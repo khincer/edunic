@@ -19,10 +19,10 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=build /app/dist/apps/api ./dist
+COPY --from=build /app/dist/apps/api ./dist/apps/api
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 
 EXPOSE 3000
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/apps/api/src/main.js"]

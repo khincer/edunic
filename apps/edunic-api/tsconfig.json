@@ -2,11 +2,26 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
-    "module": "CommonJS",
-    "types": ["node"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true, "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "types": [
+      "node"
+    ],
     "emitDecoratorMetadata": false,
-    "experimentalDecorators": false
+    "experimentalDecorators": false,
+    "emitDeclarationOnly": false
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "ts-node": {
+    "esm": true,
+    "experimentalResolver": true
+  }
 }

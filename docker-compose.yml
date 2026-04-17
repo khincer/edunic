@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   postgres:
     image: postgres:16
@@ -38,25 +36,26 @@ services:
       JWT_SECRET: supersecret
     volumes:
       - .:/app
-      - /app/node_modules
-    command: npm run dev:api
+      - api_node_modules:/app/node_modules
+    command: sh -c "npm ci && npm run dev:api"
 
-  worker:
-    build:
-      context: .
-      dockerfile: docker/worker.Dockerfile
-    container_name: edu_worker
-    depends_on:
-      - postgres
-      - redis
-    environment:
-      NODE_ENV: development
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/edu_platform
-      REDIS_URL: redis://redis:6379
-    volumes:
-      - .:/app
-      - /app/node_modules
-    command: npm run dev:worker
+  # worker:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/worker.Dockerfile
+  #   container_name: edu_worker
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   environment:
+  #     NODE_ENV: development
+  #     DATABASE_URL: postgres://postgres:postgres@postgres:5432/edu_platform
+  #     REDIS_URL: redis://redis:6379
+  #   volumes:
+  #     - .:/app
+  #     - /app/node_modules
+  #   command: npm run dev:worker
 
 volumes:
   postgres_data:
+  api_node_modules:
