@@ -5,6 +5,7 @@
   "scripts": {},
   "private": true,
   "dependencies": {
+    "fastify": "^5.8.5",
     "next": "~16.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
