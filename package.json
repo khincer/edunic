@@ -2,17 +2,21 @@
   "name": "@edunic/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "dev:fe": "nx dev edunic-fe",
+    "dev:admin": "nx dev edunic-admin",
+    "dev:teachers": "nx dev edunic-teachers"
+  },
   "private": true,
   "dependencies": {
     "fastify": "^5.8.5",
-    "next": "~16.1.6",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "next": "16.2.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",
-    "@next/eslint-plugin-next": "^16.1.6",
+    "@next/eslint-plugin-next": "16.2.4",
     "@nx/eslint": "22.6.5",
     "@nx/eslint-plugin": "22.6.5",
     "@nx/js": "22.6.5",
@@ -22,11 +26,12 @@
     "@swc/cli": "~0.8.0",
     "@swc/core": "~1.15.5",
     "@swc/helpers": "~0.5.18",
+    "@types/node": "^20.19.39",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "10.4.13",
     "eslint": "^9.8.0",
-    "eslint-config-next": "^16.1.6",
+    "eslint-config-next": "16.2.4",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-import": "2.31.0",
     "eslint-plugin-jsx-a11y": "6.10.1",
@@ -39,8 +44,5 @@
     "tslib": "^2.3.0",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.40.0"
-  },
-  "workspaces": [
-    "apps/*"
-  ]
+  }
 }
