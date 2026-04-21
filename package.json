@@ -10,7 +10,11 @@
     "dev:api:nx": "nx run api:dev",
     "dev:api:watch": "node --watch --loader ts-node/esm apps/edunic-api/src/main.ts",
     "build:api": "nx build api",
-    "start:api": "node dist/apps/api/src/main.js"
+    "start:api": "node dist/apps/api/src/main.js",
+    "db:generate": "drizzle-kit generate --config=libs/db/src/drizzle.config.ts",
+    "db:migrate": "tsx tools/migrate.ts",
+    "db:reset": "tsx tools/reset-db.ts",
+    "db:seed": "tsx tools/seed.ts"
   },
   "private": true,
   "dependencies": {
