@@ -1,10 +1,6 @@
+import type { FastifyInstance } from 'fastify';
 import { healthRoutes } from './health.routes.js';
 
-type ApiApp = {
-  get(path: string, handler: () => unknown | Promise<unknown>): void;
-  register(plugin: (app: ApiApp) => void | Promise<void>, options: { prefix: string }): void;
-};
-
-export async function registerRoutes(app: ApiApp) {
+export async function registerRoutes(app: FastifyInstance) {
   app.register(healthRoutes, { prefix: '/health' });
 }
