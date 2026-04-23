@@ -1,8 +1,10 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import type { FastifyPluginAsync } from 'fastify';
+import fp from 'fastify-plugin';
 import pg from 'pg';
 
-export const dbPlugin: FastifyPluginAsync = async (app) => {
+
+const dbPluginHandler: FastifyPluginAsync = async (app) => {
 	const databaseUrl = process.env.DATABASE_URL;
 
 	if (!databaseUrl) {
@@ -19,3 +21,7 @@ export const dbPlugin: FastifyPluginAsync = async (app) => {
 		await pool.end();
 	});
 };
+
+export const dbPlugin = fp(dbPluginHandler, {
+	name: 'db-plugin',
+});
