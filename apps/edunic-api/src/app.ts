@@ -1,44 +1,12 @@
+import Fastify, {
+  type FastifyReply,
+  type FastifyRequest,
+} from 'fastify';
+import { registerPlugins } from './plugins/index.js';
 import { registerRoutes } from './routes/index.js';
-import fastifyModule from 'fastify';
-
-type ApiLogger = {
-  error(error: unknown): void;
-};
-
-type ApiRequest = {
-  log: ApiLogger;
-};
-
-type ApiReply = {
-  status(code: number): {
-    send(payload: { message: string }): void;
-  };
-};
-
-type ApiApp = {
-  get(path: string, handler: () => unknown | Promise<unknown>): void;
-  register(plugin: (app: ApiApp) => void | Promise<void>, options: { prefix: string }): void;
-  setErrorHandler(handler: (error: { statusCode?: number; message?: string }, request: ApiRequest, reply: ApiReply) => void): void;
-  listen(options: { port: number; host: string }): Promise<void>;
-  log: ApiLogger;
-};
-
-type FastifyFactory = (options?: {
-  logger?: {
-    level?: string;
-    transport?: {
-      target: string;
-      options: {
-        colorize: boolean;
-      };
-    };
-  };
-}) => ApiApp;
 
 export async function buildApp() {
-  const fastify = fastifyModule as unknown as FastifyFactory;
-
-  const app = fastify({
+  const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL || 'info',
       transport:
@@ -51,7 +19,7 @@ export async function buildApp() {
     },
   });
 
-  app.setErrorHandler((error: { statusCode?: number; message?: string }, request: ApiRequest, reply: ApiReply) => {
+  app.setErrorHandler((error: Error & { statusCode?: number }, request: FastifyRequest, reply: FastifyReply) => {
     request.log.error(error);
 
     reply.status(error.statusCode || 500).send({
@@ -59,6 +27,7 @@ export async function buildApp() {
     });
   });
 
+  await registerPlugins(app);
   await registerRoutes(app);
 
   return app;

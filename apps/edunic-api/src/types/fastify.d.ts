@@ -1,6 +1,8 @@
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
 declare module 'fastify' {
   interface FastifyInstance {
-    db:any;
+    db: NodePgDatabase;
     featureFlags: any;
     authenticate: any;
   }
@@ -14,3 +16,5 @@ declare module 'fastify' {
     featureFlags?: Record<string, boolean>;
   }
 }
+
+export {};
