@@ -32,6 +32,20 @@ const studentSchema = {
   },
 };
 
+const institutionSchema = {
+  type: 'object',
+  required: ['id', 'name'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    name: { type: 'string', example: 'Colegio Central' },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+    },
+  },
+};
+
 export function buildOpenApiDocument() {
   return {
     openapi: '3.0.3',
@@ -49,6 +63,7 @@ export function buildOpenApiDocument() {
     ],
     tags: [
       { name: 'Health', description: 'Service health endpoints' },
+      { name: 'Institutions', description: 'Institution CRUD endpoints' },
       { name: 'Students', description: 'Student CRUD endpoints' },
     ],
     paths: {
@@ -70,6 +85,220 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+          },
+        },
+      },
+      '/institutions': {
+        get: {
+          tags: ['Institutions'],
+          summary: 'List institutions',
+          parameters: [
+            {
+              name: 'search',
+              in: 'query',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 100,
+                default: 25,
+              },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              schema: { type: 'integer', minimum: 0, default: 0 },
+            },
+            {
+              name: 'sortBy',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['createdAt', 'name'],
+                default: 'createdAt',
+              },
+            },
+            {
+              name: 'sortOrder',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['asc', 'desc'],
+                default: 'desc',
+              },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Institutions page',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: institutionSchema,
+                      },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          total: { type: 'integer' },
+                          limit: { type: 'integer' },
+                          offset: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+          },
+        },
+        post: {
+          tags: ['Institutions'],
+          summary: 'Create an institution',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['name'],
+                  properties: {
+                    name: { type: 'string', example: 'Colegio Central' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Institution created',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: institutionSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+          },
+        },
+      },
+      '/institutions/{institutionId}': {
+        get: {
+          tags: ['Institutions'],
+          summary: 'Get an institution by id',
+          parameters: [
+            {
+              name: 'institutionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Institution details',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: institutionSchema,
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/InstitutionNotFound' },
+          },
+        },
+        patch: {
+          tags: ['Institutions'],
+          summary: 'Update an institution',
+          parameters: [
+            {
+              name: 'institutionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Institution updated',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: institutionSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/InstitutionNotFound' },
+          },
+        },
+        delete: {
+          tags: ['Institutions'],
+          summary: 'Delete an institution',
+          parameters: [
+            {
+              name: 'institutionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Institution deleted',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string', format: 'uuid' },
+                          deleted: { type: 'boolean', example: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/InstitutionNotFound' },
+            409: { $ref: '#/components/responses/InstitutionConflict' },
           },
         },
       },
@@ -333,6 +562,39 @@ export function buildOpenApiDocument() {
                   message: {
                     type: 'string',
                     example: 'Student cannot be deleted while enrollments exist',
+                  },
+                },
+              },
+            },
+          },
+        },
+        InstitutionNotFound: {
+          description: 'Institution not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Institution not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        InstitutionConflict: {
+          description: 'Institution cannot be deleted because related data exists',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example:
+                      'Institution cannot be deleted while dependent academic records exist',
                   },
                 },
               },
