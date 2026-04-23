@@ -11,21 +11,33 @@ services:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d edu_platform']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
     container_name: edu_redis
     ports:
       - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api:
     build:
       context: .
-      dockerfile: docker/api.Dockerfile
+      dockerfile: docker/api.dockerfile
     container_name: edu_api
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - '3000:3000'
     environment:
@@ -37,7 +49,7 @@ services:
     volumes:
       - .:/app
       - api_node_modules:/app/node_modules
-    command: sh -c "npm ci && npm run dev:api"
+    command: npm run dev:api
 
   # worker:
   #   build:
