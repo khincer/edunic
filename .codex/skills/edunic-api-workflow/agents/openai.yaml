@@ -1,0 +1,4 @@
+interface:
+  display_name: "Edunic API Workflow"
+  short_description: "Build Edunic API modules with repo-specific patterns"
+  default_prompt: "Use $edunic-api-workflow to implement the next Edunic backend module with the repo's route, service, repository, and docs pattern."
