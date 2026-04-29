@@ -128,6 +128,32 @@ const attendanceSchema = {
   },
 };
 
+const academicPeriodSchema = {
+  type: 'object',
+  required: ['id', 'institutionId', 'year', 'term'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    institutionId: { type: 'string', format: 'uuid' },
+    year: { type: 'integer', example: 2026 },
+    term: { type: 'integer', minimum: 1, maximum: 4, example: 1 },
+    startDate: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+    },
+    endDate: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+    },
+  },
+};
+
 export function buildOpenApiDocument() {
   return {
     openapi: '3.0.3',
@@ -144,6 +170,7 @@ export function buildOpenApiDocument() {
       },
     ],
     tags: [
+      { name: 'Academic Periods', description: 'Academic period CRUD endpoints' },
       { name: 'Attendance', description: 'Attendance CRUD endpoints' },
       { name: 'Enrollments', description: 'Enrollment CRUD endpoints' },
       { name: 'Grades', description: 'Grade CRUD endpoints' },
@@ -170,6 +197,252 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+          },
+        },
+      },
+      '/academic-periods': {
+        get: {
+          tags: ['Academic Periods'],
+          summary: 'List academic periods',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'year',
+              in: 'query',
+              schema: { type: 'integer', minimum: 2000, maximum: 2100 },
+            },
+            {
+              name: 'term',
+              in: 'query',
+              schema: { type: 'integer', minimum: 1, maximum: 4 },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 100,
+                default: 25,
+              },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              schema: { type: 'integer', minimum: 0, default: 0 },
+            },
+            {
+              name: 'sortBy',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['createdAt', 'year', 'term', 'startDate'],
+                default: 'year',
+              },
+            },
+            {
+              name: 'sortOrder',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['asc', 'desc'],
+                default: 'desc',
+              },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Academic periods page',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: academicPeriodSchema,
+                      },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          total: { type: 'integer' },
+                          limit: { type: 'integer' },
+                          offset: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+          },
+        },
+        post: {
+          tags: ['Academic Periods'],
+          summary: 'Create an academic period',
+          parameters: [institutionIdHeaderSchema],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['year', 'term'],
+                  properties: {
+                    year: { type: 'integer', minimum: 2000, maximum: 2100 },
+                    term: { type: 'integer', minimum: 1, maximum: 4 },
+                    startDate: {
+                      type: 'string',
+                      example: '2026-01-15T00:00:00.000Z',
+                    },
+                    endDate: {
+                      type: 'string',
+                      example: '2026-03-30T00:00:00.000Z',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Academic period created',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: academicPeriodSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            409: { $ref: '#/components/responses/AcademicPeriodConflict' },
+          },
+        },
+      },
+      '/academic-periods/{academicPeriodId}': {
+        get: {
+          tags: ['Academic Periods'],
+          summary: 'Get an academic period by id',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'academicPeriodId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Academic period details',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: academicPeriodSchema,
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/AcademicPeriodNotFound' },
+          },
+        },
+        patch: {
+          tags: ['Academic Periods'],
+          summary: 'Update an academic period',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'academicPeriodId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    year: { type: 'integer', minimum: 2000, maximum: 2100 },
+                    term: { type: 'integer', minimum: 1, maximum: 4 },
+                    startDate: {
+                      type: 'string',
+                      nullable: true,
+                      example: '2026-01-15T00:00:00.000Z',
+                    },
+                    endDate: {
+                      type: 'string',
+                      nullable: true,
+                      example: '2026-03-30T00:00:00.000Z',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Academic period updated',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: academicPeriodSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/AcademicPeriodNotFound' },
+            409: { $ref: '#/components/responses/AcademicPeriodConflict' },
+          },
+        },
+        delete: {
+          tags: ['Academic Periods'],
+          summary: 'Delete an academic period',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'academicPeriodId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Academic period deleted',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string', format: 'uuid' },
+                          deleted: { type: 'boolean', example: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/AcademicPeriodNotFound' },
+            409: { $ref: '#/components/responses/AcademicPeriodDeleteConflict' },
           },
         },
       },
@@ -1564,6 +1837,56 @@ export function buildOpenApiDocument() {
                   message: {
                     type: 'string',
                     example: 'Enrollment not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        AcademicPeriodNotFound: {
+          description: 'Academic period not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Academic period not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        AcademicPeriodConflict: {
+          description: 'Academic period already exists for year and term',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example:
+                      'Academic period already exists for this year and term',
+                  },
+                },
+              },
+            },
+          },
+        },
+        AcademicPeriodDeleteConflict: {
+          description: 'Academic period cannot be deleted because enrollments exist',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example:
+                      'Academic period cannot be deleted while enrollments exist',
                   },
                 },
               },
