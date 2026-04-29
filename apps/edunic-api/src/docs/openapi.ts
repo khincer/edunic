@@ -107,6 +107,27 @@ const gradeSchema = {
   },
 };
 
+const attendanceSchema = {
+  type: 'object',
+  required: ['id', 'institutionId', 'enrollmentId', 'date', 'status'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    institutionId: { type: 'string', format: 'uuid' },
+    enrollmentId: { type: 'string', format: 'uuid' },
+    date: { type: 'string', format: 'date-time' },
+    status: {
+      type: 'string',
+      enum: ['present', 'absent', 'late'],
+      example: 'present',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+    },
+  },
+};
+
 export function buildOpenApiDocument() {
   return {
     openapi: '3.0.3',
@@ -123,6 +144,7 @@ export function buildOpenApiDocument() {
       },
     ],
     tags: [
+      { name: 'Attendance', description: 'Attendance CRUD endpoints' },
       { name: 'Enrollments', description: 'Enrollment CRUD endpoints' },
       { name: 'Grades', description: 'Grade CRUD endpoints' },
       { name: 'Health', description: 'Service health endpoints' },
@@ -148,6 +170,253 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+          },
+        },
+      },
+      '/attendance': {
+        get: {
+          tags: ['Attendance'],
+          summary: 'List attendance records',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'enrollmentId',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'status',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['present', 'absent', 'late'],
+              },
+            },
+            {
+              name: 'date',
+              in: 'query',
+              schema: { type: 'string', example: '2026-04-29' },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 100,
+                default: 25,
+              },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              schema: { type: 'integer', minimum: 0, default: 0 },
+            },
+            {
+              name: 'sortBy',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['createdAt', 'date', 'status'],
+                default: 'date',
+              },
+            },
+            {
+              name: 'sortOrder',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['asc', 'desc'],
+                default: 'desc',
+              },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Attendance page',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: attendanceSchema,
+                      },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          total: { type: 'integer' },
+                          limit: { type: 'integer' },
+                          offset: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+          },
+        },
+        post: {
+          tags: ['Attendance'],
+          summary: 'Create an attendance record',
+          parameters: [institutionIdHeaderSchema],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['enrollmentId', 'date', 'status'],
+                  properties: {
+                    enrollmentId: { type: 'string', format: 'uuid' },
+                    date: {
+                      type: 'string',
+                      example: '2026-04-29T00:00:00.000Z',
+                    },
+                    status: {
+                      type: 'string',
+                      enum: ['present', 'absent', 'late'],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Attendance record created',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: attendanceSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/AttendanceRelatedNotFound' },
+          },
+        },
+      },
+      '/attendance/{attendanceId}': {
+        get: {
+          tags: ['Attendance'],
+          summary: 'Get an attendance record by id',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'attendanceId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Attendance details',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: attendanceSchema,
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/AttendanceNotFound' },
+          },
+        },
+        patch: {
+          tags: ['Attendance'],
+          summary: 'Update an attendance record',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'attendanceId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    date: {
+                      type: 'string',
+                      example: '2026-04-29T00:00:00.000Z',
+                    },
+                    status: {
+                      type: 'string',
+                      enum: ['present', 'absent', 'late'],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Attendance record updated',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: attendanceSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/AttendanceNotFound' },
+          },
+        },
+        delete: {
+          tags: ['Attendance'],
+          summary: 'Delete an attendance record',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'attendanceId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Attendance record deleted',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string', format: 'uuid' },
+                          deleted: { type: 'boolean', example: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/AttendanceNotFound' },
           },
         },
       },
@@ -1254,6 +1523,38 @@ export function buildOpenApiDocument() {
           },
         },
         GradeRelatedNotFound: {
+          description: 'Related enrollment not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Enrollment not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        AttendanceNotFound: {
+          description: 'Attendance record not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Attendance record not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        AttendanceRelatedNotFound: {
           description: 'Related enrollment not found',
           content: {
             'application/json': {
