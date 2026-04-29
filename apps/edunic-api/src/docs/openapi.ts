@@ -46,6 +46,67 @@ const institutionSchema = {
   },
 };
 
+const enrollmentSchema = {
+  type: 'object',
+  required: [
+    'id',
+    'institutionId',
+    'studentId',
+    'academicPeriodId',
+    'status',
+    'student',
+  ],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    institutionId: { type: 'string', format: 'uuid' },
+    studentId: { type: 'string', format: 'uuid' },
+    academicPeriodId: { type: 'string', format: 'uuid' },
+    classroomId: { type: 'string', format: 'uuid', nullable: true },
+    status: {
+      type: 'string',
+      enum: ['active', 'withdrawn', 'completed'],
+      example: 'active',
+    },
+    promotionStatus: {
+      type: 'string',
+      nullable: true,
+      example: 'promoted',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+    },
+    student: {
+      type: 'object',
+      required: ['id', 'firstName', 'lastName', 'fullName'],
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        firstName: { type: 'string', example: 'Jane' },
+        lastName: { type: 'string', example: 'Doe' },
+        fullName: { type: 'string', example: 'Jane Doe' },
+      },
+    },
+  },
+};
+
+const gradeSchema = {
+  type: 'object',
+  required: ['id', 'institutionId', 'enrollmentId', 'subject', 'score'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    institutionId: { type: 'string', format: 'uuid' },
+    enrollmentId: { type: 'string', format: 'uuid' },
+    subject: { type: 'string', example: 'Mathematics' },
+    score: { type: 'integer', minimum: 0, maximum: 100, example: 87 },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+    },
+  },
+};
+
 export function buildOpenApiDocument() {
   return {
     openapi: '3.0.3',
@@ -62,6 +123,8 @@ export function buildOpenApiDocument() {
       },
     ],
     tags: [
+      { name: 'Enrollments', description: 'Enrollment CRUD endpoints' },
+      { name: 'Grades', description: 'Grade CRUD endpoints' },
       { name: 'Health', description: 'Service health endpoints' },
       { name: 'Institutions', description: 'Institution CRUD endpoints' },
       { name: 'Students', description: 'Student CRUD endpoints' },
@@ -85,6 +148,513 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+          },
+        },
+      },
+      '/grades': {
+        get: {
+          tags: ['Grades'],
+          summary: 'List grades',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'search',
+              in: 'query',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'enrollmentId',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'subject',
+              in: 'query',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 100,
+                default: 25,
+              },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              schema: { type: 'integer', minimum: 0, default: 0 },
+            },
+            {
+              name: 'sortBy',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['createdAt', 'subject', 'score'],
+                default: 'createdAt',
+              },
+            },
+            {
+              name: 'sortOrder',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['asc', 'desc'],
+                default: 'desc',
+              },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Grades page',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: gradeSchema,
+                      },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          total: { type: 'integer' },
+                          limit: { type: 'integer' },
+                          offset: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+          },
+        },
+        post: {
+          tags: ['Grades'],
+          summary: 'Create a grade',
+          parameters: [institutionIdHeaderSchema],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['enrollmentId', 'subject', 'score'],
+                  properties: {
+                    enrollmentId: { type: 'string', format: 'uuid' },
+                    subject: { type: 'string', example: 'Mathematics' },
+                    score: {
+                      type: 'integer',
+                      minimum: 0,
+                      maximum: 100,
+                      example: 87,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Grade created',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: gradeSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/GradeRelatedNotFound' },
+          },
+        },
+      },
+      '/grades/{gradeId}': {
+        get: {
+          tags: ['Grades'],
+          summary: 'Get a grade by id',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'gradeId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Grade details',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: gradeSchema,
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/GradeNotFound' },
+          },
+        },
+        patch: {
+          tags: ['Grades'],
+          summary: 'Update a grade',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'gradeId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    subject: { type: 'string' },
+                    score: {
+                      type: 'integer',
+                      minimum: 0,
+                      maximum: 100,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Grade updated',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: gradeSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/GradeNotFound' },
+          },
+        },
+        delete: {
+          tags: ['Grades'],
+          summary: 'Delete a grade',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'gradeId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Grade deleted',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string', format: 'uuid' },
+                          deleted: { type: 'boolean', example: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/GradeNotFound' },
+          },
+        },
+      },
+      '/enrollments': {
+        get: {
+          tags: ['Enrollments'],
+          summary: 'List enrollments',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'search',
+              in: 'query',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'studentId',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'academicPeriodId',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'status',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['active', 'withdrawn', 'completed'],
+              },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 100,
+                default: 25,
+              },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              schema: { type: 'integer', minimum: 0, default: 0 },
+            },
+            {
+              name: 'sortBy',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['createdAt', 'status', 'studentName'],
+                default: 'createdAt',
+              },
+            },
+            {
+              name: 'sortOrder',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['asc', 'desc'],
+                default: 'desc',
+              },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Enrollments page',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: enrollmentSchema,
+                      },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          total: { type: 'integer' },
+                          limit: { type: 'integer' },
+                          offset: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+          },
+        },
+        post: {
+          tags: ['Enrollments'],
+          summary: 'Create an enrollment',
+          parameters: [institutionIdHeaderSchema],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['studentId', 'academicPeriodId'],
+                  properties: {
+                    studentId: { type: 'string', format: 'uuid' },
+                    academicPeriodId: { type: 'string', format: 'uuid' },
+                    classroomId: {
+                      type: 'string',
+                      format: 'uuid',
+                      nullable: true,
+                    },
+                    status: {
+                      type: 'string',
+                      enum: ['active', 'withdrawn', 'completed'],
+                      default: 'active',
+                    },
+                    promotionStatus: {
+                      type: 'string',
+                      nullable: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Enrollment created',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: enrollmentSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/EnrollmentRelatedNotFound' },
+            409: { $ref: '#/components/responses/EnrollmentConflict' },
+          },
+        },
+      },
+      '/enrollments/{enrollmentId}': {
+        get: {
+          tags: ['Enrollments'],
+          summary: 'Get an enrollment by id',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'enrollmentId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Enrollment details',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: enrollmentSchema,
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/EnrollmentNotFound' },
+          },
+        },
+        patch: {
+          tags: ['Enrollments'],
+          summary: 'Update an enrollment',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'enrollmentId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    classroomId: {
+                      type: 'string',
+                      format: 'uuid',
+                      nullable: true,
+                    },
+                    status: {
+                      type: 'string',
+                      enum: ['active', 'withdrawn', 'completed'],
+                    },
+                    promotionStatus: {
+                      type: 'string',
+                      nullable: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Enrollment updated',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: enrollmentSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/EnrollmentNotFound' },
+          },
+        },
+        delete: {
+          tags: ['Enrollments'],
+          summary: 'Delete an enrollment',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'enrollmentId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Enrollment deleted',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string', format: 'uuid' },
+                          deleted: { type: 'boolean', example: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/EnrollmentNotFound' },
+            409: { $ref: '#/components/responses/EnrollmentDeleteConflict' },
           },
         },
       },
@@ -595,6 +1165,104 @@ export function buildOpenApiDocument() {
                     type: 'string',
                     example:
                       'Institution cannot be deleted while dependent academic records exist',
+                  },
+                },
+              },
+            },
+          },
+        },
+        EnrollmentNotFound: {
+          description: 'Enrollment not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Enrollment not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        EnrollmentRelatedNotFound: {
+          description: 'Related academic record not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Academic period not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        EnrollmentConflict: {
+          description: 'Student is already enrolled in the academic period',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example:
+                      'Student is already enrolled in this academic period',
+                  },
+                },
+              },
+            },
+          },
+        },
+        EnrollmentDeleteConflict: {
+          description: 'Enrollment cannot be deleted because dependent records exist',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example:
+                      'Enrollment cannot be deleted while grades or attendance records exist',
+                  },
+                },
+              },
+            },
+          },
+        },
+        GradeNotFound: {
+          description: 'Grade not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Grade not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        GradeRelatedNotFound: {
+          description: 'Related enrollment not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Enrollment not found',
                   },
                 },
               },
