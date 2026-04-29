@@ -1,0 +1,38 @@
+name: Render Staging
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - feat/render-staging
+
+concurrency:
+  group: render-staging-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-checks:
+    name: API Build And Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build API
+        run: npx nx build api
+
+      - name: Lint API
+        run: npx nx lint api

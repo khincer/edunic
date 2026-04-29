@@ -1,0 +1,28 @@
+databases:
+  - name: edunic-postgres-staging
+    databaseName: edu_platform
+    user: edunic
+    plan: free
+
+services:
+  - type: web
+    name: edunic-api-staging
+    runtime: node
+    plan: free
+    rootDir: .
+    autoDeployTrigger: checksPass
+    buildCommand: npm ci && npm run build:api
+    startCommand: npm run start:api
+    preDeployCommand: npm run db:migrate
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: edunic-postgres-staging
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true

@@ -42,3 +42,8 @@ npx nx lint edunic-teachers
 - Keep dependencies in the root `package.json`.
 - Avoid creating app-level `node_modules` folders.
 - Use `npx nx show project <name>` to inspect targets for any project.
+
+## Deployment
+
+- Render staging setup: [docs/deployment/render-staging.md](docs/deployment/render-staging.md)
+- CI gate for staging deploys: `.github/workflows/render-staging.yml`
