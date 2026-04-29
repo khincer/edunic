@@ -4,12 +4,12 @@
 
 This project is a **multi-tenant academic management SaaS platform** designed for schools. It supports:
 
-* Student management
-* Enrollments
-* Grades & attendance
-* Government compliance (MINED)
-* Extension system (modular features)
-* Multi-role access (admin, teacher, parent)
+- Student management
+- Enrollments
+- Grades & attendance
+- Government compliance (MINED)
+- Extension system (modular features)
+- Multi-role access (admin, teacher, parent)
 
 ---
 
@@ -17,37 +17,36 @@ This project is a **multi-tenant academic management SaaS platform** designed fo
 
 ### 1. Monorepo (Nx)
 
-* All apps and libs live in one repository
-* Shared types and logic via `libs/*`
+- All apps and libs live in one repository
+- Shared types and logic via `libs/*`
 
 ### 2. Domain-Driven Design (DDD)
 
-* Business logic lives in `libs/domain/*`
-* Each domain module is self-contained:
-
-  * `application/` → services
-  * `infrastructure/` → repos
-  * `presentation/` → routes
-  * `schemas/` → validation
+- Business logic lives in `libs/domain/*`
+- Each domain module is self-contained:
+  - `application/` → services
+  - `infrastructure/` → repos
+  - `presentation/` → routes
+  - `schemas/` → validation
 
 ### 3. Thin API Layer
 
-* `apps/api` only handles:
+- `apps/api` only handles:
+  - HTTP
+  - Middleware
+  - Routing
 
-  * HTTP
-  * Middleware
-  * Routing
-* No business logic in controllers
+- No business logic in controllers
 
 ### 4. Multi-Tenancy First
 
-* Every core table includes `institution_id`
-* All queries MUST be scoped by tenant
+- Every core table includes `institution_id`
+- All queries MUST be scoped by tenant
 
 ### 5. Feature Flags
 
-* Incomplete features must be hidden via flags
-* Never block merges due to unfinished work
+- Incomplete features must be hidden via flags
+- Never block merges due to unfinished work
 
 ---
 
@@ -65,36 +64,36 @@ Core academic system working end-to-end
 
 #### Core Domains
 
-* Students CRUD
-* Enrollments system
-* Academic periods
-* Grades submission
-* Attendance tracking
+- Students CRUD
+- Enrollments system
+- Academic periods
+- Grades submission
+- Attendance tracking
 
 #### Backend
 
-* Fastify API setup
-* Drizzle ORM integration
-* PostgreSQL schema
-* Basic validation (Zod)
+- Fastify API setup
+- Drizzle ORM integration
+- PostgreSQL schema
+- Basic validation (Zod)
 
 #### Infra
 
-* Docker (API + Postgres + Redis)
-* Nx workspace configured
+- Docker (API + Postgres + Redis)
+- Nx workspace configured
 
 ---
 
 ### 📌 Key Tasks
 
-* [ ] Implement students module
-* [ ] Implement enrollments module
-* [ ] Implement grades module
-* [ ] Implement attendance module
-* [ ] Implement academic periods
-* [ ] Add DB constraints (unique, checks)
-* [ ] Seed initial data
-* [ ] Deploy staging environment
+- [ ] Implement students module
+- [ ] Implement enrollments module
+- [ ] Implement grades module
+- [ ] Implement attendance module
+- [ ] Implement academic periods
+- [ ] Add DB constraints (unique, checks)
+- [ ] Seed initial data
+- [ ] Deploy staging environment
 
 ---
 
@@ -106,23 +105,23 @@ Meet academic and government requirements
 
 ### ✅ Deliverables:
 
-* Grade averages (bimestral & annual)
-* Promotion logic (pass/fail)
-* Reporting system (PDF/export)
-* Parent access (read-only)
-* Teacher dashboards
+- Grade averages (bimestral & annual)
+- Promotion logic (pass/fail)
+- Reporting system (PDF/export)
+- Parent access (read-only)
+- Teacher dashboards
 
 ---
 
 ### 📌 Key Tasks
 
-* [ ] Compute academic averages
-* [ ] Implement promotion rules
-* [ ] Build reporting endpoints
-* [ ] Generate PDF reports (worker)
-* [ ] Add guardians system
-* [ ] Add audit logs
-* [ ] Add role-based access control
+- [ ] Compute academic averages
+- [ ] Implement promotion rules
+- [ ] Build reporting endpoints
+- [ ] Generate PDF reports (worker)
+- [ ] Add guardians system
+- [ ] Add audit logs
+- [ ] Add role-based access control
 
 ---
 
@@ -134,21 +133,21 @@ Make system customizable per school
 
 ### ✅ Deliverables:
 
-* Event-driven architecture
-* Extension registry
-* Custom fields system
-* Marketplace-ready structure
+- Event-driven architecture
+- Extension registry
+- Custom fields system
+- Marketplace-ready structure
 
 ---
 
 ### 📌 Key Tasks
 
-* [ ] Implement event bus (initial: in-memory)
-* [ ] Define domain events
-* [ ] Build extension registry
-* [ ] Implement custom fields
-* [ ] Create first extension (notifications)
-* [ ] Upgrade event system (Redis Streams)
+- [ ] Implement event bus (initial: in-memory)
+- [ ] Define domain events
+- [ ] Build extension registry
+- [ ] Implement custom fields
+- [ ] Create first extension (notifications)
+- [ ] Upgrade event system (Redis Streams)
 
 ---
 
@@ -160,22 +159,22 @@ Commercial-ready platform
 
 ### ✅ Deliverables:
 
-* Billing system
-* Parent portal
-* Notifications system
-* Analytics dashboards
-* Multi-school management
+- Billing system
+- Parent portal
+- Notifications system
+- Analytics dashboards
+- Multi-school management
 
 ---
 
 ### 📌 Key Tasks
 
-* [ ] Implement billing module
-* [ ] Build parent UI
-* [ ] Add push/email notifications
-* [ ] Build analytics dashboards
-* [ ] Add subscription system
-* [ ] Launch production
+- [ ] Implement billing module
+- [ ] Build parent UI
+- [ ] Add push/email notifications
+- [ ] Build analytics dashboards
+- [ ] Add subscription system
+- [ ] Launch production
 
 ---
 
@@ -183,29 +182,28 @@ Commercial-ready platform
 
 ### 🚫 Never:
 
-* Access DB without `institution_id`
-* Put business logic in routes
-* Merge unfinished features without flags
-* Modify DB manually outside migrations
+- Access DB without `institution_id`
+- Put business logic in routes
+- Merge unfinished features without flags
+- Modify DB manually outside migrations
 
 ---
 
 ### ✅ Always:
 
-* Use services (`application/`)
-* Validate input with Zod
-* Use repositories for DB access
-* Write migrations for schema changes
+- Use services (`application/`)
+- Validate input with Zod
+- Use repositories for DB access
+- Write migrations for schema changes
 
 ---
 
 ## 🧩 Feature Flags Strategy
 
-* All new features must be behind flags
-* Flags can be:
-
-  * Global
-  * Per institution
+- All new features must be behind flags
+- Flags can be:
+  - Global
+  - Per institution
 
 Example:
 
@@ -219,15 +217,15 @@ if (!flags.billing_module) return;
 
 Domain events should be emitted for:
 
-* Enrollment created
-* Grade submitted
-* Attendance marked
+- Enrollment created
+- Grade submitted
+- Attendance marked
 
 Used for:
 
-* Notifications
-* Extensions
-* Analytics
+- Notifications
+- Extensions
+- Analytics
 
 ---
 
@@ -235,9 +233,9 @@ Used for:
 
 ### Branching
 
-* `main` → always deployable
-* `feature/*` → short-lived
-* `hotfix/*` → production fixes
+- `main` → always deployable
+- `feature/*` → short-lived
+- `hotfix/*` → production fixes
 
 ### Flow
 
@@ -250,18 +248,18 @@ Used for:
 
 ## 🧪 Testing Strategy
 
-* Unit tests → services
-* Integration tests → API routes
-* E2E tests → critical flows
+- Unit tests → services
+- Integration tests → API routes
+- E2E tests → critical flows
 
 ---
 
 ## 📦 Future Improvements
 
-* Redis caching layer
-* Row-Level Security (Postgres)
-* Observability (logs + tracing)
-* Load testing
+- Redis caching layer
+- Row-Level Security (Postgres)
+- Observability (logs + tracing)
+- Load testing
 
 ---
 
@@ -278,10 +276,34 @@ This system should evolve into:
 
 When working on this repo:
 
-* Prefer modifying existing modules over creating new ones
-* Follow domain structure strictly
-* Do not bypass service layer
-* Ensure tenant isolation in all queries
-* Keep code minimal, explicit, and testable
+- Prefer modifying existing modules over creating new ones
+- Follow domain structure strictly
+- Do not bypass service layer
+- Ensure tenant isolation in all queries
+- Keep code minimal, explicit, and testable
 
 ---
+
+<!-- nx configuration start-->
+<!-- Leave the start & end comments to automatically receive updates. -->
+
+## General Guidelines for working with Nx
+
+- For navigating/exploring the workspace, invoke the `nx-workspace` skill first - it has patterns for querying projects, targets, and dependencies
+- When running tasks (for example build, lint, test, e2e, etc.), always prefer running the task through `nx` (i.e. `nx run`, `nx run-many`, `nx affected`) instead of using the underlying tooling directly
+- Prefix nx commands with the workspace's package manager (e.g., `pnpm nx build`, `npm exec nx test`) - avoids using globally installed CLI
+- You have access to the Nx MCP server and its tools, use them to help the user
+- For Nx plugin best practices, check `node_modules/@nx/<plugin>/PLUGIN.md`. Not all plugins have this file - proceed without it if unavailable.
+- NEVER guess CLI flags - always check nx_docs or `--help` first when unsure
+
+## Scaffolding & Generators
+
+- For scaffolding tasks (creating apps, libs, project structure, setup), ALWAYS invoke the `nx-generate` skill FIRST before exploring or calling MCP tools
+
+## When to use nx_docs
+
+- USE for: advanced config options, unfamiliar flags, migration guides, plugin configuration, edge cases
+- DON'T USE for: basic generator syntax (`nx g @nx/react:app`), standard commands, things you already know
+- The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
+
+<!-- nx configuration end-->
