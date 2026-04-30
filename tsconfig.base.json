@@ -6,6 +6,7 @@
     "importHelpers": true,
     "isolatedModules": true,
     "lib": ["es2022"],
+    "baseUrl": ".",
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmitOnError": true,
@@ -16,6 +17,10 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@mrincer/source"]
+    "customConditions": ["@mrincer/source"],
+    "paths": {
+      "@edunic/source/db": ["libs/db/src/index.ts"],
+      "@edunic/source/db/schema": ["libs/db/src/schema/index.ts"]
+    }
   }
 }
