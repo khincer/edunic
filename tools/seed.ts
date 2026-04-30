@@ -1,4 +1,4 @@
-import { db } from "../libs/db/src";
+import { db } from '../libs/db/src/index.js';
 import {
   academicPeriods,
   attendance,
@@ -9,7 +9,7 @@ import {
   institutionFeatureFlags,
   institutions,
   students,
-} from "../libs/db/src/schema";
+} from '../libs/db/src/schema/index.js';
 
 const ids = {
   institutions: {
@@ -48,8 +48,8 @@ const ids = {
   },
 };
 
-async function seed() {
-  console.log('🌱 Seeding database...');
+export async function seedDatabase() {
+  console.log('Seeding database...');
 
   await db
     .insert(institutions)
@@ -262,11 +262,10 @@ async function seed() {
     ])
     .onConflictDoNothing();
 
-  console.log('✅ Seed complete');
-  process.exit(0);
+  console.log('Seed complete');
 }
 
-seed().catch((error) => {
+seedDatabase().catch((error) => {
   console.error('Seed failed:', error);
   process.exit(1);
 });

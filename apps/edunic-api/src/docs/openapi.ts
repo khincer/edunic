@@ -170,6 +170,10 @@ export function buildOpenApiDocument() {
       },
     ],
     tags: [
+      {
+        name: 'Bootstrap',
+        description: 'Temporary operational endpoints for database bootstrap',
+      },
       { name: 'Academic Periods', description: 'Academic period CRUD endpoints' },
       { name: 'Attendance', description: 'Attendance CRUD endpoints' },
       { name: 'Enrollments', description: 'Enrollment CRUD endpoints' },
@@ -179,6 +183,38 @@ export function buildOpenApiDocument() {
       { name: 'Students', description: 'Student CRUD endpoints' },
     ],
     paths: {
+      '/admin/bootstrap': {
+        post: {
+          tags: ['Bootstrap'],
+          summary: 'Run migrations and seed data',
+          description:
+            'Temporary internal endpoint. This mutates the database by running migrations first and seed data second. Remove it after deployment bootstrap is stable.',
+          responses: {
+            200: {
+              description: 'Bootstrap completed successfully',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'object',
+                        required: ['migration', 'seed', 'durationMs'],
+                        properties: {
+                          migration: { type: 'string', example: 'ok' },
+                          seed: { type: 'string', example: 'ok' },
+                          durationMs: { type: 'integer', example: 1320 },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            500: { $ref: '#/components/responses/BootstrapFailed' },
+          },
+        },
+      },
       '/health': {
         get: {
           tags: ['Health'],
@@ -1646,6 +1682,23 @@ export function buildOpenApiDocument() {
                 type: 'object',
                 properties: {
                   message: { type: 'string', example: 'Invalid request' },
+                },
+              },
+            },
+          },
+        },
+        BootstrapFailed: {
+          description: 'Bootstrap migration or seed failed',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example:
+                      'Bootstrap failed during migration: DATABASE_URL is not set',
+                  },
                 },
               },
             },
