@@ -41,8 +41,14 @@ function getInstitutionId(request: FastifyRequest) {
 
 export async function guardianRoutes(app: FastifyInstance) {
   const guardiansService = new GuardiansService(new GuardiansRepository(app.db));
+  const readAccess = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+  };
+  const adminOnly = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+  };
 
-  app.get('/guardians', async (request) => {
+  app.get('/guardians', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listGuardiansQuerySchema, request.query);
 
@@ -52,14 +58,14 @@ export async function guardianRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get('/guardians/:guardianId', async (request) => {
+  app.get('/guardians/:guardianId', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(guardianParamsSchema, request.params);
 
     return guardiansService.getGuardian(institutionId, params.guardianId);
   });
 
-  app.post('/guardians', async (request, reply) => {
+  app.post('/guardians', adminOnly, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createGuardianBodySchema, request.body);
     const result = await guardiansService.createGuardian({
@@ -70,7 +76,7 @@ export async function guardianRoutes(app: FastifyInstance) {
     return reply.status(201).send(result);
   });
 
-  app.patch('/guardians/:guardianId', async (request) => {
+  app.patch('/guardians/:guardianId', adminOnly, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(guardianParamsSchema, request.params);
     const body = parseWithSchema(updateGuardianBodySchema, request.body);
@@ -82,14 +88,14 @@ export async function guardianRoutes(app: FastifyInstance) {
     });
   });
 
-  app.delete('/guardians/:guardianId', async (request) => {
+  app.delete('/guardians/:guardianId', adminOnly, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(guardianParamsSchema, request.params);
 
     return guardiansService.deleteGuardian(institutionId, params.guardianId);
   });
 
-  app.get('/students/:studentId/guardians', async (request) => {
+  app.get('/students/:studentId/guardians', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentGuardiansParamsSchema, request.params);
 
@@ -99,7 +105,7 @@ export async function guardianRoutes(app: FastifyInstance) {
     );
   });
 
-  app.post('/students/:studentId/guardians/:guardianId', async (request, reply) => {
+  app.post('/students/:studentId/guardians/:guardianId', adminOnly, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentGuardianParamsSchema, request.params);
     const result = await guardiansService.linkGuardianToStudent(
@@ -111,7 +117,7 @@ export async function guardianRoutes(app: FastifyInstance) {
     return reply.status(201).send(result);
   });
 
-  app.delete('/students/:studentId/guardians/:guardianId', async (request) => {
+  app.delete('/students/:studentId/guardians/:guardianId', adminOnly, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentGuardianParamsSchema, request.params);
 

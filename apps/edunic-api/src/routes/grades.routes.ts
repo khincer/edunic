@@ -39,8 +39,14 @@ function getInstitutionId(request: FastifyRequest) {
 
 export async function gradeRoutes(app: FastifyInstance) {
   const gradesService = new GradesService(new GradesRepository(app.db));
+  const readAccess = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+  };
+  const academicWriteAccess = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher'])],
+  };
 
-  app.get('/', async (request) => {
+  app.get('/', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listGradesQuerySchema, request.query);
 
@@ -50,14 +56,14 @@ export async function gradeRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get('/:gradeId', async (request) => {
+  app.get('/:gradeId', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(gradeParamsSchema, request.params);
 
     return gradesService.getGrade(institutionId, params.gradeId);
   });
 
-  app.post('/', async (request, reply) => {
+  app.post('/', academicWriteAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createGradeBodySchema, request.body);
     const result = await gradesService.createGrade({
@@ -68,7 +74,7 @@ export async function gradeRoutes(app: FastifyInstance) {
     return reply.status(201).send(result);
   });
 
-  app.patch('/:gradeId', async (request) => {
+  app.patch('/:gradeId', academicWriteAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(gradeParamsSchema, request.params);
     const body = parseWithSchema(updateGradeBodySchema, request.body);
@@ -80,7 +86,7 @@ export async function gradeRoutes(app: FastifyInstance) {
     });
   });
 
-  app.delete('/:gradeId', async (request) => {
+  app.delete('/:gradeId', academicWriteAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(gradeParamsSchema, request.params);
 

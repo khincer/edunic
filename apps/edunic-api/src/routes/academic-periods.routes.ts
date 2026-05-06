@@ -41,8 +41,14 @@ export async function academicPeriodRoutes(app: FastifyInstance) {
   const academicPeriodsService = new AcademicPeriodsService(
     new AcademicPeriodsRepository(app.db)
   );
+  const readAccess = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+  };
+  const adminOnly = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+  };
 
-  app.get('/', async (request) => {
+  app.get('/', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listAcademicPeriodsQuerySchema, request.query);
 
@@ -52,7 +58,7 @@ export async function academicPeriodRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get('/:academicPeriodId', async (request) => {
+  app.get('/:academicPeriodId', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(academicPeriodParamsSchema, request.params);
 
@@ -62,7 +68,7 @@ export async function academicPeriodRoutes(app: FastifyInstance) {
     );
   });
 
-  app.post('/', async (request, reply) => {
+  app.post('/', adminOnly, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createAcademicPeriodBodySchema, request.body);
     const result = await academicPeriodsService.createAcademicPeriod({
@@ -73,7 +79,7 @@ export async function academicPeriodRoutes(app: FastifyInstance) {
     return reply.status(201).send(result);
   });
 
-  app.patch('/:academicPeriodId', async (request) => {
+  app.patch('/:academicPeriodId', adminOnly, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(academicPeriodParamsSchema, request.params);
     const body = parseWithSchema(updateAcademicPeriodBodySchema, request.body);
@@ -85,7 +91,7 @@ export async function academicPeriodRoutes(app: FastifyInstance) {
     });
   });
 
-  app.delete('/:academicPeriodId', async (request) => {
+  app.delete('/:academicPeriodId', adminOnly, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(academicPeriodParamsSchema, request.params);
 

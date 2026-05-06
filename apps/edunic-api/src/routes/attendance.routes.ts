@@ -41,8 +41,14 @@ export async function attendanceRoutes(app: FastifyInstance) {
   const attendanceService = new AttendanceService(
     new AttendanceRepository(app.db)
   );
+  const readAccess = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+  };
+  const academicWriteAccess = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher'])],
+  };
 
-  app.get('/', async (request) => {
+  app.get('/', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listAttendanceQuerySchema, request.query);
 
@@ -52,14 +58,14 @@ export async function attendanceRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get('/:attendanceId', async (request) => {
+  app.get('/:attendanceId', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(attendanceParamsSchema, request.params);
 
     return attendanceService.getAttendance(institutionId, params.attendanceId);
   });
 
-  app.post('/', async (request, reply) => {
+  app.post('/', academicWriteAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createAttendanceBodySchema, request.body);
     const result = await attendanceService.createAttendance({
@@ -70,7 +76,7 @@ export async function attendanceRoutes(app: FastifyInstance) {
     return reply.status(201).send(result);
   });
 
-  app.patch('/:attendanceId', async (request) => {
+  app.patch('/:attendanceId', academicWriteAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(attendanceParamsSchema, request.params);
     const body = parseWithSchema(updateAttendanceBodySchema, request.body);
@@ -82,7 +88,7 @@ export async function attendanceRoutes(app: FastifyInstance) {
     });
   });
 
-  app.delete('/:attendanceId', async (request) => {
+  app.delete('/:attendanceId', academicWriteAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(attendanceParamsSchema, request.params);
 

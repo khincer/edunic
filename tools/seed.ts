@@ -1,4 +1,5 @@
 import { db } from '../libs/db/src/index.js';
+import { hashPassword } from '../apps/edunic-api/src/modules/auth/application/password.js';
 import {
   academicPeriods,
   attendance,
@@ -8,6 +9,8 @@ import {
   grades,
   institutionFeatureFlags,
   institutions,
+  userInstitutionRoles,
+  users,
   students,
 } from '../libs/db/src/schema/index.js';
 
@@ -15,6 +18,18 @@ const ids = {
   institutions: {
     central: '00000000-0000-0000-0000-000000000001',
     north: '00000000-0000-0000-0000-000000000002',
+  },
+  users: {
+    centralAdmin: '70000000-0000-0000-0000-000000000001',
+    centralTeacher: '70000000-0000-0000-0000-000000000002',
+    centralParent: '70000000-0000-0000-0000-000000000003',
+    northAdmin: '70000000-0000-0000-0000-000000000004',
+  },
+  userInstitutionRoles: {
+    centralAdmin: '71000000-0000-0000-0000-000000000001',
+    centralTeacher: '71000000-0000-0000-0000-000000000002',
+    centralParent: '71000000-0000-0000-0000-000000000003',
+    northAdmin: '71000000-0000-0000-0000-000000000004',
   },
   academicPeriods: {
     centralTerm1: '10000000-0000-0000-0000-000000000001',
@@ -50,6 +65,9 @@ const ids = {
 
 export async function seedDatabase() {
   console.log('Seeding database...');
+  const hashedAdminPassword = hashPassword('admin1234');
+  const hashedTeacherPassword = hashPassword('teacher1234');
+  const hashedParentPassword = hashPassword('parent1234');
 
   await db
     .insert(institutions)
@@ -61,6 +79,62 @@ export async function seedDatabase() {
       {
         id: ids.institutions.north,
         name: 'Instituto del Norte',
+      },
+    ])
+    .onConflictDoNothing();
+
+  await db
+    .insert(users)
+    .values([
+      {
+        id: ids.users.centralAdmin,
+        email: 'admin@central.edu',
+        passwordHash: hashedAdminPassword,
+      },
+      {
+        id: ids.users.centralTeacher,
+        email: 'teacher@central.edu',
+        passwordHash: hashedTeacherPassword,
+      },
+      {
+        id: ids.users.centralParent,
+        email: 'parent@central.edu',
+        passwordHash: hashedParentPassword,
+      },
+      {
+        id: ids.users.northAdmin,
+        email: 'admin@north.edu',
+        passwordHash: hashedAdminPassword,
+      },
+    ])
+    .onConflictDoNothing();
+
+  await db
+    .insert(userInstitutionRoles)
+    .values([
+      {
+        id: ids.userInstitutionRoles.centralAdmin,
+        userId: ids.users.centralAdmin,
+        institutionId: ids.institutions.central,
+        role: 'admin',
+      },
+      {
+        id: ids.userInstitutionRoles.centralTeacher,
+        userId: ids.users.centralTeacher,
+        institutionId: ids.institutions.central,
+        role: 'teacher',
+      },
+      {
+        id: ids.userInstitutionRoles.centralParent,
+        userId: ids.users.centralParent,
+        institutionId: ids.institutions.central,
+        role: 'parent',
+      },
+      {
+        id: ids.userInstitutionRoles.northAdmin,
+        userId: ids.users.northAdmin,
+        institutionId: ids.institutions.north,
+        role: 'admin',
       },
     ])
     .onConflictDoNothing();

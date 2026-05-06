@@ -3,8 +3,11 @@ import { BootstrapService } from '../modules/bootstrap/application/bootstrap.ser
 
 export async function adminRoutes(app: FastifyInstance) {
   const bootstrapService = new BootstrapService();
+  const adminOnly = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+  };
 
-  app.post('/bootstrap', async () => {
+  app.post('/bootstrap', adminOnly, async () => {
     return bootstrapService.runBootstrap();
   });
 }

@@ -42,8 +42,14 @@ export async function enrollmentRoutes(app: FastifyInstance) {
   const enrollmentsService = new EnrollmentsService(
     new EnrollmentsRepository(app.db)
   );
+  const readAccess = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+  };
+  const academicWriteAccess = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher'])],
+  };
 
-  app.get('/', async (request) => {
+  app.get('/', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listEnrollmentsQuerySchema, request.query);
 
@@ -53,14 +59,14 @@ export async function enrollmentRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get('/:enrollmentId', async (request) => {
+  app.get('/:enrollmentId', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(enrollmentParamsSchema, request.params);
 
     return enrollmentsService.getEnrollment(institutionId, params.enrollmentId);
   });
 
-  app.post('/', async (request, reply) => {
+  app.post('/', academicWriteAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createEnrollmentBodySchema, request.body);
     const result = await enrollmentsService.createEnrollment({
@@ -71,7 +77,7 @@ export async function enrollmentRoutes(app: FastifyInstance) {
     return reply.status(201).send(result);
   });
 
-  app.patch('/:enrollmentId', async (request) => {
+  app.patch('/:enrollmentId', academicWriteAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(enrollmentParamsSchema, request.params);
     const body = parseWithSchema(updateEnrollmentBodySchema, request.body);
@@ -83,7 +89,7 @@ export async function enrollmentRoutes(app: FastifyInstance) {
     });
   });
 
-  app.delete('/:enrollmentId', async (request) => {
+  app.delete('/:enrollmentId', academicWriteAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(enrollmentParamsSchema, request.params);
 
@@ -93,7 +99,7 @@ export async function enrollmentRoutes(app: FastifyInstance) {
     );
   });
 
-  app.post('/:enrollmentId/promotion', async (request) => {
+  app.post('/:enrollmentId/promotion', academicWriteAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(
       evaluatePromotionParamsSchema,

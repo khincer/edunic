@@ -39,8 +39,11 @@ function getInstitutionId(request: FastifyRequest) {
 export async function reportRoutes(app: FastifyInstance) {
   const reportsService = new ReportsService(new ReportsRepository(app.db));
   const reportsPdfService = new ReportsPdfService();
+  const readAccess = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+  };
 
-  app.get('/students/:studentId/academic-summary', async (request) => {
+  app.get('/students/:studentId/academic-summary', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentReportParamsSchema, request.params);
     const query = parseWithSchema(studentReportQuerySchema, request.query);
@@ -52,7 +55,7 @@ export async function reportRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get('/students/:studentId/academic-summary/pdf', async (request, reply) => {
+  app.get('/students/:studentId/academic-summary/pdf', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentReportParamsSchema, request.params);
     const query = parseWithSchema(studentReportQuerySchema, request.query);

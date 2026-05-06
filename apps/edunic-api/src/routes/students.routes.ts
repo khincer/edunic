@@ -33,8 +33,14 @@ function getInstitutionId(request: FastifyRequest) {
 
 export async function studentRoutes(app: FastifyInstance) {
   const studentsService = new StudentsService(new StudentsRepository(app.db));
+  const readAccess = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+  };
+  const adminOnly = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+  };
 
-  app.get('/', async (request) => {
+  app.get('/', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listStudentsQuerySchema, request.query);
 
@@ -44,14 +50,14 @@ export async function studentRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get('/:studentId', async (request) => {
+  app.get('/:studentId', readAccess, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentParamsSchema, request.params);
 
     return studentsService.getStudent(institutionId, params.studentId);
   });
 
-  app.post('/', async (request, reply) => {
+  app.post('/', adminOnly, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createStudentBodySchema, request.body);
     const result = await studentsService.createStudent({
@@ -62,7 +68,7 @@ export async function studentRoutes(app: FastifyInstance) {
     return reply.status(201).send(result);
   });
 
-  app.patch('/:studentId', async (request) => {
+  app.patch('/:studentId', adminOnly, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentParamsSchema, request.params);
     const body = parseWithSchema(updateStudentBodySchema, request.body);
@@ -74,7 +80,7 @@ export async function studentRoutes(app: FastifyInstance) {
     });
   });
 
-  app.delete('/:studentId', async (request) => {
+  app.delete('/:studentId', adminOnly, async (request) => {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentParamsSchema, request.params);
 
