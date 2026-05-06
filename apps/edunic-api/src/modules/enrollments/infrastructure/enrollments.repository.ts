@@ -20,6 +20,11 @@ type ExistsRow = {
   id: string;
 };
 
+type AverageRow = {
+  average: string | number | null;
+  gradeCount: string | number;
+};
+
 export type EnrollmentRecord = {
   id: string;
   institutionId: string;
@@ -259,6 +264,27 @@ export class EnrollmentsRepository {
     `);
 
     return this.toCount(result.rows[0]?.count);
+  }
+
+  async getEnrollmentAverage(institutionId: string, enrollmentId: string) {
+    const result = await this.db.execute<AverageRow>(sql`
+      select
+        avg(score)::numeric(10,2) as average,
+        count(*)::int as "gradeCount"
+      from grades
+      where institution_id = ${institutionId}
+        and enrollment_id = ${enrollmentId}
+    `);
+
+    const row = result.rows[0];
+
+    return {
+      average:
+        row?.average === null || row?.average === undefined
+          ? null
+          : Number(row.average),
+      gradeCount: this.toCount(row?.gradeCount),
+    };
   }
 
   private getSortColumn(sortBy: EnrollmentSortColumn) {

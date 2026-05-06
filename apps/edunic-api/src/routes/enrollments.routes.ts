@@ -7,6 +7,7 @@ import {
 import { EnrollmentsRepository } from '../modules/enrollments/infrastructure/enrollments.repository.js';
 import {
   createEnrollmentBodySchema,
+  evaluatePromotionParamsSchema,
   enrollmentParamsSchema,
   institutionHeaderSchema,
   listEnrollmentsQuerySchema,
@@ -87,6 +88,19 @@ export async function enrollmentRoutes(app: FastifyInstance) {
     const params = parseWithSchema(enrollmentParamsSchema, request.params);
 
     return enrollmentsService.deleteEnrollment(
+      institutionId,
+      params.enrollmentId
+    );
+  });
+
+  app.post('/:enrollmentId/promotion', async (request) => {
+    const institutionId = getInstitutionId(request);
+    const params = parseWithSchema(
+      evaluatePromotionParamsSchema,
+      request.params
+    );
+
+    return enrollmentsService.evaluatePromotion(
       institutionId,
       params.enrollmentId
     );

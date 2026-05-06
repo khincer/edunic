@@ -23,6 +23,8 @@ export class EnrollmentsServiceError extends Error {
 }
 
 export class EnrollmentsService {
+  private static readonly PROMOTION_THRESHOLD = 60;
+
   constructor(private readonly enrollmentsRepository: EnrollmentsRepository) {}
 
   async listEnrollments(input: ListEnrollmentsQuery & { institutionId: string }) {
@@ -174,6 +176,52 @@ export class EnrollmentsService {
       data: {
         id: enrollmentId,
         deleted: true,
+      },
+    };
+  }
+
+  async evaluatePromotion(institutionId: string, enrollmentId: string) {
+    const enrollment = await this.enrollmentsRepository.findById(
+      institutionId,
+      enrollmentId
+    );
+
+    if (!enrollment) {
+      throw new EnrollmentsServiceError('Enrollment not found', 404);
+    }
+
+    const { average, gradeCount } =
+      await this.enrollmentsRepository.getEnrollmentAverage(
+        institutionId,
+        enrollmentId
+      );
+
+    const promotionStatus =
+      average === null
+        ? 'pending'
+        : average >= EnrollmentsService.PROMOTION_THRESHOLD
+          ? 'promoted'
+          : 'retained';
+
+    const updatedEnrollment = await this.enrollmentsRepository.update({
+      institutionId,
+      enrollmentId,
+      promotionStatus,
+    });
+
+    if (!updatedEnrollment) {
+      throw new EnrollmentsServiceError('Enrollment not found', 404);
+    }
+
+    return {
+      data: {
+        enrollmentId,
+        academicPeriodId: enrollment.academicPeriodId,
+        studentId: enrollment.studentId,
+        gradeCount,
+        average,
+        threshold: EnrollmentsService.PROMOTION_THRESHOLD,
+        promotionStatus,
       },
     };
   }

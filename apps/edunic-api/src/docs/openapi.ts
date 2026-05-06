@@ -46,6 +46,21 @@ const institutionSchema = {
   },
 };
 
+const guardianSchema = {
+  type: 'object',
+  required: ['id', 'institutionId', 'name'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    institutionId: { type: 'string', format: 'uuid' },
+    name: { type: 'string', example: 'Maria Lopez' },
+    phone: {
+      type: 'string',
+      nullable: true,
+      example: '+50255550000',
+    },
+  },
+};
+
 const enrollmentSchema = {
   type: 'object',
   required: [
@@ -154,6 +169,158 @@ const academicPeriodSchema = {
   },
 };
 
+const academicAverageSchema = {
+  type: 'object',
+  required: ['institutionId', 'studentId', 'year', 'annualSubjects', 'termAverages'],
+  properties: {
+    institutionId: { type: 'string', format: 'uuid' },
+    studentId: { type: 'string', format: 'uuid' },
+    year: { type: 'integer', example: 2026 },
+    annualAverage: {
+      type: 'number',
+      nullable: true,
+      example: 89.67,
+    },
+    annualSubjects: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['subject', 'average'],
+        properties: {
+          subject: { type: 'string', example: 'Mathematics' },
+          average: { type: 'number', nullable: true, example: 88.5 },
+        },
+      },
+    },
+    termAverages: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['academicPeriodId', 'term', 'subjects'],
+        properties: {
+          academicPeriodId: { type: 'string', format: 'uuid' },
+          term: { type: 'integer', minimum: 1, maximum: 4, example: 1 },
+          average: { type: 'number', nullable: true, example: 90.25 },
+          subjects: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['subject', 'average'],
+              properties: {
+                subject: { type: 'string', example: 'Science' },
+                average: { type: 'number', nullable: true, example: 92.0 },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+const promotionEvaluationSchema = {
+  type: 'object',
+  required: [
+    'enrollmentId',
+    'academicPeriodId',
+    'studentId',
+    'gradeCount',
+    'threshold',
+    'promotionStatus',
+  ],
+  properties: {
+    enrollmentId: { type: 'string', format: 'uuid' },
+    academicPeriodId: { type: 'string', format: 'uuid' },
+    studentId: { type: 'string', format: 'uuid' },
+    gradeCount: { type: 'integer', example: 4 },
+    average: { type: 'number', nullable: true, example: 72.5 },
+    threshold: { type: 'integer', example: 60 },
+    promotionStatus: {
+      type: 'string',
+      enum: ['promoted', 'retained', 'pending'],
+      example: 'promoted',
+    },
+  },
+};
+
+const studentAcademicSummarySchema = {
+  type: 'object',
+  required: ['institutionId', 'year', 'student', 'annualSubjects', 'termAverages', 'enrollments'],
+  properties: {
+    institutionId: { type: 'string', format: 'uuid' },
+    year: { type: 'integer', example: 2026 },
+    student: {
+      type: 'object',
+      required: ['id', 'firstName', 'lastName', 'fullName'],
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        firstName: { type: 'string', example: 'Jane' },
+        lastName: { type: 'string', example: 'Doe' },
+        fullName: { type: 'string', example: 'Jane Doe' },
+        dateOfBirth: { type: 'string', nullable: true, example: '2012-03-15' },
+      },
+    },
+    annualAverage: { type: 'number', nullable: true, example: 86.75 },
+    annualSubjects: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['subject', 'average'],
+        properties: {
+          subject: { type: 'string', example: 'Mathematics' },
+          average: { type: 'number', nullable: true, example: 88.5 },
+        },
+      },
+    },
+    termAverages: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['academicPeriodId', 'term', 'subjects'],
+        properties: {
+          academicPeriodId: { type: 'string', format: 'uuid' },
+          term: { type: 'integer', minimum: 1, maximum: 4, example: 1 },
+          average: { type: 'number', nullable: true, example: 84.5 },
+          promotionStatus: {
+            type: 'string',
+            nullable: true,
+            example: 'promoted',
+          },
+          subjects: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['subject', 'average'],
+              properties: {
+                subject: { type: 'string', example: 'Science' },
+                average: { type: 'number', nullable: true, example: 82.0 },
+              },
+            },
+          },
+        },
+      },
+    },
+    enrollments: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['enrollmentId', 'academicPeriodId', 'term'],
+        properties: {
+          enrollmentId: { type: 'string', format: 'uuid' },
+          academicPeriodId: { type: 'string', format: 'uuid' },
+          term: { type: 'integer', minimum: 1, maximum: 4, example: 1 },
+          status: { type: 'string', nullable: true, example: 'active' },
+          promotionStatus: {
+            type: 'string',
+            nullable: true,
+            example: 'promoted',
+          },
+        },
+      },
+    },
+  },
+};
+
 export function buildOpenApiDocument() {
   return {
     openapi: '3.0.3',
@@ -174,15 +341,142 @@ export function buildOpenApiDocument() {
         name: 'Bootstrap',
         description: 'Temporary operational endpoints for database bootstrap',
       },
+      {
+        name: 'Academic Averages',
+        description: 'Computed annual and term-based academic averages',
+      },
+      {
+        name: 'Reports',
+        description: 'Read-only reporting endpoints for academic summaries',
+      },
       { name: 'Academic Periods', description: 'Academic period CRUD endpoints' },
       { name: 'Attendance', description: 'Attendance CRUD endpoints' },
       { name: 'Enrollments', description: 'Enrollment CRUD endpoints' },
       { name: 'Grades', description: 'Grade CRUD endpoints' },
+      { name: 'Guardians', description: 'Guardian CRUD and student-link endpoints' },
       { name: 'Health', description: 'Service health endpoints' },
       { name: 'Institutions', description: 'Institution CRUD endpoints' },
       { name: 'Students', description: 'Student CRUD endpoints' },
     ],
     paths: {
+      '/reports/students/{studentId}/academic-summary': {
+        get: {
+          tags: ['Reports'],
+          summary: 'Get a student academic summary report',
+          description:
+            'Returns a reporting-friendly academic summary for the selected student and year, including averages, per-term breakdowns, and enrollment promotion statuses.',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'studentId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'year',
+              in: 'query',
+              required: true,
+              schema: { type: 'integer', minimum: 2000, maximum: 2100 },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Student academic summary report',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: studentAcademicSummarySchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/StudentReportNotFound' },
+          },
+        },
+      },
+      '/reports/students/{studentId}/academic-summary/pdf': {
+        get: {
+          tags: ['Reports'],
+          summary: 'Download a student academic summary PDF',
+          description:
+            'Generates a PDF export for the student academic summary report for the selected year.',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'studentId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'year',
+              in: 'query',
+              required: true,
+              schema: { type: 'integer', minimum: 2000, maximum: 2100 },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'PDF file',
+              content: {
+                'application/pdf': {
+                  schema: {
+                    type: 'string',
+                    format: 'binary',
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/StudentReportNotFound' },
+          },
+        },
+      },
+      '/academic-averages/students/{studentId}': {
+        get: {
+          tags: ['Academic Averages'],
+          summary: 'Get annual and term averages for a student',
+          description:
+            'Computes annual averages for the selected year and uses academic period term as the current bimestral bucket.',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'studentId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'year',
+              in: 'query',
+              required: true,
+              schema: { type: 'integer', minimum: 2000, maximum: 2100 },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Student academic averages',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: academicAverageSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/StudentAverageNotFound' },
+          },
+        },
+      },
       '/admin/bootstrap': {
         post: {
           tags: ['Bootstrap'],
@@ -1235,6 +1529,40 @@ export function buildOpenApiDocument() {
             409: { $ref: '#/components/responses/EnrollmentDeleteConflict' },
           },
         },
+        },
+      '/enrollments/{enrollmentId}/promotion': {
+        post: {
+          tags: ['Enrollments'],
+          summary: 'Evaluate promotion rules for an enrollment',
+          description:
+            'Computes the enrollment grade average, applies the default passing threshold of 60, and persists promotionStatus as promoted, retained, or pending when no grades exist.',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'enrollmentId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Promotion evaluation result',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: promotionEvaluationSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/EnrollmentNotFound' },
+          },
+        },
       },
       '/institutions': {
         get: {
@@ -1447,6 +1775,345 @@ export function buildOpenApiDocument() {
             },
             404: { $ref: '#/components/responses/InstitutionNotFound' },
             409: { $ref: '#/components/responses/InstitutionConflict' },
+          },
+        },
+      },
+      '/guardians': {
+        get: {
+          tags: ['Guardians'],
+          summary: 'List guardians',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'search',
+              in: 'query',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: { type: 'integer', minimum: 1, maximum: 100, default: 25 },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              schema: { type: 'integer', minimum: 0, default: 0 },
+            },
+            {
+              name: 'sortBy',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['name', 'phone'],
+                default: 'name',
+              },
+            },
+            {
+              name: 'sortOrder',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['asc', 'desc'],
+                default: 'asc',
+              },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Guardians page',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: guardianSchema,
+                      },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          total: { type: 'integer' },
+                          limit: { type: 'integer' },
+                          offset: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+          },
+        },
+        post: {
+          tags: ['Guardians'],
+          summary: 'Create a guardian',
+          parameters: [institutionIdHeaderSchema],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['name'],
+                  properties: {
+                    name: { type: 'string', example: 'Maria Lopez' },
+                    phone: { type: 'string', nullable: true, example: '+50255550000' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Guardian created',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: guardianSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+          },
+        },
+      },
+      '/guardians/{guardianId}': {
+        get: {
+          tags: ['Guardians'],
+          summary: 'Get a guardian by id',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'guardianId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Guardian details',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: guardianSchema,
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/GuardianNotFound' },
+          },
+        },
+        patch: {
+          tags: ['Guardians'],
+          summary: 'Update a guardian',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'guardianId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    phone: { type: 'string', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Guardian updated',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: guardianSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/GuardianNotFound' },
+          },
+        },
+        delete: {
+          tags: ['Guardians'],
+          summary: 'Delete a guardian',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'guardianId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Guardian deleted',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string', format: 'uuid' },
+                          deleted: { type: 'boolean', example: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/GuardianNotFound' },
+            409: { $ref: '#/components/responses/GuardianConflict' },
+          },
+        },
+      },
+      '/students/{studentId}/guardians': {
+        get: {
+          tags: ['Guardians'],
+          summary: 'List guardians linked to a student',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'studentId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Student guardians',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: guardianSchema,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
+      '/students/{studentId}/guardians/{guardianId}': {
+        post: {
+          tags: ['Guardians'],
+          summary: 'Link a guardian to a student',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'studentId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'guardianId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            201: {
+              description: 'Guardian linked to student',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'object',
+                        properties: {
+                          studentId: { type: 'string', format: 'uuid' },
+                          guardian: guardianSchema,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/NotFound' },
+            409: { $ref: '#/components/responses/GuardianStudentLinkConflict' },
+          },
+        },
+        delete: {
+          tags: ['Guardians'],
+          summary: 'Unlink a guardian from a student',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'studentId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'guardianId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Guardian unlinked from student',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'object',
+                        properties: {
+                          studentId: { type: 'string', format: 'uuid' },
+                          guardianId: { type: 'string', format: 'uuid' },
+                          deleted: { type: 'boolean', example: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/GuardianStudentLinkNotFound' },
           },
         },
       },
@@ -1704,6 +2371,38 @@ export function buildOpenApiDocument() {
             },
           },
         },
+        StudentAverageNotFound: {
+          description: 'Student not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Student not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        StudentReportNotFound: {
+          description: 'Student not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Student not found',
+                  },
+                },
+              },
+            },
+          },
+        },
         NotFound: {
           description: 'Resource not found',
           content: {
@@ -1858,6 +2557,70 @@ export function buildOpenApiDocument() {
                   message: {
                     type: 'string',
                     example: 'Enrollment not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        GuardianNotFound: {
+          description: 'Guardian not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Guardian not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        GuardianConflict: {
+          description: 'Guardian cannot be deleted because student links exist',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Guardian cannot be deleted while linked to students',
+                  },
+                },
+              },
+            },
+          },
+        },
+        GuardianStudentLinkConflict: {
+          description: 'Guardian is already linked to this student',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Guardian is already linked to this student',
+                  },
+                },
+              },
+            },
+          },
+        },
+        GuardianStudentLinkNotFound: {
+          description: 'Guardian link for this student was not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Guardian link for this student was not found',
                   },
                 },
               },

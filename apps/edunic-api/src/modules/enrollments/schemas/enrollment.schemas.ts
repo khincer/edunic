@@ -22,6 +22,8 @@ export const enrollmentParamsSchema = z.object({
   enrollmentId: uuidSchema,
 });
 
+export const evaluatePromotionParamsSchema = enrollmentParamsSchema;
+
 export const listEnrollmentsQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   studentId: uuidSchema.optional(),
