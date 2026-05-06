@@ -1,10 +1,12 @@
 import { createTestApp, createHttpClient } from '../helpers/app.js';
+import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
   createAcademicPeriodFixture,
   createEnrollmentFixture,
   createInstitutionFixture,
   createStudentFixture,
+  createUserFixture,
 } from '../helpers/fixtures.js';
 
 describe('students routes', () => {
@@ -26,7 +28,14 @@ describe('students routes', () => {
 
   it('supports full CRUD for tenant-scoped students', async () => {
     const institution = await createInstitutionFixture();
-    const tenantHeaders = { 'x-institution-id': institution.id };
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
+    const tenantHeaders = createAuthHeaders({
+      userId: adminUser.id,
+      institutionId: institution.id,
+    });
 
     const createResponse = await client.post('/students').set(tenantHeaders).send({
       firstName: '  Ana  ',
@@ -64,11 +73,15 @@ describe('students routes', () => {
 
   it('returns 400 when tenant header is missing', async () => {
     const response = await client.get('/students');
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(401);
   });
 
   it('returns 409 when deleting a student with enrollments', async () => {
     const institution = await createInstitutionFixture();
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
     const student = await createStudentFixture({ institutionId: institution.id });
     const period = await createAcademicPeriodFixture({ institutionId: institution.id });
     await createEnrollmentFixture({
@@ -79,7 +92,12 @@ describe('students routes', () => {
 
     const response = await client
       .delete(`/students/${student.id}`)
-      .set({ 'x-institution-id': institution.id });
+      .set(
+        createAuthHeaders({
+          userId: adminUser.id,
+          institutionId: institution.id,
+        })
+      );
 
     expect(response.status).toBe(409);
     expect(response.body.message).toContain('Student cannot be deleted');

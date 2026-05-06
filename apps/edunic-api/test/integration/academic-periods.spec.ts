@@ -1,10 +1,12 @@
 import { createTestApp, createHttpClient } from '../helpers/app.js';
+import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
   createAcademicPeriodFixture,
   createInstitutionFixture,
   createStudentFixture,
   createEnrollmentFixture,
+  createUserFixture,
 } from '../helpers/fixtures.js';
 
 describe('academic periods routes', () => {
@@ -26,7 +28,14 @@ describe('academic periods routes', () => {
 
   it('supports CRUD and duplicate protection', async () => {
     const institution = await createInstitutionFixture();
-    const headers = { 'x-institution-id': institution.id };
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
+    const headers = createAuthHeaders({
+      userId: adminUser.id,
+      institutionId: institution.id,
+    });
 
     const createResponse = await client.post('/academic-periods').set(headers).send({
       year: 2026,
@@ -59,6 +68,10 @@ describe('academic periods routes', () => {
 
   it('returns 409 when deleting a period with enrollments', async () => {
     const institution = await createInstitutionFixture();
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
     const period = await createAcademicPeriodFixture({ institutionId: institution.id });
     const student = await createStudentFixture({ institutionId: institution.id });
     await createEnrollmentFixture({
@@ -69,7 +82,12 @@ describe('academic periods routes', () => {
 
     const response = await client
       .delete(`/academic-periods/${period.id}`)
-      .set({ 'x-institution-id': institution.id });
+      .set(
+        createAuthHeaders({
+          userId: adminUser.id,
+          institutionId: institution.id,
+        })
+      );
 
     expect(response.status).toBe(409);
   });

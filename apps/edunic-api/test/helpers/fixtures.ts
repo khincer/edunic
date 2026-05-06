@@ -1,12 +1,16 @@
 import { db } from '@edunic/source/db';
+import { hashPassword } from '../../src/modules/auth/application/password.js';
 import {
   academicPeriods,
   attendance,
   classrooms,
   enrollments,
+  guardians,
   grades,
   institutions,
   students,
+  userInstitutionRoles,
+  users,
 } from '@edunic/source/db/schema';
 
 let idCounter = 1;
@@ -46,6 +50,56 @@ export async function createStudentFixture(input: {
     .returning();
 
   return result[0];
+}
+
+export async function createGuardianFixture(input: {
+  institutionId: string;
+  name?: string;
+  phone?: string | null;
+}) {
+  const result = await db
+    .insert(guardians)
+    .values({
+      id: nextId('25000000'),
+      institutionId: input.institutionId,
+      name: input.name ?? 'Maria Lopez',
+      phone: input.phone ?? '+50255550000',
+    })
+    .returning();
+
+  return result[0];
+}
+
+export async function createUserFixture(input: {
+  institutionId: string;
+  role: 'admin' | 'teacher' | 'parent';
+  email?: string;
+  password?: string;
+}) {
+  const userResult = await db
+    .insert(users)
+    .values({
+      id: nextId('15000000'),
+      email: input.email ?? `${input.role}-${idCounter}@example.com`,
+      passwordHash: hashPassword(input.password ?? `${input.role}1234`),
+    })
+    .returning();
+
+  const user = userResult[0];
+
+  await db.insert(userInstitutionRoles).values({
+    id: nextId('16000000'),
+    userId: user.id,
+    institutionId: input.institutionId,
+    role: input.role,
+  });
+
+  return {
+    ...user,
+    institutionId: input.institutionId,
+    role: input.role,
+    password: input.password ?? `${input.role}1234`,
+  };
 }
 
 export async function createAcademicPeriodFixture(input: {
