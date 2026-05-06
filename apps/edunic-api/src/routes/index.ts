@@ -2,6 +2,7 @@ import { academicAverageRoutes } from './academic-averages.routes.js';
 import { adminRoutes } from './admin.routes.js';
 import { attendanceRoutes } from './attendance.routes.js';
 import { academicPeriodRoutes } from './academic-periods.routes.js';
+import { authRoutes } from './auth.routes.js';
 import { docsRoutes } from './docs.routes.js';
 import type { FastifyInstance } from 'fastify';
 import { enrollmentRoutes } from './enrollments.routes.js';
@@ -17,6 +18,7 @@ export async function registerRoutes(app: FastifyInstance) {
   app.register(adminRoutes, { prefix: '/admin' });
   app.register(academicPeriodRoutes, { prefix: '/academic-periods' });
   app.register(attendanceRoutes, { prefix: '/attendance' });
+  app.register(authRoutes, { prefix: '/auth' });
   app.register(docsRoutes, { prefix: '/docs' });
   app.register(enrollmentRoutes, { prefix: '/enrollments' });
   app.register(guardianRoutes);

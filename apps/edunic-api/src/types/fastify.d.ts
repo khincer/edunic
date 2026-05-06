@@ -1,10 +1,12 @@
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { preHandlerHookHandler } from 'fastify';
 
 declare module 'fastify' {
   interface FastifyInstance {
     db: NodePgDatabase;
-    featureFlags: any;
-    authenticate: any;
+    featureFlags: Record<string, boolean>;
+    authenticate: preHandlerHookHandler;
+    authorizeRoles: (roles: string[]) => preHandlerHookHandler;
   }
 
   interface FastifyRequest {

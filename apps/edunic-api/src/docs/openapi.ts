@@ -342,6 +342,10 @@ export function buildOpenApiDocument() {
         description: 'Temporary operational endpoints for database bootstrap',
       },
       {
+        name: 'Auth',
+        description: 'Authentication endpoints for obtaining bearer tokens',
+      },
+      {
         name: 'Academic Averages',
         description: 'Computed annual and term-based academic averages',
       },
@@ -359,6 +363,69 @@ export function buildOpenApiDocument() {
       { name: 'Students', description: 'Student CRUD endpoints' },
     ],
     paths: {
+      '/auth/login': {
+        post: {
+          tags: ['Auth'],
+          summary: 'Log in and obtain a bearer token',
+          description:
+            'Authenticates a user for a specific institution and returns a JWT bearer token that resolves role-based permissions from user_institution_roles.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['email', 'password', 'institutionId'],
+                  properties: {
+                    email: { type: 'string', format: 'email', example: 'admin@central.edu' },
+                    password: { type: 'string', example: 'admin1234' },
+                    institutionId: {
+                      type: 'string',
+                      format: 'uuid',
+                      example: '00000000-0000-0000-0000-000000000001',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Authentication succeeded',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'object',
+                        properties: {
+                          token: { type: 'string' },
+                          user: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'string', format: 'uuid' },
+                              email: { type: 'string', format: 'email' },
+                              institutionId: { type: 'string', format: 'uuid' },
+                              role: {
+                                type: 'string',
+                                enum: ['admin', 'teacher', 'parent'],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
       '/reports/students/{studentId}/academic-summary': {
         get: {
           tags: ['Reports'],
@@ -2340,6 +2407,13 @@ export function buildOpenApiDocument() {
       },
     },
     components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
       responses: {
         BadRequest: {
           description: 'Invalid request',
@@ -2365,6 +2439,38 @@ export function buildOpenApiDocument() {
                     type: 'string',
                     example:
                       'Bootstrap failed during migration: DATABASE_URL is not set',
+                  },
+                },
+              },
+            },
+          },
+        },
+        Unauthorized: {
+          description: 'Authentication failed',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Authentication is required',
+                  },
+                },
+              },
+            },
+          },
+        },
+        Forbidden: {
+          description: 'Authenticated user does not have permission',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'You do not have permission to perform this action',
                   },
                 },
               },

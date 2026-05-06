@@ -35,27 +35,30 @@ export async function institutionRoutes(app: FastifyInstance) {
   const institutionsService = new InstitutionsService(
     new InstitutionsRepository(app.db)
   );
+  const adminOnly = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+  };
 
-  app.get('/', async (request) => {
+  app.get('/', adminOnly, async (request) => {
     const query = parseWithSchema(listInstitutionsQuerySchema, request.query);
 
     return institutionsService.listInstitutions(query);
   });
 
-  app.get('/:institutionId', async (request) => {
+  app.get('/:institutionId', adminOnly, async (request) => {
     const params = parseWithSchema(institutionParamsSchema, request.params);
 
     return institutionsService.getInstitution(params.institutionId);
   });
 
-  app.post('/', async (request, reply) => {
+  app.post('/', adminOnly, async (request, reply) => {
     const body = parseWithSchema(createInstitutionBodySchema, request.body);
     const result = await institutionsService.createInstitution(body);
 
     return reply.status(201).send(result);
   });
 
-  app.patch('/:institutionId', async (request) => {
+  app.patch('/:institutionId', adminOnly, async (request) => {
     const params = parseWithSchema(institutionParamsSchema, request.params);
     const body = parseWithSchema(updateInstitutionBodySchema, request.body);
 
@@ -65,7 +68,7 @@ export async function institutionRoutes(app: FastifyInstance) {
     });
   });
 
-  app.delete('/:institutionId', async (request) => {
+  app.delete('/:institutionId', adminOnly, async (request) => {
     const params = parseWithSchema(institutionParamsSchema, request.params);
 
     return institutionsService.deleteInstitution(params.institutionId);
