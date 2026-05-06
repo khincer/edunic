@@ -61,6 +61,30 @@ const guardianSchema = {
   },
 };
 
+const auditLogSchema = {
+  type: 'object',
+  required: ['id', 'institutionId', 'action', 'entity'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    institutionId: { type: 'string', format: 'uuid' },
+    userId: { type: 'string', format: 'uuid', nullable: true },
+    action: {
+      type: 'string',
+      enum: ['create', 'update', 'delete'],
+      example: 'update',
+    },
+    entity: { type: 'string', example: 'students' },
+    entityId: { type: 'string', format: 'uuid', nullable: true },
+    before: { nullable: true },
+    after: { nullable: true },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+    },
+  },
+};
+
 const enrollmentSchema = {
   type: 'object',
   required: [
@@ -346,6 +370,10 @@ export function buildOpenApiDocument() {
         description: 'Authentication endpoints for obtaining bearer tokens',
       },
       {
+        name: 'Audit Logs',
+        description: 'Administrative access to audit trail records',
+      },
+      {
         name: 'Academic Averages',
         description: 'Computed annual and term-based academic averages',
       },
@@ -363,6 +391,83 @@ export function buildOpenApiDocument() {
       { name: 'Students', description: 'Student CRUD endpoints' },
     ],
     paths: {
+      '/audit-logs': {
+        get: {
+          tags: ['Audit Logs'],
+          summary: 'List audit logs',
+          description:
+            'Returns audit trail records for successful mutating requests within the authenticated institution. Admin role required.',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'entity',
+              in: 'query',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'action',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['create', 'update', 'delete'],
+              },
+            },
+            {
+              name: 'userId',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: { type: 'integer', minimum: 1, maximum: 100, default: 25 },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              schema: { type: 'integer', minimum: 0, default: 0 },
+            },
+            {
+              name: 'sortOrder',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['asc', 'desc'],
+                default: 'desc',
+              },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Audit logs page',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: auditLogSchema,
+                      },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          total: { type: 'integer' },
+                          limit: { type: 'integer' },
+                          offset: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
       '/auth/login': {
         post: {
           tags: ['Auth'],
