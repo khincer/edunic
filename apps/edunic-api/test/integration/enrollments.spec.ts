@@ -1,4 +1,5 @@
 import { createTestApp, createHttpClient } from '../helpers/app.js';
+import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
   createAcademicPeriodFixture,
@@ -8,6 +9,7 @@ import {
   createGradeFixture,
   createInstitutionFixture,
   createStudentFixture,
+  createUserFixture,
 } from '../helpers/fixtures.js';
 
 describe('enrollments routes', () => {
@@ -29,10 +31,17 @@ describe('enrollments routes', () => {
 
   it('supports CRUD for enrollments', async () => {
     const institution = await createInstitutionFixture();
+    const teacherUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'teacher',
+    });
     const student = await createStudentFixture({ institutionId: institution.id });
     const period = await createAcademicPeriodFixture({ institutionId: institution.id });
     const classroom = await createClassroomFixture({ institutionId: institution.id });
-    const headers = { 'x-institution-id': institution.id };
+    const headers = createAuthHeaders({
+      userId: teacherUser.id,
+      institutionId: institution.id,
+    });
 
     const createResponse = await client.post('/enrollments').set(headers).send({
       studentId: student.id,
@@ -65,13 +74,22 @@ describe('enrollments routes', () => {
 
   it('rejects cross-institution relations', async () => {
     const institution = await createInstitutionFixture('Alpha');
+    const teacherUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'teacher',
+    });
     const otherInstitution = await createInstitutionFixture('Beta');
     const student = await createStudentFixture({ institutionId: otherInstitution.id });
     const period = await createAcademicPeriodFixture({ institutionId: institution.id });
 
     const response = await client
       .post('/enrollments')
-      .set({ 'x-institution-id': institution.id })
+      .set(
+        createAuthHeaders({
+          userId: teacherUser.id,
+          institutionId: institution.id,
+        })
+      )
       .send({
         studentId: student.id,
         academicPeriodId: period.id,
@@ -82,6 +100,10 @@ describe('enrollments routes', () => {
 
   it('returns 409 when dependent grades or attendance exist on delete', async () => {
     const institution = await createInstitutionFixture();
+    const teacherUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'teacher',
+    });
     const student = await createStudentFixture({ institutionId: institution.id });
     const period = await createAcademicPeriodFixture({ institutionId: institution.id });
     const enrollment = await createEnrollmentFixture({
@@ -100,7 +122,12 @@ describe('enrollments routes', () => {
 
     const response = await client
       .delete(`/enrollments/${enrollment.id}`)
-      .set({ 'x-institution-id': institution.id });
+      .set(
+        createAuthHeaders({
+          userId: teacherUser.id,
+          institutionId: institution.id,
+        })
+      );
 
     expect(response.status).toBe(409);
   });

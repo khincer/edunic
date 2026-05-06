@@ -1,10 +1,12 @@
 import { createTestApp, createHttpClient } from '../helpers/app.js';
+import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
   createAcademicPeriodFixture,
   createEnrollmentFixture,
   createInstitutionFixture,
   createStudentFixture,
+  createUserFixture,
 } from '../helpers/fixtures.js';
 
 describe('attendance routes', () => {
@@ -26,6 +28,10 @@ describe('attendance routes', () => {
 
   it('supports CRUD for attendance', async () => {
     const institution = await createInstitutionFixture();
+    const teacherUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'teacher',
+    });
     const student = await createStudentFixture({ institutionId: institution.id });
     const period = await createAcademicPeriodFixture({ institutionId: institution.id });
     const enrollment = await createEnrollmentFixture({
@@ -33,7 +39,10 @@ describe('attendance routes', () => {
       studentId: student.id,
       academicPeriodId: period.id,
     });
-    const headers = { 'x-institution-id': institution.id };
+    const headers = createAuthHeaders({
+      userId: teacherUser.id,
+      institutionId: institution.id,
+    });
 
     const createResponse = await client.post('/attendance').set(headers).send({
       enrollmentId: enrollment.id,
@@ -59,6 +68,10 @@ describe('attendance routes', () => {
 
   it('returns 404 when enrollment is outside the institution', async () => {
     const institution = await createInstitutionFixture();
+    const teacherUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'teacher',
+    });
     const otherInstitution = await createInstitutionFixture('Other');
     const student = await createStudentFixture({ institutionId: otherInstitution.id });
     const period = await createAcademicPeriodFixture({ institutionId: otherInstitution.id });
@@ -70,7 +83,12 @@ describe('attendance routes', () => {
 
     const response = await client
       .post('/attendance')
-      .set({ 'x-institution-id': institution.id })
+      .set(
+        createAuthHeaders({
+          userId: teacherUser.id,
+          institutionId: institution.id,
+        })
+      )
       .send({
         enrollmentId: enrollment.id,
         date: '2026-02-05T08:00:00.000Z',
