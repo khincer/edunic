@@ -15,6 +15,13 @@
       "when": 1777486200000,
       "tag": "0001_huge_db_constraints",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778198400000,
+      "tag": "0002_phase3_extensions",
+      "breakpoints": true
     }
   ]
 }

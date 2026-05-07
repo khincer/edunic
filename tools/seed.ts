@@ -5,9 +5,11 @@ import {
   attendance,
   classrooms,
   enrollments,
+  extensions,
   featureFlags,
   grades,
   institutionFeatureFlags,
+  institutionExtensions,
   institutions,
   userInstitutionRoles,
   users,
@@ -164,6 +166,33 @@ export async function seedDatabase() {
         institutionId: ids.institutions.north,
         featureKey: 'billing_module',
         enabled: false,
+      },
+    ])
+    .onConflictDoNothing();
+
+  await db
+    .insert(extensions)
+    .values([
+      {
+        key: 'notifications',
+        name: 'Notifications',
+        enabled: true,
+      },
+    ])
+    .onConflictDoNothing();
+
+  await db
+    .insert(institutionExtensions)
+    .values([
+      {
+        institutionId: ids.institutions.central,
+        extensionKey: 'notifications',
+        config: {},
+      },
+      {
+        institutionId: ids.institutions.north,
+        extensionKey: 'notifications',
+        config: {},
       },
     ])
     .onConflictDoNothing();

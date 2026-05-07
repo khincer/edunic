@@ -1,3 +1,5 @@
+import type { EventBus } from '../../../events.js';
+import { createGradeSubmittedEvent } from '../../../domain-events.js';
 import type {
   CreateGradeBody,
   ListGradesQuery,
@@ -19,7 +21,10 @@ export class GradesServiceError extends Error {
 }
 
 export class GradesService {
-  constructor(private readonly gradesRepository: GradesRepository) {}
+  constructor(
+    private readonly gradesRepository: GradesRepository,
+    private readonly eventBus?: EventBus
+  ) {}
 
   async listGrades(input: ListGradesQuery & { institutionId: string }) {
     const result = await this.gradesRepository.list({
@@ -75,6 +80,18 @@ export class GradesService {
     if (!grade) {
       throw new GradesServiceError('Grade not found', 404);
     }
+
+    await this.eventBus?.publish(
+      createGradeSubmittedEvent({
+        institutionId: input.institutionId,
+        payload: {
+          gradeId: grade.id,
+          enrollmentId: grade.enrollmentId,
+          subject: grade.subject,
+          score: grade.score,
+        },
+      })
+    );
 
     return {
       data: this.toGradeResponse(grade),

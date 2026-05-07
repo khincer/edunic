@@ -1,3 +1,5 @@
+import type { EventBus } from '../../../events.js';
+import { createEnrollmentCreatedEvent } from '../../../domain-events.js';
 import type {
   CreateEnrollmentBody,
   ListEnrollmentsQuery,
@@ -25,7 +27,10 @@ export class EnrollmentsServiceError extends Error {
 export class EnrollmentsService {
   private static readonly PROMOTION_THRESHOLD = 60;
 
-  constructor(private readonly enrollmentsRepository: EnrollmentsRepository) {}
+  constructor(
+    private readonly enrollmentsRepository: EnrollmentsRepository,
+    private readonly eventBus?: EventBus
+  ) {}
 
   async listEnrollments(input: ListEnrollmentsQuery & { institutionId: string }) {
     const result = await this.enrollmentsRepository.list({
@@ -86,6 +91,18 @@ export class EnrollmentsService {
       if (!enrollment) {
         throw new EnrollmentsServiceError('Enrollment not found', 404);
       }
+
+      await this.eventBus?.publish(
+        createEnrollmentCreatedEvent({
+          institutionId: input.institutionId,
+          payload: {
+            enrollmentId: enrollment.id,
+            studentId: enrollment.studentId,
+            academicPeriodId: enrollment.academicPeriodId,
+            classroomId: enrollment.classroomId,
+          },
+        })
+      );
 
       return {
         data: this.toEnrollmentResponse(enrollment),

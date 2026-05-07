@@ -1,3 +1,5 @@
+import type { EventBus } from '../../../events.js';
+import { createAttendanceMarkedEvent } from '../../../domain-events.js';
 import type {
   CreateAttendanceBody,
   ListAttendanceQuery,
@@ -19,7 +21,10 @@ export class AttendanceServiceError extends Error {
 }
 
 export class AttendanceService {
-  constructor(private readonly attendanceRepository: AttendanceRepository) {}
+  constructor(
+    private readonly attendanceRepository: AttendanceRepository,
+    private readonly eventBus?: EventBus
+  ) {}
 
   async listAttendance(input: ListAttendanceQuery & { institutionId: string }) {
     const result = await this.attendanceRepository.list({
@@ -81,6 +86,18 @@ export class AttendanceService {
     if (!attendance) {
       throw new AttendanceServiceError('Attendance record not found', 404);
     }
+
+    await this.eventBus?.publish(
+      createAttendanceMarkedEvent({
+        institutionId: input.institutionId,
+        payload: {
+          attendanceId: attendance.id,
+          enrollmentId: attendance.enrollmentId,
+          date: attendance.date,
+          status: attendance.status,
+        },
+      })
+    );
 
     return {
       data: this.toAttendanceResponse(attendance),

@@ -33,6 +33,7 @@ export async function resetTestDatabase() {
       feature_flags,
       custom_field_values,
       custom_fields,
+      notifications,
       institution_extensions,
       extensions,
       audit_logs,
