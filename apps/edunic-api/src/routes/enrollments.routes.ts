@@ -40,7 +40,8 @@ function getInstitutionId(request: FastifyRequest) {
 
 export async function enrollmentRoutes(app: FastifyInstance) {
   const enrollmentsService = new EnrollmentsService(
-    new EnrollmentsRepository(app.db)
+    new EnrollmentsRepository(app.db),
+    app.eventBus
   );
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],

@@ -20,7 +20,9 @@
     "customConditions": ["@mrincer/source"],
     "paths": {
       "@edunic/source/db": ["libs/db/src/index.ts"],
-      "@edunic/source/db/schema": ["libs/db/src/schema/index.ts"]
+      "@edunic/source/db/schema": ["libs/db/src/schema/index.ts"],
+      "@edunic/source/domain/events": ["libs/domain/src/events.ts"],
+      "@edunic/source/events": ["libs/events/src/index.ts"]
     }
   }
 }

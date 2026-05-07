@@ -4,13 +4,16 @@ import { auditLogRoutes } from './audit-logs.routes.js';
 import { attendanceRoutes } from './attendance.routes.js';
 import { academicPeriodRoutes } from './academic-periods.routes.js';
 import { authRoutes } from './auth.routes.js';
+import { customFieldRoutes } from './custom-fields.routes.js';
 import { docsRoutes } from './docs.routes.js';
 import type { FastifyInstance } from 'fastify';
 import { enrollmentRoutes } from './enrollments.routes.js';
+import { extensionRoutes } from './extensions.routes.js';
 import { guardianRoutes } from './guardians.routes.js';
 import { gradeRoutes } from './grades.routes.js';
 import { healthRoutes } from './health.routes.js';
 import { institutionRoutes } from './institutions.routes.js';
+import { notificationRoutes } from './notifications.routes.js';
 import { reportRoutes } from './reports.routes.js';
 import { studentRoutes } from './students.routes.js';
 
@@ -21,12 +24,15 @@ export async function registerRoutes(app: FastifyInstance) {
   app.register(academicPeriodRoutes, { prefix: '/academic-periods' });
   app.register(attendanceRoutes, { prefix: '/attendance' });
   app.register(authRoutes, { prefix: '/auth' });
+  app.register(customFieldRoutes);
   app.register(docsRoutes, { prefix: '/docs' });
   app.register(enrollmentRoutes, { prefix: '/enrollments' });
+  app.register(extensionRoutes);
   app.register(guardianRoutes);
   app.register(gradeRoutes, { prefix: '/grades' });
   app.register(healthRoutes, { prefix: '/health' });
   app.register(institutionRoutes, { prefix: '/institutions' });
+  app.register(notificationRoutes);
   app.register(reportRoutes, { prefix: '/reports' });
   app.register(studentRoutes, { prefix: '/students' });
 }

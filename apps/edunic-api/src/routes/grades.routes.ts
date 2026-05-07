@@ -38,7 +38,10 @@ function getInstitutionId(request: FastifyRequest) {
 }
 
 export async function gradeRoutes(app: FastifyInstance) {
-  const gradesService = new GradesService(new GradesRepository(app.db));
+  const gradesService = new GradesService(
+    new GradesRepository(app.db),
+    app.eventBus
+  );
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
   };

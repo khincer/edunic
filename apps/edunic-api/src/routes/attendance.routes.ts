@@ -39,7 +39,8 @@ function getInstitutionId(request: FastifyRequest) {
 
 export async function attendanceRoutes(app: FastifyInstance) {
   const attendanceService = new AttendanceService(
-    new AttendanceRepository(app.db)
+    new AttendanceRepository(app.db),
+    app.eventBus
   );
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],

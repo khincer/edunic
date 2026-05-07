@@ -257,6 +257,22 @@ export const auditLogs = pgTable('audit_logs', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+export const notifications = pgTable('notifications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  institutionId: uuid('institution_id')
+    .notNull()
+    .references(() => institutions.id),
+
+  eventName: text('event_name').notNull(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  metadata: jsonb('metadata'),
+  readAt: timestamp('read_at'),
+
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 /* =========================================================
    🚩 FEATURE FLAGS
 ========================================================= */
@@ -310,15 +326,23 @@ export const institutionExtensions = pgTable(
 
 export const customFields = pgTable('custom_fields', {
   id: uuid('id').defaultRandom().primaryKey(),
-  institutionId: uuid('institution_id').references(() => institutions.id),
+  institutionId: uuid('institution_id')
+    .notNull()
+    .references(() => institutions.id),
   entity: text('entity').notNull(),
   name: text('name').notNull(),
   type: text('type').notNull(),
 });
 
-export const customFieldValues = pgTable('custom_field_values', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  fieldId: uuid('field_id').notNull().references(() => customFields.id),
-  entityId: uuid('entity_id').notNull(),
-  value: jsonb('value'),
-});
+export const customFieldValues = pgTable(
+  'custom_field_values',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    fieldId: uuid('field_id').notNull().references(() => customFields.id),
+    entityId: uuid('entity_id').notNull(),
+    value: jsonb('value'),
+  },
+  (t) => ({
+    uniqueFieldEntity: unique().on(t.fieldId, t.entityId),
+  })
+);
