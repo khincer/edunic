@@ -1,6 +1,5 @@
 import { z } from 'zod';
-
-const uuidSchema = z.string().uuid();
+import { uuidSchema } from '../../shared/uuid.schema.js';
 
 export const institutionHeaderSchema = z.object({
   'x-institution-id': uuidSchema,

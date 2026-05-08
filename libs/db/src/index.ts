@@ -1,12 +1,13 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
+import dotenv from 'dotenv';
 import pg from 'pg';
 import * as schema from './schema';
 
-const databaseUrl = process.env.DATABASE_URL;
+dotenv.config();
 
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL is not set');
-}
+const databaseUrl =
+  process.env.DATABASE_URL ??
+  'postgres://postgres:postgres@localhost:5432/edu_platform';
 
 export const pool = new pg.Pool({
   connectionString: databaseUrl,

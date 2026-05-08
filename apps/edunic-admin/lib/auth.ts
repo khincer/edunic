@@ -24,6 +24,8 @@ type LoginResponse = {
 
 export const SESSION_STORAGE_KEY = 'edunic-admin-session';
 const SESSION_EVENT_NAME = 'edunic-admin-session-change';
+let cachedSessionRaw: string | null = null;
+let cachedSession: AdminSession | null = null;
 
 function isBrowser() {
   return typeof window !== 'undefined';
@@ -37,23 +39,38 @@ export function getSession(): AdminSession | null {
   const value = window.localStorage.getItem(SESSION_STORAGE_KEY);
 
   if (!value) {
+    cachedSessionRaw = null;
+    cachedSession = null;
     return null;
   }
 
+  if (value === cachedSessionRaw) {
+    return cachedSession;
+  }
+
   try {
-    return JSON.parse(value) as AdminSession;
+    cachedSessionRaw = value;
+    cachedSession = JSON.parse(value) as AdminSession;
+    return cachedSession;
   } catch {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    cachedSessionRaw = null;
+    cachedSession = null;
     return null;
   }
 }
 
 export function saveSession(session: AdminSession) {
-  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  const value = JSON.stringify(session);
+  cachedSessionRaw = value;
+  cachedSession = session;
+  window.localStorage.setItem(SESSION_STORAGE_KEY, value);
   window.dispatchEvent(new Event(SESSION_EVENT_NAME));
 }
 
 export function clearSession() {
+  cachedSessionRaw = null;
+  cachedSession = null;
   window.localStorage.removeItem(SESSION_STORAGE_KEY);
   window.dispatchEvent(new Event(SESSION_EVENT_NAME));
 }

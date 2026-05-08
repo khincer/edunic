@@ -1,0 +1,6 @@
+-- No-op migration.
+--
+-- This migration was generated after the 0001/0002 snapshots were missing from
+-- the Drizzle metadata folder, so it duplicated tables and constraints already
+-- created by earlier migrations. Keep the journal entry as a no-op so local and
+-- deployed databases can advance past 0002 without re-creating existing objects.

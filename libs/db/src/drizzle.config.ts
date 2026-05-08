@@ -1,10 +1,11 @@
 import { defineConfig } from 'drizzle-kit';
+import dotenv from 'dotenv';
 
-const databaseUrl = process.env.DATABASE_URL;
+dotenv.config();
 
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL is not set');
-}
+const databaseUrl =
+  process.env.DATABASE_URL ??
+  'postgres://postgres:postgres@localhost:5432/edu_platform';
 
 export default defineConfig({
   schema: './libs/db/src/schema',
