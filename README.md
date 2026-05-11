@@ -5,36 +5,33 @@ This repository is an Nx monorepo. Dependencies are installed once at the worksp
 ## Applications
 
 - `edunic-fe`
-- `edunic-admin`
-- `edunic-teachers`
 - `edunic-api`
+
+`edunic-fe` is the single Next.js frontend. In local development it runs on port `3001` so the API can keep port `3000`. It owns:
+
+- `http://localhost:3001/admin`
+- `http://localhost:3001/teachers`
+- `http://localhost:3001/students` and `http://localhost:3001/parents`
 
 ## Run apps
 
 ```sh
 npx nx dev edunic-fe
-npx nx dev edunic-admin
-npx nx dev edunic-teachers
 ```
 
 You can also use the root npm shortcuts:
 
 ```sh
 npm run dev:fe
-npm run dev:admin
-npm run dev:teachers
+npm run dev:web
 ```
 
 ## Build and lint
 
 ```sh
 npx nx build edunic-fe
-npx nx build edunic-admin
-npx nx build edunic-teachers
 
 npx nx lint edunic-fe
-npx nx lint edunic-admin
-npx nx lint edunic-teachers
 ```
 
 ## Workspace notes

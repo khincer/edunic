@@ -15,17 +15,17 @@ type AdminShellProps = {
   children: ReactNode;
 };
 interface NavItem {
-    label:     string;
-    href:      string;
-    disabled?: boolean;
+  label: string;
+  href: string;
+  disabled?: boolean;
 }
 const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Institutions', href: '/institutions' },
-  { label: 'Billing', href: '/billing' },
-  { label: 'Analytics', href: '/analytics' },
-  { label: 'Platform', href: '/platform' },
-  { label: 'Settings', href: '/settings'},
+  { label: 'Dashboard', href: '/admin/dashboard' },
+  { label: 'Institutions', href: '/admin/institutions' },
+  { label: 'Billing', href: '/admin/billing', disabled: true },
+  { label: 'Analytics', href: '/admin/analytics', disabled: true },
+  { label: 'Platform', href: '/admin/platform', disabled: true },
+  { label: 'Settings', href: '/admin/settings', disabled: true },
 ];
 
 export function AdminShell({ children }: AdminShellProps) {
@@ -37,19 +37,19 @@ export function AdminShell({ children }: AdminShellProps) {
 
   useEffect(() => {
     if (ready && !session) {
-      router.replace('/login');
+      router.replace('/admin/login');
     }
   }, [ready, router, session]);
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = search.trim();
-    router.push(value ? `/institutions?search=${encodeURIComponent(value)}` : '/institutions');
+    router.push(value ? `/admin/institutions?search=${encodeURIComponent(value)}` : '/admin/institutions');
   }
 
   function handleLogout() {
     clearSession();
-    router.replace('/login');
+    router.replace('/admin/login');
   }
 
   if (!ready || !session) {
@@ -66,7 +66,7 @@ export function AdminShell({ children }: AdminShellProps) {
     <main className="admin-app">
       <div className="admin-shell">
         <aside className="admin-sidebar">
-          <Link className="admin-brand" href="/dashboard">
+          <Link className="admin-brand" href="/admin/dashboard">
             <span className="admin-brand-mark">E</span>
             <span>
               <strong className="admin-brand-title">Edunic Admin</strong>
@@ -107,7 +107,7 @@ export function AdminShell({ children }: AdminShellProps) {
             <div className="admin-user">
               <span>
                 <strong>{session.user.email}</strong>
-                {session.user.role} · local API
+                {session.user.role} - local API
               </span>
               <Button onClick={handleLogout} variant="secondary">
                 Sign out

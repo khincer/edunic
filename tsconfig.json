@@ -5,12 +5,6 @@
   "references": [
     {
       "path": "./apps/edunic-fe"
-    },
-    {
-      "path": "./apps/edunic-admin"
-    },
-    {
-      "path": "./apps/edunic-teachers"
     }
   ]
 }

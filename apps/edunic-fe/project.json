@@ -25,7 +25,7 @@
       "continuous": true,
       "options": {
         "cwd": "apps/edunic-fe",
-        "command": "next dev"
+        "command": "next dev -p 3001"
       }
     },
     "start": {
@@ -34,7 +34,7 @@
       "dependsOn": ["build"],
       "options": {
         "cwd": "apps/edunic-fe",
-        "command": "next start"
+        "command": "next start -p 3001"
       }
     },
     "serve-static": {
@@ -43,7 +43,7 @@
       "dependsOn": ["build"],
       "options": {
         "cwd": "apps/edunic-fe",
-        "command": "next start"
+        "command": "next start -p 3001"
       }
     },
     "build-deps": {
