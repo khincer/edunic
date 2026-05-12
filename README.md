@@ -42,5 +42,5 @@ npx nx lint edunic-fe
 
 ## Deployment
 
-- Render staging setup: [docs/deployment/render-staging.md](docs/deployment/render-staging.md)
-- CI gate for staging deploys: `.github/workflows/render-staging.yml`
+- Railway staging setup: [docs/deployment/railway-staging.md](docs/deployment/railway-staging.md)
+- CI gate for staging deploys: `.github/workflows/railway-ci.yml`

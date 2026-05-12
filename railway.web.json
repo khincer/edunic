@@ -1,0 +1,23 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK",
+    "watchPatterns": [
+      "apps/edunic-fe/**",
+      "libs/**",
+      "package.json",
+      "package-lock.json",
+      "nx.json",
+      "tsconfig*.json",
+      "railway.web.json"
+    ],
+    "buildCommand": "npm run build:fe"
+  },
+  "deploy": {
+    "startCommand": "npm run start:fe",
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 100,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}

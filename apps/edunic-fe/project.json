@@ -34,7 +34,7 @@
       "dependsOn": ["build"],
       "options": {
         "cwd": "apps/edunic-fe",
-        "command": "next start -p 3001"
+        "command": "next start"
       }
     },
     "serve-static": {
@@ -43,7 +43,7 @@
       "dependsOn": ["build"],
       "options": {
         "cwd": "apps/edunic-fe",
-        "command": "next start -p 3001"
+        "command": "next start"
       }
     },
     "build-deps": {
