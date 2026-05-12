@@ -68,6 +68,8 @@ Check the service settings:
 - The API start command should resolve to `npm run start:api`.
 - The web start command should resolve to `npm run start:fe`.
 
+If the API pre-deploy migration fails, first confirm the API service has `DATABASE_URL` set to the Railway PostgreSQL connection URL. The migration script requires `DATABASE_URL` explicitly in deploys and prints the underlying PostgreSQL error when the database rejects a migration.
+
 ## Notes
 
 - Do not run schema changes manually in Railway. Add migrations and let the API pre-deploy command run them.
