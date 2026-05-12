@@ -8,6 +8,7 @@ This repo uses Railway for staging deployments. The monorepo should be deployed 
 
 ## Repo files
 
+- `railway.json` is the default Railway config and deploys the API service. Railway reads this file automatically when no custom config file path is set.
 - `railway.api.json` configures the API service build, migration, start command, health check, and watch paths.
 - `railway.web.json` configures the frontend service build, start command, health check, and watch paths.
 - `.github/workflows/railway-ci.yml` runs build and lint checks for both `api` and `edunic-fe`.
@@ -20,7 +21,7 @@ This repo uses Railway for staging deployments. The monorepo should be deployed 
 4. In the API service settings:
    - Source repo: this repository
    - Root directory: `/`
-   - Config file path: `/railway.api.json`
+   - Config file path: `/railway.api.json` or leave unset to use the default `/railway.json`
    - Public networking: enabled
 5. Add a GitHub-backed service named `edunic-web-staging`.
 6. In the web service settings:
@@ -54,6 +55,18 @@ Railway injects `PORT` automatically for web services. The API reads `PORT` from
 4. Railway GitHub deploys the changed service based on each service's watch patterns.
 5. The API service runs `npm run db:migrate` as a pre-deploy command before starting.
 6. Railway checks `/health` for the API and `/` for the frontend before routing traffic.
+
+## Troubleshooting
+
+If Railpack fails with `No start command detected`, Railway is not using the intended deployment config. The root `package.json` only has service-specific scripts such as `start:api` and `start:fe`, so Railpack cannot infer the correct monorepo service automatically.
+
+Check the service settings:
+
+- Root directory must be `/`, not `apps/edunic-api` or `apps/edunic-fe`.
+- API service can use the default `/railway.json` or custom `/railway.api.json`.
+- Web service must use custom config file path `/railway.web.json`.
+- The API start command should resolve to `npm run start:api`.
+- The web start command should resolve to `npm run start:fe`.
 
 ## Notes
 
