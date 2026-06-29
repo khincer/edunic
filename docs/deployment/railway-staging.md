@@ -10,6 +10,7 @@ This repo uses Railway for staging deployments. The monorepo should be deployed 
 
 - `railway.json` is the default Railway config and deploys the API service. Railway reads this file automatically when no custom config file path is set.
 - `railway.api.json` configures the API service build, migration, start command, health check, and watch paths.
+- `railway.demo-api.json` configures the API for portfolio demos and runs migrations plus the seed script before startup.
 - `railway.web.json` configures the frontend service build, start command, health check, and watch paths.
 - `.github/workflows/railway-ci.yml` runs build and lint checks for both `api` and `edunic-fe`.
 
@@ -74,5 +75,6 @@ If the API pre-deploy migration fails, first confirm the API service has `DATABA
 ## Notes
 
 - Do not run schema changes manually in Railway. Add migrations and let the API pre-deploy command run them.
+- Use `docs/deployment/railway-portfolio-demo.md` for the public portfolio demo setup with seeded demo data.
 - Redis is still not required for the current staging setup. Add a Railway Redis service later when the event bus is switched to Redis.
 - Keep `NEXT_PUBLIC_API_URL` pointed at the public API URL because browser requests originate from the user's device, not Railway private networking.
