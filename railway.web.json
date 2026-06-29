@@ -9,6 +9,7 @@
       "package-lock.json",
       "nx.json",
       "tsconfig*.json",
+      "tools/start-fe-standalone.mjs",
       "railway.web.json"
     ],
     "buildCommand": "npm run build:fe"
