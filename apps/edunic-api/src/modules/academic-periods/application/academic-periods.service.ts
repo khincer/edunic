@@ -113,13 +113,13 @@ export class AcademicPeriodsService {
     const nextTerm = input.term ?? existingAcademicPeriod.term;
     const nextStartDate =
       input.startDate === undefined
-        ? existingAcademicPeriod.startDate
+        ? this.toDate(existingAcademicPeriod.startDate)
         : input.startDate === null
           ? null
           : new Date(input.startDate);
     const nextEndDate =
       input.endDate === undefined
-        ? existingAcademicPeriod.endDate
+        ? this.toDate(existingAcademicPeriod.endDate)
         : input.endDate === null
           ? null
           : new Date(input.endDate);
@@ -220,5 +220,13 @@ export class AcademicPeriodsService {
       endDate: academicPeriod.endDate,
       createdAt: academicPeriod.createdAt,
     };
+  }
+
+  private toDate(value: Date | string | null) {
+    if (!value) {
+      return null;
+    }
+
+    return value instanceof Date ? value : new Date(value);
   }
 }

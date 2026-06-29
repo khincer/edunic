@@ -6,11 +6,14 @@ import {
 describe('BootstrapService', () => {
   it('maps migration failures to a 500 service error', async () => {
     const service = new BootstrapService();
-    const commandSpy = jest
-      .spyOn(service as never, 'runCommand')
-      .mockImplementation(() => {
-        throw new Error('migration exploded');
-      });
+    const internals = service as unknown as {
+      runMigrations: jest.Mock;
+      runCommand: jest.Mock;
+    };
+    internals.runMigrations = jest
+      .fn()
+      .mockRejectedValue(new Error('migration exploded'));
+    internals.runCommand = jest.fn();
 
     await expect(service.runBootstrap()).rejects.toEqual(
       expect.objectContaining<Partial<BootstrapServiceError>>({
@@ -19,15 +22,17 @@ describe('BootstrapService', () => {
       })
     );
 
-    commandSpy.mockRestore();
+    expect(internals.runCommand).not.toHaveBeenCalled();
   });
 
   it('maps seed failures to a 500 service error', async () => {
     const service = new BootstrapService();
-    const commandSpy = jest
-      .spyOn(service as never, 'runCommand')
-      .mockImplementationOnce(() => undefined)
-      .mockImplementationOnce(() => {
+    const internals = service as unknown as {
+      runMigrations: jest.Mock;
+      runCommand: jest.Mock;
+    };
+    internals.runMigrations = jest.fn().mockResolvedValue(undefined);
+    internals.runCommand = jest.fn().mockImplementation(() => {
         throw new Error('seed exploded');
       });
 
@@ -38,6 +43,6 @@ describe('BootstrapService', () => {
       })
     );
 
-    commandSpy.mockRestore();
+    expect(internals.runMigrations).toHaveBeenCalledTimes(1);
   });
 });

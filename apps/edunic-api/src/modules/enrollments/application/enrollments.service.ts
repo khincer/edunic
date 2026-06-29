@@ -12,6 +12,9 @@ import {
 
 type DatabaseError = Error & {
   code?: string;
+  cause?: {
+    code?: string;
+  };
 };
 
 export class EnrollmentsServiceError extends Error {
@@ -276,7 +279,7 @@ export class EnrollmentsService {
   private handlePersistenceError(error: unknown): never {
     const databaseError = error as DatabaseError;
 
-    if (databaseError?.code === '23505') {
+    if (databaseError?.code === '23505' || databaseError?.cause?.code === '23505') {
       throw new EnrollmentsServiceError(
         'Student is already enrolled in this academic period',
         409

@@ -106,6 +106,7 @@ export const academicPeriods = pgTable(
     term: integer('term').notNull(), // 1–4
     startDate: timestamp('start_date'),
     endDate: timestamp('end_date'),
+    createdAt: timestamp('created_at').defaultNow(),
   },
   (t) => ({
     uniqueInstitutionYearTerm: unique().on(

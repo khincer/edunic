@@ -72,6 +72,58 @@ describe('enrollments routes', () => {
     expect(deleteResponse.status).toBe(200);
   });
 
+  it('filters enrollments by classroom', async () => {
+    const institution = await createInstitutionFixture();
+    const teacherUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'teacher',
+    });
+    const period = await createAcademicPeriodFixture({ institutionId: institution.id });
+    const targetClassroom = await createClassroomFixture({
+      institutionId: institution.id,
+      gradeLevel: 5,
+      section: 'A',
+    });
+    const otherClassroom = await createClassroomFixture({
+      institutionId: institution.id,
+      gradeLevel: 5,
+      section: 'B',
+    });
+    const firstStudent = await createStudentFixture({
+      institutionId: institution.id,
+      firstName: 'Ana',
+    });
+    const secondStudent = await createStudentFixture({
+      institutionId: institution.id,
+      firstName: 'Luis',
+    });
+    await createEnrollmentFixture({
+      institutionId: institution.id,
+      studentId: firstStudent.id,
+      academicPeriodId: period.id,
+      classroomId: targetClassroom.id,
+    });
+    await createEnrollmentFixture({
+      institutionId: institution.id,
+      studentId: secondStudent.id,
+      academicPeriodId: period.id,
+      classroomId: otherClassroom.id,
+    });
+
+    const response = await client
+      .get(`/enrollments?classroomId=${targetClassroom.id}`)
+      .set(
+        createAuthHeaders({
+          userId: teacherUser.id,
+          institutionId: institution.id,
+        })
+      );
+
+    expect(response.status).toBe(200);
+    expect(response.body.meta.total).toBe(1);
+    expect(response.body.data[0].student.firstName).toBe('Ana');
+  });
+
   it('rejects cross-institution relations', async () => {
     const institution = await createInstitutionFixture('Alpha');
     const teacherUser = await createUserFixture({

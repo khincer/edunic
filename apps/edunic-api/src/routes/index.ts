@@ -4,6 +4,7 @@ import { auditLogRoutes } from './audit-logs.routes.js';
 import { attendanceRoutes } from './attendance.routes.js';
 import { academicPeriodRoutes } from './academic-periods.routes.js';
 import { authRoutes } from './auth.routes.js';
+import { classroomRoutes } from './classrooms.routes.js';
 import { customFieldRoutes } from './custom-fields.routes.js';
 import { docsRoutes } from './docs.routes.js';
 import type { FastifyInstance } from 'fastify';
@@ -24,6 +25,7 @@ export async function registerRoutes(app: FastifyInstance) {
   app.register(academicPeriodRoutes, { prefix: '/academic-periods' });
   app.register(attendanceRoutes, { prefix: '/attendance' });
   app.register(authRoutes, { prefix: '/auth' });
+  app.register(classroomRoutes, { prefix: '/classrooms' });
   app.register(customFieldRoutes);
   app.register(docsRoutes, { prefix: '/docs' });
   app.register(enrollmentRoutes, { prefix: '/enrollments' });
