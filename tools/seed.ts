@@ -145,7 +145,10 @@ export async function seedDatabase() {
     .insert(featureFlags)
     .values([
       { key: 'billing_module', defaultValue: false },
+      { key: 'custom_fields', defaultValue: false },
       { key: 'parent_portal', defaultValue: false },
+      { key: 'reports_pdf', defaultValue: false },
+      { key: 'teacher_gradebook', defaultValue: true },
     ])
     .onConflictDoNothing();
 
@@ -161,6 +164,11 @@ export async function seedDatabase() {
         institutionId: ids.institutions.central,
         featureKey: 'parent_portal',
         enabled: false,
+      },
+      {
+        institutionId: ids.institutions.central,
+        featureKey: 'teacher_gradebook',
+        enabled: true,
       },
       {
         institutionId: ids.institutions.north,

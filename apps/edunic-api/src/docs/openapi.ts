@@ -95,6 +95,26 @@ const extensionSchema = {
   },
 };
 
+const featureFlagSchema = {
+  type: 'object',
+  required: ['key', 'defaultValue', 'enabled', 'source'],
+  properties: {
+    key: { type: 'string', example: 'parent_portal' },
+    defaultValue: { type: 'boolean', example: false },
+    institutionEnabled: {
+      type: 'boolean',
+      nullable: true,
+      example: true,
+    },
+    enabled: { type: 'boolean', example: true },
+    source: {
+      type: 'string',
+      enum: ['default', 'institution'],
+      example: 'institution',
+    },
+  },
+};
+
 const institutionExtensionSchema = {
   type: 'object',
   required: ['institutionId', 'extensionKey', 'config', 'extension'],
@@ -464,6 +484,10 @@ export function buildOpenApiDocument() {
         description: 'Extension registry and per-institution enablement',
       },
       {
+        name: 'Feature Flags',
+        description: 'Global feature catalog and per-institution overrides',
+      },
+      {
         name: 'Custom Fields',
         description: 'Tenant-scoped custom field definitions and values',
       },
@@ -490,6 +514,148 @@ export function buildOpenApiDocument() {
       { name: 'Students', description: 'Student CRUD endpoints' },
     ],
     paths: {
+      '/feature-flags': {
+        get: {
+          tags: ['Feature Flags'],
+          summary: 'List effective feature flags for the authenticated institution',
+          responses: {
+            200: {
+              description: 'Effective feature flags',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: featureFlagSchema,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: { $ref: '#/components/responses/Unauthorized' },
+          },
+        },
+      },
+      '/institutions/{institutionId}/feature-flags': {
+        get: {
+          tags: ['Feature Flags'],
+          summary: 'List effective feature flags for an institution',
+          parameters: [
+            {
+              name: 'institutionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Effective feature flags',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: featureFlagSchema,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/institutions/{institutionId}/feature-flags/{featureKey}': {
+        put: {
+          tags: ['Feature Flags'],
+          summary: 'Set a feature flag override for an institution',
+          parameters: [
+            {
+              name: 'institutionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'featureKey',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['enabled'],
+                  properties: {
+                    enabled: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Feature flag override saved',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: featureFlagSchema },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/NotFound' },
+          },
+        },
+        delete: {
+          tags: ['Feature Flags'],
+          summary: 'Remove an institution feature flag override',
+          parameters: [
+            {
+              name: 'institutionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'featureKey',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Feature flag reset to global default',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: featureFlagSchema },
+                  },
+                },
+              },
+            },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
       '/extensions': {
         get: {
           tags: ['Extensions'],

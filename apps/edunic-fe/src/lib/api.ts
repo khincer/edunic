@@ -80,6 +80,14 @@ export type InstitutionExtension = {
   extension: Extension;
 };
 
+export type FeatureFlag = {
+  key: string;
+  defaultValue: boolean;
+  institutionEnabled: boolean | null;
+  enabled: boolean;
+  source: 'default' | 'institution';
+};
+
 export type AuditLog = {
   id: string;
   institutionId: string;
@@ -192,4 +200,11 @@ export function buildQuery(params: Record<string, string | number | undefined>) 
 
   const value = query.toString();
   return value ? `?${value}` : '';
+}
+
+export function toFeatureFlagMap(flags: FeatureFlag[]) {
+  return flags.reduce<Record<string, boolean>>((result, flag) => {
+    result[flag.key] = flag.enabled;
+    return result;
+  }, {});
 }
