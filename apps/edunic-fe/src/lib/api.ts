@@ -22,6 +22,51 @@ export type Institution = {
   createdAt: string;
 };
 
+export type Classroom = {
+  id: string;
+  institutionId: string;
+  gradeLevel: number;
+  section: string | null;
+  name: string;
+};
+
+export type Enrollment = {
+  id: string;
+  institutionId: string;
+  studentId: string;
+  academicPeriodId: string;
+  classroomId: string | null;
+  status: 'active' | 'withdrawn' | 'completed';
+  promotionStatus: string | null;
+  createdAt: string | null;
+  student: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+  };
+};
+
+export type AttendanceStatus = 'present' | 'absent' | 'late';
+
+export type AttendanceRecord = {
+  id: string;
+  institutionId: string;
+  enrollmentId: string;
+  date: string;
+  status: AttendanceStatus;
+  createdAt: string | null;
+};
+
+export type Grade = {
+  id: string;
+  institutionId: string;
+  enrollmentId: string;
+  subject: string;
+  score: number;
+  createdAt: string | null;
+};
+
 export type Extension = {
   key: string;
   name: string | null;
@@ -33,6 +78,14 @@ export type InstitutionExtension = {
   extensionKey: string;
   config: Record<string, unknown>;
   extension: Extension;
+};
+
+export type FeatureFlag = {
+  key: string;
+  defaultValue: boolean;
+  institutionEnabled: boolean | null;
+  enabled: boolean;
+  source: 'default' | 'institution';
 };
 
 export type AuditLog = {
@@ -147,4 +200,11 @@ export function buildQuery(params: Record<string, string | number | undefined>) 
 
   const value = query.toString();
   return value ? `?${value}` : '';
+}
+
+export function toFeatureFlagMap(flags: FeatureFlag[]) {
+  return flags.reduce<Record<string, boolean>>((result, flag) => {
+    result[flag.key] = flag.enabled;
+    return result;
+  }, {});
 }

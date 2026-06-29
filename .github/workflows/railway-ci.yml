@@ -16,6 +16,20 @@ jobs:
   checks:
     name: Build And Lint
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: edu_platform_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d edu_platform_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout
@@ -35,6 +49,12 @@ jobs:
 
       - name: Lint API
         run: npx nx lint api
+
+      - name: Test API
+        run: npx nx test api -- --runInBand
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/edu_platform_test
+          JWT_SECRET: test-jwt-secret
 
       - name: Build frontend
         run: npx nx build edunic-fe

@@ -47,7 +47,12 @@ describe('institutions routes', () => {
 
     const listResponse = await client.get('/institutions').set(authHeaders);
     expect(listResponse.status).toBe(200);
-    expect(listResponse.body.meta.total).toBe(1);
+    expect(listResponse.body.meta.total).toBe(2);
+    expect(
+      listResponse.body.data.some(
+        (institution: { id: string }) => institution.id === institutionId
+      )
+    ).toBe(true);
 
     const detailResponse = await client
       .get(`/institutions/${institutionId}`)

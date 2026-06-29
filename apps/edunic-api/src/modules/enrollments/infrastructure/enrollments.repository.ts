@@ -80,6 +80,10 @@ export class EnrollmentsRepository {
       filters.push(sql`e.academic_period_id = ${input.academicPeriodId}`);
     }
 
+    if (input.classroomId) {
+      filters.push(sql`e.classroom_id = ${input.classroomId}`);
+    }
+
     if (input.status) {
       filters.push(sql`e.status = ${input.status}`);
     }

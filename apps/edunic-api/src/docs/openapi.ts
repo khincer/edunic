@@ -95,6 +95,26 @@ const extensionSchema = {
   },
 };
 
+const featureFlagSchema = {
+  type: 'object',
+  required: ['key', 'defaultValue', 'enabled', 'source'],
+  properties: {
+    key: { type: 'string', example: 'parent_portal' },
+    defaultValue: { type: 'boolean', example: false },
+    institutionEnabled: {
+      type: 'boolean',
+      nullable: true,
+      example: true,
+    },
+    enabled: { type: 'boolean', example: true },
+    source: {
+      type: 'string',
+      enum: ['default', 'institution'],
+      example: 'institution',
+    },
+  },
+};
+
 const institutionExtensionSchema = {
   type: 'object',
   required: ['institutionId', 'extensionKey', 'config', 'extension'],
@@ -264,6 +284,18 @@ const academicPeriodSchema = {
       format: 'date-time',
       nullable: true,
     },
+  },
+};
+
+const classroomSchema = {
+  type: 'object',
+  required: ['id', 'institutionId', 'gradeLevel', 'name'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    institutionId: { type: 'string', format: 'uuid' },
+    gradeLevel: { type: 'integer', minimum: 1, maximum: 20, example: 5 },
+    section: { type: 'string', nullable: true, example: 'A' },
+    name: { type: 'string', example: 'Grade 5 A' },
   },
 };
 
@@ -452,6 +484,10 @@ export function buildOpenApiDocument() {
         description: 'Extension registry and per-institution enablement',
       },
       {
+        name: 'Feature Flags',
+        description: 'Global feature catalog and per-institution overrides',
+      },
+      {
         name: 'Custom Fields',
         description: 'Tenant-scoped custom field definitions and values',
       },
@@ -469,6 +505,7 @@ export function buildOpenApiDocument() {
       },
       { name: 'Academic Periods', description: 'Academic period CRUD endpoints' },
       { name: 'Attendance', description: 'Attendance CRUD endpoints' },
+      { name: 'Classrooms', description: 'Classroom CRUD endpoints' },
       { name: 'Enrollments', description: 'Enrollment CRUD endpoints' },
       { name: 'Grades', description: 'Grade CRUD endpoints' },
       { name: 'Guardians', description: 'Guardian CRUD and student-link endpoints' },
@@ -477,6 +514,148 @@ export function buildOpenApiDocument() {
       { name: 'Students', description: 'Student CRUD endpoints' },
     ],
     paths: {
+      '/feature-flags': {
+        get: {
+          tags: ['Feature Flags'],
+          summary: 'List effective feature flags for the authenticated institution',
+          responses: {
+            200: {
+              description: 'Effective feature flags',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: featureFlagSchema,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: { $ref: '#/components/responses/Unauthorized' },
+          },
+        },
+      },
+      '/institutions/{institutionId}/feature-flags': {
+        get: {
+          tags: ['Feature Flags'],
+          summary: 'List effective feature flags for an institution',
+          parameters: [
+            {
+              name: 'institutionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Effective feature flags',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: featureFlagSchema,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/institutions/{institutionId}/feature-flags/{featureKey}': {
+        put: {
+          tags: ['Feature Flags'],
+          summary: 'Set a feature flag override for an institution',
+          parameters: [
+            {
+              name: 'institutionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'featureKey',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['enabled'],
+                  properties: {
+                    enabled: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Feature flag override saved',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: featureFlagSchema },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/NotFound' },
+          },
+        },
+        delete: {
+          tags: ['Feature Flags'],
+          summary: 'Remove an institution feature flag override',
+          parameters: [
+            {
+              name: 'institutionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'featureKey',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Feature flag reset to global default',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: featureFlagSchema },
+                  },
+                },
+              },
+            },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
       '/extensions': {
         get: {
           tags: ['Extensions'],
@@ -1430,6 +1609,243 @@ export function buildOpenApiDocument() {
           },
         },
       },
+      '/classrooms': {
+        get: {
+          tags: ['Classrooms'],
+          summary: 'List classrooms',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'gradeLevel',
+              in: 'query',
+              schema: { type: 'integer', minimum: 1, maximum: 20 },
+            },
+            {
+              name: 'section',
+              in: 'query',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 100,
+                default: 25,
+              },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              schema: { type: 'integer', minimum: 0, default: 0 },
+            },
+            {
+              name: 'sortBy',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['gradeLevel', 'section'],
+                default: 'gradeLevel',
+              },
+            },
+            {
+              name: 'sortOrder',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['asc', 'desc'],
+                default: 'asc',
+              },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Classrooms page',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'array',
+                        items: classroomSchema,
+                      },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          total: { type: 'integer' },
+                          limit: { type: 'integer' },
+                          offset: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+          },
+        },
+        post: {
+          tags: ['Classrooms'],
+          summary: 'Create a classroom',
+          parameters: [institutionIdHeaderSchema],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['gradeLevel'],
+                  properties: {
+                    gradeLevel: {
+                      type: 'integer',
+                      minimum: 1,
+                      maximum: 20,
+                      example: 5,
+                    },
+                    section: { type: 'string', nullable: true, example: 'A' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Classroom created',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: classroomSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            409: { $ref: '#/components/responses/ClassroomConflict' },
+          },
+        },
+      },
+      '/classrooms/{classroomId}': {
+        get: {
+          tags: ['Classrooms'],
+          summary: 'Get a classroom by id',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'classroomId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Classroom details',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: classroomSchema,
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/ClassroomNotFound' },
+          },
+        },
+        patch: {
+          tags: ['Classrooms'],
+          summary: 'Update a classroom',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'classroomId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    gradeLevel: {
+                      type: 'integer',
+                      minimum: 1,
+                      maximum: 20,
+                    },
+                    section: { type: 'string', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Classroom updated',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: classroomSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            404: { $ref: '#/components/responses/ClassroomNotFound' },
+            409: { $ref: '#/components/responses/ClassroomConflict' },
+          },
+        },
+        delete: {
+          tags: ['Classrooms'],
+          summary: 'Delete a classroom',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'classroomId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Classroom deleted',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string', format: 'uuid' },
+                          deleted: { type: 'boolean', example: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            404: { $ref: '#/components/responses/ClassroomNotFound' },
+            409: { $ref: '#/components/responses/ClassroomDeleteConflict' },
+          },
+        },
+      },
       '/attendance': {
         get: {
           tags: ['Attendance'],
@@ -1936,6 +2352,11 @@ export function buildOpenApiDocument() {
             },
             {
               name: 'academicPeriodId',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'classroomId',
               in: 'query',
               schema: { type: 'string', format: 'uuid' },
             },
@@ -3396,6 +3817,56 @@ export function buildOpenApiDocument() {
                     type: 'string',
                     example:
                       'Academic period cannot be deleted while enrollments exist',
+                  },
+                },
+              },
+            },
+          },
+        },
+        ClassroomNotFound: {
+          description: 'Classroom not found',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example: 'Classroom not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        ClassroomConflict: {
+          description: 'Classroom already exists for grade and section',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example:
+                      'Classroom already exists for this grade and section',
+                  },
+                },
+              },
+            },
+          },
+        },
+        ClassroomDeleteConflict: {
+          description: 'Classroom cannot be deleted because enrollments exist',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example:
+                      'Classroom cannot be deleted while enrollments exist',
                   },
                 },
               },

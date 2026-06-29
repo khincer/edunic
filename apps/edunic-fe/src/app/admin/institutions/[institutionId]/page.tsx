@@ -122,6 +122,9 @@ export default function InstitutionDetailPage() {
                 <ButtonLink href={`/admin/institutions/${institution.id}/extensions`}>
                   Extensions
                 </ButtonLink>
+                <ButtonLink href={`/admin/institutions/${institution.id}/feature-flags`} variant="secondary">
+                  Feature flags
+                </ButtonLink>
                 <ButtonLink href={`/admin/institutions/${institution.id}/audit-logs`} variant="secondary">
                   Audit logs
                 </ButtonLink>

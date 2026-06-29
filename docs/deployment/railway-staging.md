@@ -45,7 +45,7 @@ Web service:
 - `NEXT_PUBLIC_API_URL`: public URL of the Railway API service.
 - `NODE_ENV`: `production`.
 
-Railway injects `PORT` automatically for web services. The API reads `PORT` from the environment, and the frontend start target uses `next start`, which also respects Railway's runtime port.
+Railway injects `PORT` automatically for web services. The API reads `PORT` from the environment and binds Fastify to `::` for Railway public/private networking. The frontend is built with Next.js standalone output and starts the generated standalone server, which also respects Railway's runtime port.
 
 ## Deployment flow
 
@@ -67,6 +67,7 @@ Check the service settings:
 - Web service must use custom config file path `/railway.web.json`.
 - The API start command should resolve to `npm run start:api`.
 - The web start command should resolve to `npm run start:fe`.
+- If the web service cannot find `server.js`, confirm the frontend build produced `apps/edunic-fe/.next/standalone/apps/edunic-fe/server.js`.
 
 If the API pre-deploy migration fails, first confirm the API service has `DATABASE_URL` set to the Railway PostgreSQL connection URL. The migration script requires `DATABASE_URL` explicitly in deploys and prints the underlying PostgreSQL error when the database rejects a migration.
 

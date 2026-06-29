@@ -1,4 +1,7 @@
 import { execSync } from 'node:child_process';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
 
 export class BootstrapServiceError extends Error {
   constructor(
@@ -15,9 +18,7 @@ export class BootstrapService {
     const startedAt = Date.now();
 
     try {
-      this.runCommand(
-        'npx drizzle-kit migrate --config=libs/db/src/drizzle.config.ts'
-      );
+      await this.runMigrations();
     } catch (error) {
       throw new BootstrapServiceError(
         this.toStageMessage('migration', error),
@@ -51,6 +52,28 @@ export class BootstrapService {
   private runCommand(command: string) {
     execSync(command, {
       stdio: 'inherit',
+      env: { ...process.env },
     });
+  }
+
+  private async runMigrations() {
+    const databaseUrl = process.env.DATABASE_URL;
+
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL is not set');
+    }
+
+    const pool = new pg.Pool({
+      connectionString: databaseUrl,
+    });
+    const db = drizzle(pool);
+
+    try {
+      await migrate(db, {
+        migrationsFolder: 'libs/db/src/migrations',
+      });
+    } finally {
+      await pool.end();
+    }
   }
 }

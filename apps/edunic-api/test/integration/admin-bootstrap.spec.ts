@@ -19,6 +19,10 @@ describe('admin bootstrap route', () => {
     await resetTestDatabase();
   });
 
+  afterEach(async () => {
+    await resetTestDatabase();
+  });
+
   afterAll(async () => {
     await app.close();
   });

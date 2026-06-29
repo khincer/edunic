@@ -11,6 +11,7 @@ const databaseUrl =
 
 export const pool = new pg.Pool({
   connectionString: databaseUrl,
+  allowExitOnIdle: process.env.NODE_ENV === 'test' || Boolean(process.env.JEST_WORKER_ID),
 });
 
 export const db = drizzle(pool, { schema });
