@@ -43,4 +43,5 @@ npx nx lint edunic-fe
 ## Deployment
 
 - Railway staging setup: [docs/deployment/railway-staging.md](docs/deployment/railway-staging.md)
+- Railway portfolio demo setup: [docs/deployment/railway-portfolio-demo.md](docs/deployment/railway-portfolio-demo.md)
 - CI gate for staging deploys: `.github/workflows/railway-ci.yml`
