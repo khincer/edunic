@@ -26,15 +26,17 @@ export default function StudentsPage() {
         <div>
           <Link href="/admin">Admin</Link>
           <Link href="/teachers">Teachers</Link>
+          <Link href="/parents/login">Parents</Link>
         </div>
       </nav>
 
       <section className="portal-hero">
-        <p className="eyebrow">Students and parents</p>
-        <h1 className="page-title">A shared family view for academic progress.</h1>
+        <p className="eyebrow">Students</p>
+        <h1 className="page-title">A student view for academic progress.</h1>
         <p className="body-copy">
-          Students and parents use this section for grades, attendance,
-          notifications, reports, and read-only school updates.
+          Students use this section for grades, attendance, notifications,
+          reports, and read-only school updates. Parents now have their own
+          access path.
         </p>
       </section>
 
@@ -51,12 +53,11 @@ export default function StudentsPage() {
       <section className="card card-soft portal-band">
         <div>
           <p className="eyebrow">Parent access</p>
-          <h2 className="section-title">/parents redirects here</h2>
+          <h2 className="section-title">Dedicated parent login is available</h2>
         </div>
         <p className="body-copy">
-          Parent and student experiences share /students for now. If role-based
-          flows split later, the redirect can become a dedicated parent route
-          without another app.
+          Parents and guardians should use /parents/login so their read-only
+          portal can enforce the parent role separately from student access.
         </p>
       </section>
     </main>

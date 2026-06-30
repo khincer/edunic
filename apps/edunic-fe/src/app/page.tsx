@@ -2,22 +2,22 @@ import Link from 'next/link';
 
 const sections = [
   {
-    href: '/admin',
+    href: '/admin/login',
     label: 'Admin',
     title: 'Institution management',
     text: 'Manage schools, extensions, audit trails, and platform operations.',
   },
   {
-    href: '/teachers',
-    label: 'Teachers',
-    title: 'Classroom analytics',
-    text: 'Review attendance, averages, and classroom alerts in one teaching surface.',
+    href: '/teachers/login',
+    label: 'Teacher',
+    title: 'Classroom tools',
+    text: 'Mark attendance, submit grades, and work from assigned rosters.',
   },
   {
-    href: '/students',
-    label: 'Students & parents',
-    title: 'Family observatory',
-    text: 'See grades, attendance, reports, and notifications for linked students.',
+    href: '/parents/login',
+    label: 'Parent',
+    title: 'Family portal',
+    text: 'Read linked student grades, attendance, reports, and school notices.',
   },
 ];
 
@@ -29,7 +29,7 @@ export default function Home() {
         <h1 className="page-title">One Next.js app, three focused workspaces.</h1>
         <p className="body-copy">
           Choose the section that matches the user journey. Admins, teachers,
-          students, and parents now share the same frontend host.
+          and parents now have separate access points on the same frontend host.
         </p>
 
         <div className="portal-grid">

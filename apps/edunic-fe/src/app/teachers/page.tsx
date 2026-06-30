@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/button';
 import { FormField } from '@/components/form-field';
@@ -16,23 +16,16 @@ import {
   type Enrollment,
   type Grade,
 } from '@/lib/api';
-import { clearSession, getSession, login, type AdminSession } from '@/lib/auth';
-
-const centralTeacher = {
-  email: 'teacher@central.edu',
-  password: 'teacher1234',
-  institutionId: '00000000-0000-0000-0000-000000000001',
-};
+import { clearSession, getSession, type AdminSession } from '@/lib/auth';
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
 export default function TeachersPage() {
+  const router = useRouter();
   const [session, setSession] = useState<AdminSession | null>(null);
-  const [email, setEmail] = useState(centralTeacher.email);
-  const [password, setPassword] = useState(centralTeacher.password);
-  const [institutionId, setInstitutionId] = useState(centralTeacher.institutionId);
+  const [ready, setReady] = useState(false);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedClassroomId, setSelectedClassroomId] = useState('');
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -66,10 +59,12 @@ export default function TeachersPage() {
   useEffect(() => {
     const storedSession = getSession();
     setSession(storedSession);
-    if (storedSession) {
-      setInstitutionId(storedSession.user.institutionId);
+    setReady(true);
+
+    if (!storedSession) {
+      router.replace('/teachers/login');
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (!session || !canUseTeacherTools) {
@@ -98,28 +93,6 @@ export default function TeachersPage() {
     void loadAttendanceForDate(session.user.institutionId, enrollments, attendanceDate);
   }, [attendanceDate, enrollments, session]);
 
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError('');
-    setNotice('');
-    setLoading(true);
-
-    try {
-      const nextSession = await login({
-        email,
-        password,
-        institutionId: institutionId.trim(),
-      });
-      setSession(nextSession);
-      setInstitutionId(nextSession.user.institutionId);
-      setNotice('Signed in. Classroom tools are ready.');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to sign in');
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function handleSignOut() {
     clearSession();
     setSession(null);
@@ -127,6 +100,7 @@ export default function TeachersPage() {
     setSelectedClassroomId('');
     setEnrollments([]);
     setNotice('');
+    router.replace('/teachers/login');
   }
 
   async function loadClassrooms(nextInstitutionId: string) {
@@ -303,7 +277,7 @@ export default function TeachersPage() {
     }
   }
 
-  if (!session) {
+  if (!ready || !session) {
     return (
       <main className="portal-page">
         <nav className="portal-topnav" aria-label="Teacher section navigation">
@@ -314,47 +288,7 @@ export default function TeachersPage() {
           </div>
         </nav>
 
-        <section className="teacher-auth-panel">
-          <div>
-            <p className="eyebrow">Teacher workspace</p>
-            <h1 className="page-title">Classroom operations in one working surface.</h1>
-            <p className="body-copy">
-              Sign in with a teacher or admin account to load active class rosters,
-              mark attendance, and submit grades.
-            </p>
-          </div>
-
-          <form className="card form" onSubmit={handleLogin}>
-            <FormField
-              label="Email"
-              name="email"
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              type="email"
-              value={email}
-            />
-            <FormField
-              label="Password"
-              name="password"
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              type="password"
-              value={password}
-            />
-            <FormField
-              label="Institution ID"
-              name="institutionId"
-              onChange={(event) => setInstitutionId(event.target.value)}
-              required
-              type="text"
-              value={institutionId}
-            />
-            {error ? <div className="alert alert-error">{error}</div> : null}
-            <Button disabled={loading} type="submit">
-              {loading ? 'Signing in...' : 'Open teacher tools'}
-            </Button>
-          </form>
-        </section>
+        <section className="empty-state body-copy">Opening teacher workspace...</section>
       </main>
     );
   }
