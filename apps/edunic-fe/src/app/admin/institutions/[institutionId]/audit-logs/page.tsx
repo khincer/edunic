@@ -109,7 +109,7 @@ export default function InstitutionAuditLogsPage() {
         />
       ) : null}
 
-      <div className="page-header" style={{ marginTop: 18 }}>
+      <div className="page-header pager-row">
         <p className="field-help">
           Showing {logs.length} of {total} audit entries
         </p>

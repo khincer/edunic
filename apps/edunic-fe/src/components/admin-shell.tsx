@@ -18,14 +18,16 @@ interface NavItem {
   label: string;
   href: string;
   disabled?: boolean;
+  group: 'Workspace' | 'Roadmap';
 }
 const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/admin/dashboard' },
-  { label: 'Institutions', href: '/admin/institutions' },
-  { label: 'Billing', href: '/admin/billing', disabled: true },
-  { label: 'Analytics', href: '/admin/analytics', disabled: true },
-  { label: 'Platform', href: '/admin/platform', disabled: true },
-  { label: 'Settings', href: '/admin/settings', disabled: true },
+  { label: 'Dashboard', href: '/admin/dashboard', group: 'Workspace' },
+  { label: 'Institutions', href: '/admin/institutions', group: 'Workspace' },
+  { label: 'Students', href: '/admin/students', disabled: true, group: 'Roadmap' },
+  { label: 'Enrollments', href: '/admin/enrollments', disabled: true, group: 'Roadmap' },
+  { label: 'Grades & attendance', href: '/admin/academic-records', disabled: true, group: 'Roadmap' },
+  { label: 'Reports', href: '/admin/reports', disabled: true, group: 'Roadmap' },
+  { label: 'Billing', href: '/admin/billing', disabled: true, group: 'Roadmap' },
 ];
 
 export function AdminShell({ children }: AdminShellProps) {
@@ -62,6 +64,15 @@ export function AdminShell({ children }: AdminShellProps) {
     );
   }
 
+  const pageLabel = getPageLabel(pathname);
+  const groupedNavItems = navItems.reduce<Record<NavItem['group'], NavItem[]>>(
+    (groups, item) => {
+      groups[item.group].push(item);
+      return groups;
+    },
+    { Workspace: [], Roadmap: [] }
+  );
+
   return (
     <main className="admin-app">
       <div className="admin-shell">
@@ -74,27 +85,42 @@ export function AdminShell({ children }: AdminShellProps) {
             </span>
           </Link>
           <nav aria-label="Admin navigation" className="admin-nav">
-            {navItems.map((item) =>
-              item?.disabled ? (
-                <span className="admin-nav-disabled" key={item.label}>
-                  {item.label}
-                  <span className="admin-nav-pill">soon</span>
-                </span>
-              ) : (
-                <Link
-                  className="admin-nav-link"
-                  data-active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
-                  href={item.href}
-                  key={item.label}
-                >
-                  {item.label}
-                </Link>
-              )
-            )}
+            {Object.entries(groupedNavItems).map(([group, items]) => (
+              <div className="admin-nav-group" key={group}>
+                <p>{group}</p>
+                {items.map((item) =>
+                  item.disabled ? (
+                    <span className="admin-nav-disabled" key={item.label}>
+                      <span className="admin-nav-icon" aria-hidden="true">
+                        {item.label.slice(0, 1)}
+                      </span>
+                      {item.label}
+                      <span className="admin-nav-pill">soon</span>
+                    </span>
+                  ) : (
+                    <Link
+                      className="admin-nav-link"
+                      data-active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                      href={item.href}
+                      key={item.label}
+                    >
+                      <span className="admin-nav-icon" aria-hidden="true">
+                        {item.label.slice(0, 1)}
+                      </span>
+                      {item.label}
+                    </Link>
+                  )
+                )}
+              </div>
+            ))}
           </nav>
         </aside>
         <section className="admin-main">
           <header className="admin-topbar">
+            <div className="admin-page-trail" aria-label="Current section">
+              <span>Admin</span>
+              <strong>{pageLabel}</strong>
+            </div>
             <form className="admin-search" onSubmit={handleSearch}>
               <input
                 aria-label="Search institutions"
@@ -131,4 +157,16 @@ function getHydrated() {
 
 function getServerHydrated() {
   return false;
+}
+
+function getPageLabel(pathname: string) {
+  if (pathname.startsWith('/admin/institutions/new')) {
+    return 'New institution';
+  }
+
+  if (pathname.startsWith('/admin/institutions')) {
+    return 'Institutions';
+  }
+
+  return 'Dashboard';
 }

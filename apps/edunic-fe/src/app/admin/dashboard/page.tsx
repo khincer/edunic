@@ -53,29 +53,29 @@ export default function DashboardPage() {
 
       {error ? <div className="alert alert-error">{error}</div> : null}
 
-      <section className="grid grid-3">
-        <Card>
+      <section className="dashboard-stat-grid">
+        <Card className="dashboard-stat-card">
           <p className="eyebrow">Institutions</p>
           <p className="metric">{loading ? '...' : total}</p>
           <p className="body-copy">schools available to this admin console</p>
         </Card>
-        <Card>
-          <p className="eyebrow">Primary workflow</p>
-          <p className="metric">CRUD</p>
-          <p className="body-copy">create, rename, inspect, and retire institutions</p>
+        <Card className="dashboard-stat-card">
+          <p className="eyebrow">Core records</p>
+          <p className="metric">MVP</p>
+          <p className="body-copy">students, enrollments, grades, attendance, and periods remain the delivery focus</p>
         </Card>
-        <Card tone="dark">
-          <p className="eyebrow">Roadmap</p>
-          <p className="metric">v1</p>
-          <p className="body-copy" style={{ color: '#a8acb3' }}>
-            billing and usage analytics stay disabled until registered API routes exist
+        <Card className="dashboard-stat-card" tone="dark">
+          <p className="eyebrow">Access model</p>
+          <p className="metric">3</p>
+          <p className="body-copy muted-on-dark">
+            admin, teacher, and parent workspaces stay separated by role and institution
           </p>
         </Card>
       </section>
 
-      <section className="grid grid-2" style={{ marginTop: 24 }}>
-        <Card>
-          <div className="page-header" style={{ marginBottom: 18 }}>
+      <section className="dashboard-workspace-grid">
+        <Card className="dashboard-panel">
+          <div className="panel-header">
             <div>
               <p className="eyebrow">Recent institutions</p>
               <h2 className="section-title">Newest schools</h2>
@@ -88,22 +88,37 @@ export default function DashboardPage() {
           {!loading && institutions.length === 0 ? (
             <div className="empty-state body-copy">No institutions yet.</div>
           ) : null}
-          <div className="grid">
+          <div className="institution-list">
             {institutions.map((institution) => (
-              <a className="card card-soft" href={`/admin/institutions/${institution.id}`} key={institution.id}>
-                <strong>{institution.name}</strong>
-                <p className="field-help">Created {formatDate(institution.createdAt)}</p>
+              <a className="institution-row" href={`/admin/institutions/${institution.id}`} key={institution.id}>
+                <span className="institution-row-mark" aria-hidden="true">
+                  {institution.name.slice(0, 1)}
+                </span>
+                <span>
+                  <strong>{institution.name}</strong>
+                  <p className="field-help">Created {formatDate(institution.createdAt)}</p>
+                </span>
+                <span className="badge badge-blue">Open</span>
               </a>
             ))}
           </div>
         </Card>
-        <Card>
-          <p className="eyebrow">Quick actions</p>
-          <h2 className="section-title">Institution operations</h2>
-          <p className="body-copy">
-            Start with the institution record, then open extension and audit-log tools from the institution detail view.
-          </p>
-          <div className="button-row">
+        <Card className="dashboard-panel">
+          <div className="panel-header">
+            <div>
+              <p className="eyebrow">Roadmap flow</p>
+              <h2 className="section-title">Operational sequence</h2>
+            </div>
+          </div>
+          <div className="roadmap-flow" aria-label="Roadmap modules">
+            {['Students', 'Enrollments', 'Academic periods', 'Grades', 'Attendance', 'Reports'].map((item, index) => (
+              <div className="roadmap-step" key={item}>
+                <span>{index + 1}</span>
+                <strong>{item}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="panel-action-row">
             <ButtonLink href="/admin/institutions/new">Create school</ButtonLink>
             <ButtonLink href="/admin/institutions" variant="secondary">
               Search schools

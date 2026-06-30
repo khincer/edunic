@@ -151,7 +151,7 @@ export default function InstitutionsPage() {
         <ButtonLink href="/admin/institutions/new">New institution</ButtonLink>
       </header>
 
-      <section className="card" style={{ marginBottom: 24 }}>
+      <section className="card filter-panel">
         <form className="grid grid-2" onSubmit={handleSearch}>
           <FormField
             label="Search"
@@ -161,7 +161,7 @@ export default function InstitutionsPage() {
             type="search"
             value={search}
           />
-          <div className="button-row" style={{ alignItems: 'end' }}>
+          <div className="button-row form-action-row">
             <Button type="submit">Apply search</Button>
             <Button onClick={() => changeSort('name')} variant="secondary">
               Sort name {sortBy === 'name' ? sortOrder : ''}
@@ -184,7 +184,7 @@ export default function InstitutionsPage() {
         />
       ) : null}
 
-      <div className="page-header" style={{ marginTop: 18 }}>
+      <div className="page-header pager-row">
         <p className="field-help">
           Showing {institutions.length} of {total} institutions
         </p>

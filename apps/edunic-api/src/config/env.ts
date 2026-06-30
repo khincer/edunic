@@ -8,8 +8,12 @@ if (!process.env.JWT_SECRET) {
 
 function parseCsv(value: string | undefined) {
   return value
-    ?.split(',')
+    ?.trim()
+    .replace(/^\[/, '')
+    .replace(/\]$/, '')
+    .split(',')
     .map((item) => item.trim())
+    .map((item) => item.replace(/^['"]|['"]$/g, ''))
     .filter(Boolean);
 }
 
@@ -28,6 +32,12 @@ export const env = {
       'http://127.0.0.1:3002',
       'http://127.0.0.1:3003',
       'http://127.0.0.1:3004',
+      'http://*.edunic.test:3001',
+      'http://*.localhost:3001',
+      'http://*.localtest.me:3001',
+      'http://*.lvh.me:3001',
+      'http://app.central-school.test:3001',
+      'http://app.north-school.test:3001',
     ],
   CORS_ALLOW_CREDENTIALS: process.env.CORS_ALLOW_CREDENTIALS === 'true',
 }

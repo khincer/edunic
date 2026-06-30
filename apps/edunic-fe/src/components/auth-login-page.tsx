@@ -5,72 +5,54 @@ import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/button';
 import { clearSession, getSession, login } from '@/lib/auth';
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export type AuthShortcut = {
-  label: string;
-  email: string;
-  password: string;
-  institutionId: string;
-};
+import { getBrowserTenantContext, type TenantContext } from '@/lib/tenant';
 
 type AuthLoginPageProps = {
   accent: 'admin' | 'teacher' | 'parent';
-  activeLabel: string;
   allowedRoles: string[];
   brandSubtitle: string;
   brandTitle: string;
-  capabilities: string[];
   emailPlaceholder: string;
   eyebrow: string;
-  heroEyebrow: string;
   heroText: string;
-  heroTitle: string;
   intro: string;
+  initialTenantContext: TenantContext | null;
   redirectTo: string;
   requiredRoleLabel: string;
   sectionLabel: string;
-  shortcuts: AuthShortcut[];
-  signupText: string;
-  signupTitle: string;
   title: string;
 };
 
 export function AuthLoginPage({
   accent,
-  activeLabel,
   allowedRoles,
   brandSubtitle,
   brandTitle,
-  capabilities,
   emailPlaceholder,
   eyebrow,
-  heroEyebrow,
   heroText,
-  heroTitle,
+  initialTenantContext,
   intro,
   redirectTo,
   requiredRoleLabel,
   sectionLabel,
-  shortcuts,
-  signupText,
-  signupTitle,
   title,
 }: AuthLoginPageProps) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [institutionId, setInstitutionId] = useState('');
+  const [tenantContext, setTenantContext] = useState<TenantContext | null>(initialTenantContext);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const selectedInstitution =
-    shortcuts.find((account) => account.institutionId === institutionId.trim()) ??
-    shortcuts.find((account) => account.email === email.trim().toLowerCase()) ??
-    null;
+  const tenantIsMissing = tenantContext === null;
+  const schoolBadge = tenantContext?.slug.slice(0, 2).toUpperCase() ?? (tenantIsMissing ? '--' : 'ED');
+  const canSubmit = Boolean(tenantContext && email.trim() && password);
+
+  useEffect(() => {
+    setTenantContext(initialTenantContext ?? getBrowserTenantContext());
+  }, [initialTenantContext]);
 
   useEffect(() => {
     const session = getSession();
@@ -83,8 +65,8 @@ export function AuthLoginPage({
     event.preventDefault();
     setError('');
 
-    if (!UUID_PATTERN.test(institutionId.trim())) {
-      setError('Institution ID must be a UUID. Use a seeded shortcut or paste the institution UUID.');
+    if (!tenantContext) {
+      setError('Open this login page from an institution domain such as central.localtest.me.');
       return;
     }
 
@@ -94,7 +76,7 @@ export function AuthLoginPage({
       const session = await login({
         email,
         password,
-        institutionId: institutionId.trim(),
+        institutionId: tenantContext.institutionId,
       });
 
       if (!allowedRoles.includes(session.user.role)) {
@@ -128,6 +110,17 @@ export function AuthLoginPage({
           <p className="body-copy">{intro}</p>
 
           {error ? <div className="alert alert-error">{error}</div> : null}
+          {tenantIsMissing ? (
+            <div className="alert alert-error">
+              Institution could not be resolved from this domain.
+            </div>
+          ) : null}
+          {tenantContext?.isDevelopmentFallback ? (
+            <div className="alert alert-info">
+              Using Central School for localhost. Try central.localtest.me or north.localtest.me to
+              test tenant domains locally.
+            </div>
+          ) : null}
 
           <form className="auth-form" onSubmit={handleSubmit}>
             <label className="auth-field" htmlFor="email">
@@ -172,94 +165,20 @@ export function AuthLoginPage({
               </span>
             </label>
 
-            <label className="auth-field" htmlFor="institutionId">
-              <span>Institution UUID</span>
-              <span className="auth-input-wrap">
-                <span aria-hidden="true" className="auth-input-icon">ID</span>
-                <input
-                  autoComplete="organization"
-                  id="institutionId"
-                  name="institutionId"
-                  onChange={(event) => setInstitutionId(event.target.value)}
-                  placeholder="Paste institution UUID"
-                  required
-                  type="text"
-                  value={institutionId}
-                />
-              </span>
-            </label>
-
-            <Button className="auth-submit" disabled={busy} type="submit">
+            <Button className="auth-submit" disabled={busy || !canSubmit} type="submit">
               {busy ? 'Signing in...' : 'Sign in'}
               <span aria-hidden="true">-&gt;</span>
             </Button>
           </form>
-
-          {shortcuts.length > 0 ? (
-            <div className="institution-shortcuts" aria-label="Seeded account shortcuts">
-              <div className="auth-divider">
-                <span>Seeded access</span>
-              </div>
-              <div className="institution-option-grid">
-                {shortcuts.map((account) => (
-                  <button
-                    className="institution-option"
-                    data-active={institutionId === account.institutionId && email === account.email}
-                    key={`${account.label}-${account.email}`}
-                    onClick={() => {
-                      setEmail(account.email);
-                      setPassword(account.password);
-                      setInstitutionId(account.institutionId);
-                      setError('');
-                    }}
-                    type="button"
-                  >
-                    <strong>{account.label}</strong>
-                    <span>{account.email}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="auth-signup-note">
-            <span>{signupTitle}</span>
-            <span>{signupText}</span>
-          </div>
         </section>
       </section>
 
       <section aria-label={`${sectionLabel} context`} className="login-hero">
         <div className="auth-image-layer" aria-hidden="true" />
-        <div className="auth-hero-copy">
-          <p className="eyebrow">{heroEyebrow}</p>
-          <h2>{heroTitle}</h2>
+        <div className="school-identity">
+          <span className="school-badge">{schoolBadge}</span>
+          <h2>{tenantContext?.name ?? (tenantIsMissing ? 'Unknown institution' : 'Resolving institution')}</h2>
           <p>{heroText}</p>
-        </div>
-
-        <div className="institution-brief">
-          <div className="institution-brief-header">
-            <span className="institution-badge">{activeLabel}</span>
-            <span className="institution-status">{requiredRoleLabel}</span>
-          </div>
-          <h3>{selectedInstitution?.label ?? 'Choose a seeded account'}</h3>
-          <p>{selectedInstitution?.email ?? 'Select a shortcut or paste an institution UUID.'}</p>
-          <dl>
-            <div>
-              <dt>Institution ID</dt>
-              <dd>{selectedInstitution?.institutionId ?? 'Waiting for UUID'}</dd>
-            </div>
-            <div>
-              <dt>Required login data</dt>
-              <dd>Email, password, institution UUID</dd>
-            </div>
-          </dl>
-        </div>
-
-        <div className="auth-capability-grid" aria-label={`${sectionLabel} capabilities`}>
-          {capabilities.map((capability) => (
-            <span key={capability}>{capability}</span>
-          ))}
         </div>
       </section>
     </main>

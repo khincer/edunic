@@ -29,7 +29,7 @@ export default function Home() {
         <h1 className="page-title">One Next.js app, three focused workspaces.</h1>
         <p className="body-copy">
           Choose the section that matches the user journey. Admins, teachers,
-          and parents now have separate access points on the same frontend host.
+          and parents now have separate access points under each institution domain.
         </p>
 
         <div className="portal-grid">
