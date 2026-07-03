@@ -6,6 +6,7 @@ import { academicPeriodRoutes } from './academic-periods.routes.js';
 import { authRoutes } from './auth.routes.js';
 import { classroomRoutes } from './classrooms.routes.js';
 import { customFieldRoutes } from './custom-fields.routes.js';
+import { dashboardRoutes } from './dashboards.routes.js';
 import { docsRoutes } from './docs.routes.js';
 import type { FastifyInstance } from 'fastify';
 import { enrollmentRoutes } from './enrollments.routes.js';
@@ -18,6 +19,7 @@ import { institutionRoutes } from './institutions.routes.js';
 import { notificationRoutes } from './notifications.routes.js';
 import { reportRoutes } from './reports.routes.js';
 import { studentRoutes } from './students.routes.js';
+import { workflowRoutes } from './workflows.routes.js';
 
 export async function registerRoutes(app: FastifyInstance) {
   app.register(academicAverageRoutes, { prefix: '/academic-averages' });
@@ -28,6 +30,7 @@ export async function registerRoutes(app: FastifyInstance) {
   app.register(authRoutes, { prefix: '/auth' });
   app.register(classroomRoutes, { prefix: '/classrooms' });
   app.register(customFieldRoutes);
+  app.register(dashboardRoutes, { prefix: '/dashboard' });
   app.register(docsRoutes, { prefix: '/docs' });
   app.register(enrollmentRoutes, { prefix: '/enrollments' });
   app.register(extensionRoutes);
@@ -39,4 +42,5 @@ export async function registerRoutes(app: FastifyInstance) {
   app.register(notificationRoutes);
   app.register(reportRoutes, { prefix: '/reports' });
   app.register(studentRoutes, { prefix: '/students' });
+  app.register(workflowRoutes);
 }

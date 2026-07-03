@@ -39,23 +39,31 @@ export function getSession(): AdminSession | null {
   const value = window.localStorage.getItem(SESSION_STORAGE_KEY);
 
   if (!value) {
-    cachedSessionRaw = null;
-    cachedSession = null;
+    resetCachedSession();
     return null;
   }
 
   if (value === cachedSessionRaw) {
-    return cachedSession;
+    if (cachedSession && !isSessionExpired(cachedSession)) {
+      return cachedSession;
+    }
+
+    removeStoredSession();
+    return null;
   }
 
   try {
     cachedSessionRaw = value;
     cachedSession = JSON.parse(value) as AdminSession;
+
+    if (isSessionExpired(cachedSession)) {
+      removeStoredSession();
+      return null;
+    }
+
     return cachedSession;
   } catch {
-    window.localStorage.removeItem(SESSION_STORAGE_KEY);
-    cachedSessionRaw = null;
-    cachedSession = null;
+    removeStoredSession();
     return null;
   }
 }
@@ -69,9 +77,7 @@ export function saveSession(session: AdminSession) {
 }
 
 export function clearSession() {
-  cachedSessionRaw = null;
-  cachedSession = null;
-  window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  removeStoredSession();
   window.dispatchEvent(new Event(SESSION_EVENT_NAME));
 }
 
@@ -114,4 +120,44 @@ function getLoginErrorMessage(payload: LoginResponse | { message?: string } | nu
   }
 
   return 'Unable to sign in';
+}
+
+function resetCachedSession() {
+  cachedSessionRaw = null;
+  cachedSession = null;
+}
+
+function removeStoredSession() {
+  resetCachedSession();
+  window.localStorage.removeItem(SESSION_STORAGE_KEY);
+}
+
+function isSessionExpired(session: AdminSession) {
+  const payload = decodeJwtPayload(session.token);
+
+  if (!payload || typeof payload.exp !== 'number') {
+    return true;
+  }
+
+  return payload.exp <= Math.floor(Date.now() / 1000);
+}
+
+function decodeJwtPayload(token: string) {
+  const [, encodedPayload] = token.split('.');
+
+  if (!encodedPayload) {
+    return null;
+  }
+
+  try {
+    const normalized = encodedPayload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      '='
+    );
+
+    return JSON.parse(window.atob(padded)) as { exp?: unknown };
+  } catch {
+    return null;
+  }
 }

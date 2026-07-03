@@ -57,6 +57,7 @@ export type UpdateEnrollmentInput = {
 
 export type ListEnrollmentsInput = ListEnrollmentsQuery & {
   institutionId: string;
+  teacherUserId?: string;
 };
 
 export class EnrollmentsRepository {
@@ -64,6 +65,14 @@ export class EnrollmentsRepository {
 
   async list(input: ListEnrollmentsInput) {
     const filters: SQL[] = [sql`e.institution_id = ${input.institutionId}`];
+    const assignmentJoin = input.teacherUserId
+      ? sql`
+        inner join teacher_classroom_assignments tca
+          on tca.classroom_id = e.classroom_id
+         and tca.institution_id = e.institution_id
+         and tca.teacher_user_id = ${input.teacherUserId}
+      `
+      : sql``;
 
     if (input.search) {
       filters.push(sql`(
@@ -104,6 +113,7 @@ export class EnrollmentsRepository {
           s.first_name as "studentFirstName",
           s.last_name as "studentLastName"
         from enrollments e
+        ${assignmentJoin}
         inner join students s on s.id = e.student_id
         ${whereClause}
         order by ${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}
@@ -113,6 +123,7 @@ export class EnrollmentsRepository {
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
         from enrollments e
+        ${assignmentJoin}
         inner join students s on s.id = e.student_id
         ${whereClause}
       `),

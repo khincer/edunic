@@ -35,20 +35,29 @@ export type UpdateClassroomInput = {
 
 export type ListClassroomsInput = ListClassroomsQuery & {
   institutionId: string;
+  teacherUserId?: string;
 };
 
 export class ClassroomsRepository {
   constructor(private readonly db: Database) {}
 
   async list(input: ListClassroomsInput) {
-    const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+    const filters: SQL[] = [sql`classrooms.institution_id = ${input.institutionId}`];
+    const assignmentJoin = input.teacherUserId
+      ? sql`
+        inner join teacher_classroom_assignments tca
+          on tca.classroom_id = classrooms.id
+         and tca.institution_id = classrooms.institution_id
+         and tca.teacher_user_id = ${input.teacherUserId}
+      `
+      : sql``;
 
     if (input.gradeLevel !== undefined) {
-      filters.push(sql`grade_level = ${input.gradeLevel}`);
+      filters.push(sql`classrooms.grade_level = ${input.gradeLevel}`);
     }
 
     if (input.section) {
-      filters.push(sql`section ilike ${`%${input.section}%`}`);
+      filters.push(sql`classrooms.section ilike ${`%${input.section}%`}`);
     }
 
     const whereClause = sql`where ${sql.join(filters, sql` and `)}`;
@@ -56,11 +65,12 @@ export class ClassroomsRepository {
     const [items, totalRows] = await Promise.all([
       this.db.execute<ClassroomRecord>(sql`
         select
-          id,
-          institution_id as "institutionId",
-          grade_level as "gradeLevel",
-          section
+          classrooms.id,
+          classrooms.institution_id as "institutionId",
+          classrooms.grade_level as "gradeLevel",
+          classrooms.section
         from classrooms
+        ${assignmentJoin}
         ${whereClause}
         order by ${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}, section asc nulls last
         limit ${input.limit}
@@ -69,6 +79,7 @@ export class ClassroomsRepository {
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
         from classrooms
+        ${assignmentJoin}
         ${whereClause}
       `),
     ]);

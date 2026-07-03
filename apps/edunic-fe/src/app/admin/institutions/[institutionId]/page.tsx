@@ -98,20 +98,20 @@ export default function InstitutionDetailPage() {
             </Card>
             <Card>
               <p className="eyebrow">Created</p>
-              <p className="metric" style={{ fontSize: 22 }}>
+              <p className="metric metric-compact">
                 {formatDate(institution.createdAt)}
               </p>
               <p className="body-copy">institution onboarding timestamp</p>
             </Card>
             <Card tone="soft">
               <p className="eyebrow">Identifier</p>
-              <p className="body-copy" style={{ wordBreak: 'break-all' }}>
+              <p className="body-copy break-value">
                 {institution.id}
               </p>
             </Card>
           </section>
 
-          <section className="grid grid-2" style={{ marginTop: 24 }}>
+          <section className="grid grid-2 section-stack">
             <Card>
               <p className="eyebrow">Operations</p>
               <h2 className="section-title">Manage this school</h2>

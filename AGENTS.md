@@ -236,6 +236,8 @@ Used for:
 - `main` → always deployable
 - `feature/*` → short-lived
 - `hotfix/*` → production fixes
+- Never create branches named `code/*`
+- Branch names must use Conventional Commits-style prefixes, e.g. `feat/students-crud`, `fix/auth-token-refresh`, `chore/update-deps`
 
 ### Flow
 

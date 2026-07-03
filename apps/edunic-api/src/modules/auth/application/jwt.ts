@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 export type JwtPayload = {
   sub: string;
@@ -56,7 +56,7 @@ export function verifyJwt(token: string, secret: string) {
 
   const expectedSignature = sign(`${encodedHeader}.${encodedPayload}`, secret);
 
-  if (expectedSignature !== providedSignature) {
+  if (!safeEquals(expectedSignature, providedSignature)) {
     throw new Error('Invalid token');
   }
 
@@ -71,4 +71,15 @@ export function verifyJwt(token: string, secret: string) {
   }
 
   return payload;
+}
+
+function safeEquals(expected: string, provided: string) {
+  const expectedBuffer = Buffer.from(expected);
+  const providedBuffer = Buffer.from(provided);
+
+  if (expectedBuffer.length !== providedBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(expectedBuffer, providedBuffer);
 }

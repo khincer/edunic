@@ -19,7 +19,8 @@
     "db:generate": "drizzle-kit generate --config=libs/db/src/drizzle.config.ts",
     "db:migrate": "tsx tools/migrate.ts",
     "db:reset": "tsx tools/reset-db.ts",
-    "db:seed": "tsx tools/seed.ts"
+    "db:seed": "tsx tools/seed.ts",
+    "user:create": "tsx tools/create-user.ts"
   },
   "private": true,
   "dependencies": {

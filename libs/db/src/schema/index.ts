@@ -91,6 +91,20 @@ export const studentGuardians = pgTable(
   })
 );
 
+export const guardianUserLinks = pgTable(
+  'guardian_user_links',
+  {
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id),
+    guardianId: uuid('guardian_id').notNull().references(() => guardians.id),
+    userId: uuid('user_id').notNull().references(() => users.id),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.institutionId, t.guardianId, t.userId] }),
+  })
+);
+
 /* =========================================================
    📅 ACADEMIC STRUCTURE
 ========================================================= */
@@ -142,6 +156,22 @@ export const classrooms = pgTable(
       'classrooms_grade_level_check',
       sql`${t.gradeLevel} > 0`
     ),
+  })
+);
+
+export const teacherClassroomAssignments = pgTable(
+  'teacher_classroom_assignments',
+  {
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id),
+    teacherUserId: uuid('teacher_user_id').notNull().references(() => users.id),
+    classroomId: uuid('classroom_id').notNull().references(() => classrooms.id),
+  },
+  (t) => ({
+    pk: primaryKey({
+      columns: [t.institutionId, t.teacherUserId, t.classroomId],
+    }),
   })
 );
 
@@ -271,6 +301,69 @@ export const notifications = pgTable('notifications', {
   metadata: jsonb('metadata'),
   readAt: timestamp('read_at'),
 
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const assignments = pgTable('assignments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  institutionId: uuid('institution_id')
+    .notNull()
+    .references(() => institutions.id),
+  classroomId: uuid('classroom_id').references(() => classrooms.id),
+  createdByUserId: uuid('created_by_user_id').references(() => users.id),
+  title: text('title').notNull(),
+  type: text('type').notNull(),
+  status: text('status').notNull().default('draft'),
+  dueDate: timestamp('due_date'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const schoolEvents = pgTable('school_events', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  institutionId: uuid('institution_id')
+    .notNull()
+    .references(() => institutions.id),
+  classroomId: uuid('classroom_id').references(() => classrooms.id),
+  createdByUserId: uuid('created_by_user_id').references(() => users.id),
+  title: text('title').notNull(),
+  eventType: text('event_type').notNull().default('school'),
+  startsAt: timestamp('starts_at').notNull(),
+  endsAt: timestamp('ends_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const messageThreads = pgTable('message_threads', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  institutionId: uuid('institution_id')
+    .notNull()
+    .references(() => institutions.id),
+  subject: text('subject').notNull(),
+  createdByUserId: uuid('created_by_user_id').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const messages = pgTable('messages', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  institutionId: uuid('institution_id')
+    .notNull()
+    .references(() => institutions.id),
+  threadId: uuid('thread_id').notNull().references(() => messageThreads.id),
+  senderUserId: uuid('sender_user_id').references(() => users.id),
+  recipientUserId: uuid('recipient_user_id').references(() => users.id),
+  body: text('body').notNull(),
+  readAt: timestamp('read_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const reportHistory = pgTable('report_history', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  institutionId: uuid('institution_id')
+    .notNull()
+    .references(() => institutions.id),
+  studentId: uuid('student_id').notNull().references(() => students.id),
+  year: integer('year').notNull(),
+  reportType: text('report_type').notNull().default('academic_summary'),
+  createdByUserId: uuid('created_by_user_id').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

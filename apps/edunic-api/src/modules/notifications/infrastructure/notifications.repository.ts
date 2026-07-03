@@ -75,7 +75,11 @@ export class NotificationsRepository {
     return result.rows[0];
   }
 
-  async list(input: ListNotificationsQuery & { institutionId: string }) {
+  async list(input: ListNotificationsQuery & {
+    institutionId: string;
+    role?: string;
+    userId?: string;
+  }) {
     const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
 
     if (input.unreadOnly) {
@@ -85,6 +89,8 @@ export class NotificationsRepository {
     if (input.eventName) {
       filters.push(sql`event_name = ${input.eventName}`);
     }
+
+    filters.push(...this.getRoleFilters(input.role, input.userId));
 
     const whereClause = sql.join(filters, sql` and `);
 
@@ -118,12 +124,23 @@ export class NotificationsRepository {
     };
   }
 
-  async markRead(institutionId: string, notificationId: string) {
+  async markRead(input: {
+    institutionId: string;
+    notificationId: string;
+    role?: string;
+    userId?: string;
+  }) {
+    const roleFilters = this.getRoleFilters(input.role, input.userId);
+    const roleClause =
+      roleFilters.length > 0
+        ? sql`and ${sql.join(roleFilters, sql` and `)}`
+        : sql``;
     const result = await this.db.execute<NotificationRecord>(sql`
       update notifications
       set read_at = coalesce(read_at, now())
-      where id = ${notificationId}
-        and institution_id = ${institutionId}
+      where id = ${input.notificationId}
+        and institution_id = ${input.institutionId}
+        ${roleClause}
       returning
         id,
         institution_id as "institutionId",
@@ -136,6 +153,54 @@ export class NotificationsRepository {
     `);
 
     return result.rows[0] ?? null;
+  }
+
+  private getRoleFilters(role?: string, userId?: string) {
+    if (!role) {
+      return [];
+    }
+
+    const filters: SQL[] = [
+      sql`(
+        metadata is null
+        or metadata->'audience' is null
+        or metadata->'audience' ? ${role}
+      )`,
+    ];
+
+    if (role === 'parent' && userId) {
+      filters.push(sql`
+        (
+          metadata->'studentIds' is null
+          or exists (
+            select 1
+            from guardian_user_links gul
+            inner join student_guardians sg
+              on sg.guardian_id = gul.guardian_id
+            where gul.institution_id = notifications.institution_id
+              and gul.user_id = ${userId}
+              and metadata->'studentIds' ? sg.student_id::text
+          )
+        )
+      `);
+    }
+
+    if (role === 'teacher' && userId) {
+      filters.push(sql`
+        (
+          metadata->'classroomIds' is null
+          or exists (
+            select 1
+            from teacher_classroom_assignments tca
+            where tca.institution_id = notifications.institution_id
+              and tca.teacher_user_id = ${userId}
+              and metadata->'classroomIds' ? tca.classroom_id::text
+          )
+        )
+      `);
+    }
+
+    return filters;
   }
 
   private toCount(value: string | number | undefined) {

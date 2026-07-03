@@ -4,11 +4,13 @@ import { signJwt } from '../../src/modules/auth/application/jwt.js';
 export function createBearerToken(input: {
   userId: string;
   institutionId: string;
+  expiresAt?: number;
 }) {
   return signJwt(
     {
       sub: input.userId,
       institutionId: input.institutionId,
+      exp: input.expiresAt,
     },
     env.JWT_SECRET
   );
@@ -17,6 +19,7 @@ export function createBearerToken(input: {
 export function createAuthHeaders(input: {
   userId: string;
   institutionId: string;
+  expiresAt?: number;
 }) {
   return {
     authorization: `Bearer ${createBearerToken(input)}`,

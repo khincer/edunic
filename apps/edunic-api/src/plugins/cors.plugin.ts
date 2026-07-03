@@ -28,7 +28,7 @@ function applyCorsHeaders(request: FastifyRequest, reply: FastifyReply) {
 
   reply.header('Vary', 'Origin');
 
-  if (!origin || !env.CORS_ORIGINS.includes(origin)) {
+  if (!origin || !isAllowedOrigin(origin)) {
     return;
   }
 
@@ -40,4 +40,22 @@ function applyCorsHeaders(request: FastifyRequest, reply: FastifyReply) {
   if (env.CORS_ALLOW_CREDENTIALS) {
     reply.header('Access-Control-Allow-Credentials', 'true');
   }
+}
+
+function isAllowedOrigin(origin: string) {
+  return env.CORS_ORIGINS.some((allowedOrigin) => {
+    if (allowedOrigin === origin) {
+      return true;
+    }
+
+    if (!allowedOrigin.includes('*')) {
+      return false;
+    }
+
+    const pattern = allowedOrigin
+      .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*/g, '[^:/]+');
+
+    return new RegExp(`^${pattern}$`).test(origin);
+  });
 }
