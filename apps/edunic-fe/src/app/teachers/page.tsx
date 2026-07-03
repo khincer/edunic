@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/button';
-import { FormField } from '@/components/form-field';
+import { FormField, TextAreaField } from '@/components/form-field';
 import {
   apiRequest,
   buildQuery,
@@ -15,6 +15,7 @@ import {
   type Classroom,
   type Enrollment,
   type Grade,
+  type TeacherDashboard,
 } from '@/lib/api';
 import { clearSession, getSession, type AdminSession } from '@/lib/auth';
 
@@ -22,11 +23,19 @@ function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getLocalDateTime(offsetDays = 1) {
+  const value = new Date();
+  value.setDate(value.getDate() + offsetDays);
+  value.setHours(9, 0, 0, 0);
+  return value.toISOString().slice(0, 16);
+}
+
 export default function TeachersPage() {
   const router = useRouter();
   const [session, setSession] = useState<AdminSession | null>(null);
   const [ready, setReady] = useState(false);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [dashboard, setDashboard] = useState<TeacherDashboard | null>(null);
   const [selectedClassroomId, setSelectedClassroomId] = useState('');
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [attendanceDate, setAttendanceDate] = useState(getTodayDate);
@@ -39,6 +48,15 @@ export default function TeachersPage() {
   const [savingGrades, setSavingGrades] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [workflowTitle, setWorkflowTitle] = useState('Classroom practice set');
+  const [workflowType, setWorkflowType] = useState<'homework' | 'exam' | 'assignment'>('homework');
+  const [workflowDueDate, setWorkflowDueDate] = useState(getLocalDateTime(2));
+  const [eventTitle, setEventTitle] = useState('Classroom review session');
+  const [eventStartsAt, setEventStartsAt] = useState(getLocalDateTime(3));
+  const [recipientUserId, setRecipientUserId] = useState('');
+  const [messageSubject, setMessageSubject] = useState('Classroom update');
+  const [messageBody, setMessageBody] = useState('A quick note from the teacher workspace.');
+  const [savingWorkflow, setSavingWorkflow] = useState('');
 
   const canUseTeacherTools = session?.user.role === 'teacher' || session?.user.role === 'admin';
   const selectedClassroom = useMemo(
@@ -72,6 +90,7 @@ export default function TeachersPage() {
     }
 
     void loadClassrooms(session.user.institutionId);
+    void loadDashboard(session.user.institutionId);
   }, [canUseTeacherTools, session]);
 
   useEffect(() => {
@@ -97,6 +116,7 @@ export default function TeachersPage() {
     clearSession();
     setSession(null);
     setClassrooms([]);
+    setDashboard(null);
     setSelectedClassroomId('');
     setEnrollments([]);
     setNotice('');
@@ -293,6 +313,150 @@ export default function TeachersPage() {
     );
   }
 
+  async function createAssignment() {
+    if (!session || !selectedClassroomId || !workflowTitle.trim()) {
+      return;
+    }
+
+    setSavingWorkflow('assignment');
+    setError('');
+    setNotice('');
+
+    try {
+      await apiRequest('/assignments', {
+        method: 'POST',
+        institutionId: session.user.institutionId,
+        body: {
+          classroomId: selectedClassroomId,
+          title: workflowTitle,
+          type: workflowType,
+          status: 'published',
+          dueDate: workflowDueDate ? new Date(workflowDueDate).toISOString() : undefined,
+        },
+      });
+      setNotice('Classroom work published.');
+      await loadDashboard(session.user.institutionId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to publish classroom work');
+    } finally {
+      setSavingWorkflow('');
+    }
+  }
+
+  async function createClassroomEvent() {
+    if (!session || !selectedClassroomId || !eventTitle.trim() || !eventStartsAt) {
+      return;
+    }
+
+    setSavingWorkflow('event');
+    setError('');
+    setNotice('');
+
+    try {
+      await apiRequest('/school-events', {
+        method: 'POST',
+        institutionId: session.user.institutionId,
+        body: {
+          classroomId: selectedClassroomId,
+          title: eventTitle,
+          eventType: 'classroom',
+          startsAt: new Date(eventStartsAt).toISOString(),
+        },
+      });
+      setNotice('Classroom event scheduled.');
+      await loadDashboard(session.user.institutionId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to schedule event');
+    } finally {
+      setSavingWorkflow('');
+    }
+  }
+
+  async function sendMessage() {
+    if (!session || !recipientUserId.trim() || !messageSubject.trim() || !messageBody.trim()) {
+      return;
+    }
+
+    setSavingWorkflow('message');
+    setError('');
+    setNotice('');
+
+    try {
+      await apiRequest('/messages', {
+        method: 'POST',
+        institutionId: session.user.institutionId,
+        body: {
+          recipientUserId,
+          subject: messageSubject,
+          body: messageBody,
+        },
+      });
+      setMessageBody('');
+      setNotice('Message sent.');
+      await loadDashboard(session.user.institutionId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to send message');
+    } finally {
+      setSavingWorkflow('');
+    }
+  }
+
+  async function markNotificationRead(notificationId: string) {
+    if (!session) {
+      return;
+    }
+
+    setSavingWorkflow(notificationId);
+    setError('');
+
+    try {
+      await apiRequest(`/notifications/${notificationId}/read`, {
+        method: 'PATCH',
+        institutionId: session.user.institutionId,
+      });
+      await loadDashboard(session.user.institutionId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to mark notification read');
+    } finally {
+      setSavingWorkflow('');
+    }
+  }
+
+  async function markMessageRead(messageId: string) {
+    if (!session) {
+      return;
+    }
+
+    setSavingWorkflow(messageId);
+    setError('');
+
+    try {
+      await apiRequest(`/messages/${messageId}/read`, {
+        method: 'PATCH',
+        institutionId: session.user.institutionId,
+      });
+      await loadDashboard(session.user.institutionId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to mark message read');
+    } finally {
+      setSavingWorkflow('');
+    }
+  }
+
+  async function loadDashboard(nextInstitutionId: string) {
+    setError('');
+
+    try {
+      const result = await apiRequest<ApiSingleResponse<TeacherDashboard>>(
+        '/dashboard/teacher',
+        { institutionId: nextInstitutionId }
+      );
+      setDashboard(result.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load teacher dashboard');
+    }
+  }
+
   return (
     <main className="portal-page">
       <nav className="portal-topnav" aria-label="Teacher section navigation">
@@ -317,15 +481,15 @@ export default function TeachersPage() {
         <div className="teacher-summary">
           <div>
             <span>Present</span>
-            <strong>{attendanceSummary.present}</strong>
+            <strong>{dashboard?.attendanceToday.present ?? attendanceSummary.present}</strong>
           </div>
           <div>
             <span>Late</span>
-            <strong>{attendanceSummary.late}</strong>
+            <strong>{dashboard?.attendanceToday.late ?? attendanceSummary.late}</strong>
           </div>
           <div>
             <span>Absent</span>
-            <strong>{attendanceSummary.absent}</strong>
+            <strong>{dashboard?.attendanceToday.absent ?? attendanceSummary.absent}</strong>
           </div>
         </div>
       </section>
@@ -339,6 +503,233 @@ export default function TeachersPage() {
       {notice ? <div className="alert alert-info">{notice}</div> : null}
 
       {canUseTeacherTools ? (
+        <>
+        <section className="teacher-home-grid">
+          <article className="card teacher-home-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Today</p>
+                <h2 className="section-title">Classroom readiness</h2>
+              </div>
+              <span className="badge badge-blue">
+                {dashboard?.pendingAttendance ?? 0} pending
+              </span>
+            </div>
+            <div className="classroom-snapshot-list">
+              {(dashboard?.classrooms ?? []).map((classroom) => (
+                <div className="classroom-snapshot-row" key={classroom.id}>
+                  <span>
+                    <strong>{classroom.name}</strong>
+                    <p className="field-help">{classroom.rosterCount} active students</p>
+                  </span>
+                  <span className="badge">
+                    {classroom.attendanceMarkedToday}/{classroom.rosterCount} marked
+                  </span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="card teacher-home-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Academic risk</p>
+                <h2 className="section-title">Needs attention</h2>
+              </div>
+            </div>
+            <div className="activity-list">
+              {(dashboard?.studentsAtRisk ?? []).map((student) => (
+                <article className="activity-row" key={student.studentId}>
+                  <span className="activity-mark">!</span>
+                  <span>
+                    <strong>{student.studentName}</strong>
+                    <p className="field-help">
+                      {student.classroomName ?? 'No classroom'} - avg{' '}
+                      {student.average ?? 'n/a'} - {student.absences} absences
+                    </p>
+                  </span>
+                </article>
+              ))}
+              {dashboard?.studentsAtRisk.length === 0 ? (
+                <div className="empty-state body-copy">No risk alerts for the current roster.</div>
+              ) : null}
+            </div>
+          </article>
+        </section>
+
+        <section className="teacher-home-grid">
+          <article className="card teacher-home-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Recent grades</p>
+                <h2 className="section-title">Latest submissions</h2>
+              </div>
+            </div>
+            <div className="activity-list">
+              {(dashboard?.recentGrades ?? []).map((grade) => (
+                <article className="activity-row" key={grade.id}>
+                  <span className="activity-mark">{grade.score}</span>
+                  <span>
+                    <strong>{grade.studentName}</strong>
+                    <p className="field-help">{grade.subject}</p>
+                  </span>
+                </article>
+              ))}
+            </div>
+          </article>
+
+          <article className="card teacher-home-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Notifications</p>
+                <h2 className="section-title">School signals</h2>
+              </div>
+            </div>
+            <div className="activity-list">
+              {(dashboard?.recentNotifications ?? []).map((notification) => (
+                <article className="activity-row activity-row-action" data-unread={!notification.readAt} key={notification.id}>
+                  <span className="activity-mark">N</span>
+                  <span>
+                    <strong>{notification.title}</strong>
+                    <p className="field-help">
+                      {notification.message} - {notification.readAt ? 'read' : 'unread'}
+                    </p>
+                  </span>
+                  <Button
+                    disabled={Boolean(notification.readAt) || savingWorkflow === notification.id}
+                    onClick={() => void markNotificationRead(notification.id)}
+                    variant="secondary"
+                  >
+                    {notification.readAt ? 'Read' : 'Mark read'}
+                  </Button>
+                </article>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <section className="teacher-home-grid">
+          <article className="card teacher-home-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Upcoming work</p>
+                <h2 className="section-title">Assignments and exams</h2>
+              </div>
+            </div>
+            <div className="activity-list">
+              {(dashboard?.upcomingAssignments ?? []).map((assignment) => (
+                <article className="activity-row" key={assignment.id}>
+                  <span className="activity-mark">{assignment.type.slice(0, 1)}</span>
+                  <span>
+                    <strong>{assignment.title}</strong>
+                    <p className="field-help">
+                      {assignment.classroomName ?? 'Classroom'} -{' '}
+                      {assignment.dueDate ? assignment.dueDate.slice(0, 10) : 'No due date'}
+                    </p>
+                  </span>
+                </article>
+              ))}
+            </div>
+          </article>
+
+          <article className="card teacher-home-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Inbox and calendar</p>
+                <h2 className="section-title">{dashboard?.unreadMessages ?? 0} unread messages</h2>
+              </div>
+            </div>
+            <div className="activity-list">
+              {(dashboard?.upcomingEvents ?? []).map((event) => (
+                <article className="activity-row" key={event.id}>
+                  <span className="activity-mark">E</span>
+                  <span>
+                    <strong>{event.title}</strong>
+                    <p className="field-help">
+                      {event.classroomName ?? 'School-wide'} - {event.startsAt.slice(0, 10)}
+                    </p>
+                  </span>
+                </article>
+              ))}
+              {(dashboard?.recentMessages ?? []).map((message) => (
+                <article className="activity-row activity-row-action" data-unread={!message.readAt} key={message.id}>
+                  <span className="activity-mark">M</span>
+                  <span>
+                    <strong>{message.subject}</strong>
+                    <p className="field-help">{message.body}</p>
+                  </span>
+                  <Button
+                    disabled={Boolean(message.readAt) || savingWorkflow === message.id}
+                    onClick={() => void markMessageRead(message.id)}
+                    variant="secondary"
+                  >
+                    {message.readAt ? 'Read' : 'Mark read'}
+                  </Button>
+                </article>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <section className="workflow-console-grid">
+          <article className="card">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Publish</p>
+                <h2 className="section-title">Classroom work</h2>
+              </div>
+            </div>
+            <div className="form">
+              <FormField label="Title" name="workflowTitle" onChange={(event) => setWorkflowTitle(event.target.value)} value={workflowTitle} />
+              <label className="form-field" htmlFor="workflowType">
+                <span>Type</span>
+                <select id="workflowType" onChange={(event) => setWorkflowType(event.target.value as 'homework' | 'exam' | 'assignment')} value={workflowType}>
+                  <option value="homework">homework</option>
+                  <option value="exam">exam</option>
+                  <option value="assignment">assignment</option>
+                </select>
+              </label>
+              <FormField label="Due date" name="workflowDueDate" onChange={(event) => setWorkflowDueDate(event.target.value)} type="datetime-local" value={workflowDueDate} />
+              <Button disabled={savingWorkflow === 'assignment' || !selectedClassroomId || !workflowTitle.trim()} onClick={() => void createAssignment()}>
+                {savingWorkflow === 'assignment' ? 'Publishing...' : 'Publish work'}
+              </Button>
+            </div>
+          </article>
+
+          <article className="card">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Calendar</p>
+                <h2 className="section-title">Classroom event</h2>
+              </div>
+            </div>
+            <div className="form">
+              <FormField label="Title" name="teacherEventTitle" onChange={(event) => setEventTitle(event.target.value)} value={eventTitle} />
+              <FormField label="Starts at" name="teacherEventStartsAt" onChange={(event) => setEventStartsAt(event.target.value)} type="datetime-local" value={eventStartsAt} />
+              <Button disabled={savingWorkflow === 'event' || !selectedClassroomId || !eventTitle.trim()} onClick={() => void createClassroomEvent()}>
+                {savingWorkflow === 'event' ? 'Scheduling...' : 'Schedule event'}
+              </Button>
+            </div>
+          </article>
+
+          <article className="card">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Message</p>
+                <h2 className="section-title">Family/admin thread</h2>
+              </div>
+            </div>
+            <div className="form">
+              <FormField label="Recipient user ID" name="teacherRecipientUserId" onChange={(event) => setRecipientUserId(event.target.value)} value={recipientUserId} />
+              <FormField label="Subject" name="teacherMessageSubject" onChange={(event) => setMessageSubject(event.target.value)} value={messageSubject} />
+              <TextAreaField label="Message" name="teacherMessageBody" onChange={(event) => setMessageBody(event.target.value)} rows={4} value={messageBody} />
+              <Button disabled={savingWorkflow === 'message' || !recipientUserId.trim() || !messageSubject.trim() || !messageBody.trim()} onClick={() => void sendMessage()}>
+                {savingWorkflow === 'message' ? 'Sending...' : 'Send message'}
+              </Button>
+            </div>
+          </article>
+        </section>
+
         <section className="teacher-layout">
           <aside className="card teacher-controls">
             <div className="form-field">
@@ -455,6 +846,7 @@ export default function TeachersPage() {
             </div>
           </section>
         </section>
+        </>
       ) : null}
     </main>
   );

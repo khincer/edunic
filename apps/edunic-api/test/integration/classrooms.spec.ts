@@ -7,6 +7,7 @@ import {
   createEnrollmentFixture,
   createInstitutionFixture,
   createStudentFixture,
+  createTeacherClassroomAssignmentFixture,
   createUserFixture,
 } from '../helpers/fixtures.js';
 
@@ -78,7 +79,12 @@ describe('classrooms routes', () => {
       institutionId: institution.id,
       role: 'teacher',
     });
-    await createClassroomFixture({ institutionId: institution.id });
+    const classroom = await createClassroomFixture({ institutionId: institution.id });
+    await createTeacherClassroomAssignmentFixture({
+      institutionId: institution.id,
+      teacherUserId: teacherUser.id,
+      classroomId: classroom.id,
+    });
     const headers = createAuthHeaders({
       userId: teacherUser.id,
       institutionId: institution.id,

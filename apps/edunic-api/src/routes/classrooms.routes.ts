@@ -54,6 +54,7 @@ export async function classroomRoutes(app: FastifyInstance) {
 
     return classroomsService.listClassrooms({
       institutionId,
+      teacherUserId: request.user?.role === 'teacher' ? request.user.id : undefined,
       ...query,
     });
   });

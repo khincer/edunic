@@ -1,6 +1,6 @@
 'use client';
 
-import { getSession } from './auth';
+import { clearSession, getSession } from './auth';
 import { API_BASE_URL } from './config';
 
 export type ApiListResponse<T> = {
@@ -20,6 +20,26 @@ export type Institution = {
   id: string;
   name: string;
   createdAt: string;
+};
+
+export type Student = {
+  id: string;
+  institutionId: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  dateOfBirth: string | null;
+  createdAt: string | null;
+};
+
+export type AcademicPeriod = {
+  id: string;
+  institutionId: string;
+  year: number;
+  term: number;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: string | null;
 };
 
 export type Classroom = {
@@ -100,6 +120,191 @@ export type AuditLog = {
   createdAt: string;
 };
 
+export type DashboardAttendanceSummary = {
+  present: number;
+  late: number;
+  absent: number;
+  marked: number;
+};
+
+export type DashboardNotification = {
+  id: string;
+  eventName: string;
+  title: string;
+  message: string;
+  readAt: string | null;
+  createdAt: string | null;
+};
+
+export type DashboardAssignment = {
+  id: string;
+  title: string;
+  type: string;
+  status: string;
+  dueDate: string | null;
+  classroomName: string | null;
+};
+
+export type DashboardEvent = {
+  id: string;
+  title: string;
+  eventType: string;
+  startsAt: string;
+  endsAt: string | null;
+  classroomName: string | null;
+};
+
+export type DashboardMessage = {
+  id: string;
+  subject: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string | null;
+};
+
+export type DashboardReportHistory = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  year: number;
+  reportType: string;
+  createdAt: string | null;
+};
+
+export type WorkflowAssignment = DashboardAssignment & {
+  institutionId: string;
+  classroomId: string | null;
+  createdByUserId: string | null;
+  createdAt: string | null;
+};
+
+export type WorkflowEvent = DashboardEvent & {
+  institutionId: string;
+  classroomId: string | null;
+  createdByUserId: string | null;
+  createdAt: string | null;
+};
+
+export type WorkflowMessage = DashboardMessage & {
+  institutionId: string;
+  threadId: string;
+  senderUserId: string | null;
+  recipientUserId: string | null;
+};
+
+export type DashboardModule = {
+  key: string;
+  name: string;
+  enabled: boolean;
+  type: 'feature' | 'extension';
+  source: 'default' | 'institution';
+};
+
+export type AdminDashboard = {
+  institution: {
+    id: string;
+    name: string;
+  };
+  activePeriod: {
+    id: string;
+    year: number;
+    term: number;
+    startDate: string | null;
+    endDate: string | null;
+    label: string;
+  } | null;
+  counts: {
+    students: number;
+    teachers: number;
+    parents: number;
+    guardians: number;
+    activeEnrollments: number;
+    classrooms: number;
+  };
+  attendanceToday: DashboardAttendanceSummary;
+  gradeSubmission: {
+    submitted: number;
+    total: number;
+    percent: number;
+  };
+  modules: DashboardModule[];
+  recentNotifications: DashboardNotification[];
+  recentAuditActivity: Array<{
+    id: string;
+    action: string;
+    entity: string;
+    entityId: string | null;
+    createdAt: string | null;
+  }>;
+  upcomingAssignments: DashboardAssignment[];
+  upcomingEvents: DashboardEvent[];
+  unreadMessages: number;
+  recentMessages: DashboardMessage[];
+  reportHistory: DashboardReportHistory[];
+};
+
+export type TeacherDashboard = {
+  classrooms: Array<{
+    id: string;
+    name: string;
+    gradeLevel: number;
+    section: string | null;
+    rosterCount: number;
+    attendanceMarkedToday: number;
+  }>;
+  attendanceToday: DashboardAttendanceSummary;
+  pendingAttendance: number;
+  activeEnrollmentCount: number;
+  recentGrades: DashboardGrade[];
+  studentsAtRisk: Array<{
+    studentId: string;
+    studentName: string;
+    classroomName: string | null;
+    average: number | null;
+    absences: number;
+  }>;
+  recentNotifications: DashboardNotification[];
+  upcomingAssignments: DashboardAssignment[];
+  upcomingEvents: DashboardEvent[];
+  unreadMessages: number;
+  recentMessages: DashboardMessage[];
+};
+
+export type DashboardGrade = {
+  id: string;
+  subject: string;
+  score: number;
+  createdAt: string | null;
+  studentId: string;
+  studentName: string;
+};
+
+export type ParentDashboard = {
+  students: Array<{
+    studentId: string;
+    fullName: string;
+    dateOfBirth: string | null;
+    guardianName: string;
+    enrollmentId: string | null;
+    classroomName: string | null;
+    enrollmentStatus: string | null;
+    academicYear: number | null;
+    academicTerm: number | null;
+    average: {
+      average: number | null;
+      gradeCount: number;
+    };
+    attendance: DashboardAttendanceSummary;
+    recentGrades: DashboardGrade[];
+    reportUrl: string;
+  }>;
+  recentNotifications: DashboardNotification[];
+  upcomingAssignments: DashboardAssignment[];
+  upcomingEvents: DashboardEvent[];
+  unreadMessages: number;
+  recentMessages: DashboardMessage[];
+};
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -149,6 +354,11 @@ export async function apiRequest<T>(
   const payload = await readPayload(response);
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearSession();
+      redirectToLogin();
+    }
+
     throw new ApiError(getErrorMessage(payload), response.status, payload);
   }
 
@@ -207,4 +417,23 @@ export function toFeatureFlagMap(flags: FeatureFlag[]) {
     result[flag.key] = flag.enabled;
     return result;
   }, {});
+}
+
+function redirectToLogin() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const pathname = window.location.pathname;
+  let loginPath = '/admin/login';
+
+  if (pathname.startsWith('/teachers')) {
+    loginPath = '/teachers/login';
+  } else if (pathname.startsWith('/parents')) {
+    loginPath = '/parents/login';
+  }
+
+  if (pathname !== loginPath) {
+    window.location.replace(`${loginPath}?reason=session-expired`);
+  }
 }

@@ -21,7 +21,12 @@ export class ClassroomsServiceError extends Error {
 export class ClassroomsService {
   constructor(private readonly classroomsRepository: ClassroomsRepository) {}
 
-  async listClassrooms(input: ListClassroomsQuery & { institutionId: string }) {
+  async listClassrooms(
+    input: ListClassroomsQuery & {
+      institutionId: string;
+      teacherUserId?: string;
+    }
+  ) {
     const result = await this.classroomsRepository.list({
       ...input,
       section: input.section?.trim() || undefined,

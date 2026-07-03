@@ -1,6 +1,6 @@
 'use client';
 
-import { getSession } from './auth';
+import { clearSession, getSession } from './auth';
 import { API_BASE_URL } from './config';
 
 export type ApiListResponse<T> = {
@@ -96,6 +96,11 @@ export async function apiRequest<T>(
   const payload = await readPayload(response);
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearSession();
+      redirectToLogin();
+    }
+
     throw new ApiError(getErrorMessage(payload), response.status, payload);
   }
 
@@ -147,4 +152,14 @@ export function buildQuery(params: Record<string, string | number | undefined>) 
 
   const value = query.toString();
   return value ? `?${value}` : '';
+}
+
+function redirectToLogin() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (window.location.pathname !== '/login') {
+    window.location.replace('/login?reason=session-expired');
+  }
 }

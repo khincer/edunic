@@ -9,6 +9,7 @@ import {
   createGradeFixture,
   createInstitutionFixture,
   createStudentFixture,
+  createTeacherClassroomAssignmentFixture,
   createUserFixture,
 } from '../helpers/fixtures.js';
 
@@ -88,6 +89,11 @@ describe('enrollments routes', () => {
       institutionId: institution.id,
       gradeLevel: 5,
       section: 'B',
+    });
+    await createTeacherClassroomAssignmentFixture({
+      institutionId: institution.id,
+      teacherUserId: teacherUser.id,
+      classroomId: targetClassroom.id,
     });
     const firstStudent = await createStudentFixture({
       institutionId: institution.id,

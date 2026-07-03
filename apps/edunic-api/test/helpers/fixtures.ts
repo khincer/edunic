@@ -9,6 +9,7 @@ import {
   grades,
   institutions,
   students,
+  teacherClassroomAssignments,
   userInstitutionRoles,
   users,
 } from '@edunic/source/db/schema';
@@ -136,6 +137,24 @@ export async function createClassroomFixture(input: {
       institutionId: input.institutionId,
       gradeLevel: input.gradeLevel ?? 5,
       section: input.section ?? 'A',
+    })
+    .returning();
+
+  return result[0];
+}
+
+export async function createTeacherClassroomAssignmentFixture(input: {
+  institutionId: string;
+  teacherUserId: string;
+  classroomId: string;
+}) {
+  const result = await db
+    .insert(teacherClassroomAssignments)
+    .values({
+      id: nextId('45000000'),
+      institutionId: input.institutionId,
+      teacherUserId: input.teacherUserId,
+      classroomId: input.classroomId,
     })
     .returning();
 

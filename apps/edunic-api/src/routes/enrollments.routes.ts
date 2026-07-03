@@ -56,6 +56,7 @@ export async function enrollmentRoutes(app: FastifyInstance) {
 
     return enrollmentsService.listEnrollments({
       institutionId,
+      teacherUserId: request.user?.role === 'teacher' ? request.user.id : undefined,
       ...query,
     });
   });

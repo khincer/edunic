@@ -30,7 +30,7 @@ export class AuthService {
     );
 
     if (!userRole) {
-      throw new AuthServiceError('User role for this institution was not found', 403);
+      throw new AuthServiceError('Invalid credentials', 401);
     }
 
     const token = signJwt(

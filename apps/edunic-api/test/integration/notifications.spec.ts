@@ -70,7 +70,7 @@ describe('notifications routes', () => {
     expect(notificationsResponse.body.data[0].eventName).toBe('grade.submitted');
   });
 
-  it('does not allow parent users to read notifications', async () => {
+  it('allows parent users to read scoped notifications', async () => {
     const institution = await createInstitutionFixture();
     const parentUser = await createUserFixture({
       institutionId: institution.id,
@@ -86,6 +86,7 @@ describe('notifications routes', () => {
         })
       );
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual([]);
   });
 });

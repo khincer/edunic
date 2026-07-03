@@ -451,6 +451,286 @@ const studentAcademicSummarySchema = {
   },
 };
 
+const dashboardInstitutionSchema = {
+  type: 'object',
+  required: ['id', 'name'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    name: { type: 'string', example: 'Colegio Central' },
+  },
+};
+
+const dashboardAttendanceSummarySchema = {
+  type: 'object',
+  required: ['present', 'late', 'absent', 'marked'],
+  properties: {
+    present: { type: 'integer', example: 82 },
+    late: { type: 'integer', example: 4 },
+    absent: { type: 'integer', example: 3 },
+    marked: { type: 'integer', example: 89 },
+  },
+};
+
+const dashboardNotificationSchema = {
+  type: 'object',
+  required: ['id', 'eventName', 'title', 'message'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    eventName: { type: 'string', example: 'grade.submitted' },
+    title: { type: 'string', example: 'Grade submitted' },
+    message: { type: 'string', example: 'Mathematics grade was submitted' },
+    readAt: { type: 'string', format: 'date-time', nullable: true },
+    createdAt: { type: 'string', format: 'date-time', nullable: true },
+  },
+};
+
+const dashboardAssignmentSchema = {
+  type: 'object',
+  required: ['id', 'title', 'type', 'status'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    title: { type: 'string', example: 'Fractions practice' },
+    type: { type: 'string', enum: ['homework', 'exam', 'assignment'] },
+    status: { type: 'string', example: 'published' },
+    dueDate: { type: 'string', format: 'date-time', nullable: true },
+    classroomName: { type: 'string', nullable: true, example: 'Grade 5 A' },
+  },
+};
+
+const dashboardEventSchema = {
+  type: 'object',
+  required: ['id', 'title', 'eventType', 'startsAt'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    title: { type: 'string', example: 'Science exam' },
+    eventType: { type: 'string', example: 'exam' },
+    startsAt: { type: 'string', format: 'date-time' },
+    endsAt: { type: 'string', format: 'date-time', nullable: true },
+    classroomName: { type: 'string', nullable: true, example: 'Grade 5 A' },
+  },
+};
+
+const dashboardMessageSchema = {
+  type: 'object',
+  required: ['id', 'subject', 'body'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    subject: { type: 'string', example: 'Welcome to the term' },
+    body: { type: 'string', example: 'Please review the first-week packet.' },
+    readAt: { type: 'string', format: 'date-time', nullable: true },
+    createdAt: { type: 'string', format: 'date-time', nullable: true },
+  },
+};
+
+const dashboardModuleSchema = {
+  type: 'object',
+  required: ['key', 'name', 'enabled', 'source', 'type'],
+  properties: {
+    key: { type: 'string', example: 'parent_portal' },
+    name: { type: 'string', example: 'Parent portal' },
+    enabled: { type: 'boolean', example: true },
+    source: { type: 'string', example: 'institution' },
+    type: { type: 'string', example: 'feature_flag' },
+  },
+};
+
+const adminDashboardResponseSchema = {
+  type: 'object',
+  required: ['data'],
+  properties: {
+    data: {
+      type: 'object',
+      required: [
+        'institution',
+        'counts',
+        'attendanceToday',
+        'gradeSubmission',
+        'modules',
+        'recentNotifications',
+        'recentAuditActivity',
+        'upcomingAssignments',
+        'upcomingEvents',
+        'unreadMessages',
+        'recentMessages',
+        'reportHistory',
+      ],
+      properties: {
+        institution: dashboardInstitutionSchema,
+        activePeriod: {
+          type: 'object',
+          nullable: true,
+          required: ['id', 'year', 'term', 'label'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            year: { type: 'integer', example: 2026 },
+            term: { type: 'integer', example: 1 },
+            startDate: { type: 'string', format: 'date-time', nullable: true },
+            endDate: { type: 'string', format: 'date-time', nullable: true },
+            label: { type: 'string', example: '2026 Term 1' },
+          },
+        },
+        counts: {
+          type: 'object',
+          required: ['students', 'teachers', 'parents', 'guardians', 'activeEnrollments', 'classrooms'],
+          properties: {
+            students: { type: 'integer', example: 2 },
+            teachers: { type: 'integer', example: 1 },
+            parents: { type: 'integer', example: 1 },
+            guardians: { type: 'integer', example: 2 },
+            activeEnrollments: { type: 'integer', example: 2 },
+            classrooms: { type: 'integer', example: 2 },
+          },
+        },
+        attendanceToday: dashboardAttendanceSummarySchema,
+        gradeSubmission: {
+          type: 'object',
+          required: ['submitted', 'total', 'percent'],
+          properties: {
+            submitted: { type: 'integer', example: 2 },
+            total: { type: 'integer', example: 2 },
+            percent: { type: 'integer', example: 100 },
+          },
+        },
+        modules: { type: 'array', items: dashboardModuleSchema },
+        recentNotifications: { type: 'array', items: dashboardNotificationSchema },
+        recentAuditActivity: { type: 'array', items: auditLogSchema },
+        upcomingAssignments: { type: 'array', items: dashboardAssignmentSchema },
+        upcomingEvents: { type: 'array', items: dashboardEventSchema },
+        unreadMessages: { type: 'integer', example: 2 },
+        recentMessages: { type: 'array', items: dashboardMessageSchema },
+        reportHistory: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['id', 'studentId', 'studentName', 'year', 'reportType'],
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              studentId: { type: 'string', format: 'uuid' },
+              studentName: { type: 'string', example: 'Sofia Morales' },
+              year: { type: 'integer', example: 2026 },
+              reportType: { type: 'string', example: 'academic_summary' },
+              createdAt: { type: 'string', format: 'date-time', nullable: true },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+const teacherDashboardResponseSchema = {
+  type: 'object',
+  required: ['data'],
+  properties: {
+    data: {
+      type: 'object',
+      required: [
+        'classrooms',
+        'attendanceToday',
+        'pendingAttendance',
+        'activeEnrollmentCount',
+        'recentNotifications',
+        'recentGrades',
+        'studentsAtRisk',
+        'upcomingAssignments',
+        'upcomingEvents',
+        'unreadMessages',
+        'recentMessages',
+      ],
+      properties: {
+        classrooms: { type: 'array', items: classroomSchema },
+        attendanceToday: dashboardAttendanceSummarySchema,
+        pendingAttendance: { type: 'integer', example: 1 },
+        activeEnrollmentCount: { type: 'integer', example: 2 },
+        recentNotifications: { type: 'array', items: dashboardNotificationSchema },
+        recentGrades: { type: 'array', items: gradeSchema },
+        studentsAtRisk: { type: 'array', items: { type: 'object' } },
+        upcomingAssignments: { type: 'array', items: dashboardAssignmentSchema },
+        upcomingEvents: { type: 'array', items: dashboardEventSchema },
+        unreadMessages: { type: 'integer', example: 1 },
+        recentMessages: { type: 'array', items: dashboardMessageSchema },
+      },
+    },
+  },
+};
+
+const parentDashboardResponseSchema = {
+  type: 'object',
+  required: ['data'],
+  properties: {
+    data: {
+      type: 'object',
+      required: [
+        'students',
+        'recentNotifications',
+        'upcomingAssignments',
+        'upcomingEvents',
+        'unreadMessages',
+        'recentMessages',
+      ],
+      properties: {
+        students: { type: 'array', items: { type: 'object' } },
+        recentNotifications: { type: 'array', items: dashboardNotificationSchema },
+        upcomingAssignments: { type: 'array', items: dashboardAssignmentSchema },
+        upcomingEvents: { type: 'array', items: dashboardEventSchema },
+        unreadMessages: { type: 'integer', example: 1 },
+        recentMessages: { type: 'array', items: dashboardMessageSchema },
+      },
+    },
+  },
+};
+
+const workflowAssignmentSchema = {
+  type: 'object',
+  required: ['id', 'institutionId', 'title', 'type', 'status'],
+  properties: {
+    ...dashboardAssignmentSchema.properties,
+    institutionId: { type: 'string', format: 'uuid' },
+    classroomId: { type: 'string', format: 'uuid', nullable: true },
+    createdByUserId: { type: 'string', format: 'uuid', nullable: true },
+    createdAt: { type: 'string', format: 'date-time', nullable: true },
+  },
+};
+
+const workflowEventSchema = {
+  type: 'object',
+  required: ['id', 'institutionId', 'title', 'eventType', 'startsAt'],
+  properties: {
+    ...dashboardEventSchema.properties,
+    institutionId: { type: 'string', format: 'uuid' },
+    classroomId: { type: 'string', format: 'uuid', nullable: true },
+    createdByUserId: { type: 'string', format: 'uuid', nullable: true },
+    createdAt: { type: 'string', format: 'date-time', nullable: true },
+  },
+};
+
+const workflowMessageSchema = {
+  type: 'object',
+  required: ['id', 'institutionId', 'threadId', 'subject', 'body'],
+  properties: {
+    ...dashboardMessageSchema.properties,
+    institutionId: { type: 'string', format: 'uuid' },
+    threadId: { type: 'string', format: 'uuid' },
+    senderUserId: { type: 'string', format: 'uuid', nullable: true },
+    recipientUserId: { type: 'string', format: 'uuid', nullable: true },
+  },
+};
+
+const workflowListResponseSchema = (itemSchema: object) => ({
+  type: 'object',
+  properties: {
+    data: { type: 'array', items: itemSchema },
+    meta: {
+      type: 'object',
+      properties: {
+        total: { type: 'integer', example: 3 },
+        limit: { type: 'integer', example: 25 },
+        offset: { type: 'integer', example: 0 },
+      },
+    },
+  },
+});
+
 export function buildOpenApiDocument() {
   return {
     openapi: '3.0.3',
@@ -493,7 +773,8 @@ export function buildOpenApiDocument() {
       },
       {
         name: 'Notifications',
-        description: 'Internal notifications generated by domain events',
+        description:
+          'Role-scoped notifications generated by domain events and workflow actions',
       },
       {
         name: 'Academic Averages',
@@ -502,6 +783,14 @@ export function buildOpenApiDocument() {
       {
         name: 'Reports',
         description: 'Read-only reporting endpoints for academic summaries',
+      },
+      {
+        name: 'Dashboards',
+        description: 'Role-specific dashboard aggregate endpoints',
+      },
+      {
+        name: 'Workflows',
+        description: 'Assignments, calendar events, and role-scoped messaging',
       },
       { name: 'Academic Periods', description: 'Academic period CRUD endpoints' },
       { name: 'Attendance', description: 'Attendance CRUD endpoints' },
@@ -514,6 +803,341 @@ export function buildOpenApiDocument() {
       { name: 'Students', description: 'Student CRUD endpoints' },
     ],
     paths: {
+      '/dashboard/admin': {
+        get: {
+          tags: ['Dashboards'],
+          summary: 'Get the admin home dashboard aggregate',
+          parameters: [institutionIdHeaderSchema],
+          responses: {
+            200: {
+              description: 'Admin dashboard aggregate',
+              content: {
+                'application/json': {
+                  schema: adminDashboardResponseSchema,
+                },
+              },
+            },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/dashboard/teacher': {
+        get: {
+          tags: ['Dashboards'],
+          summary: 'Get the teacher home dashboard aggregate',
+          parameters: [institutionIdHeaderSchema],
+          responses: {
+            200: {
+              description: 'Teacher dashboard aggregate',
+              content: {
+                'application/json': {
+                  schema: teacherDashboardResponseSchema,
+                },
+              },
+            },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/dashboard/parent': {
+        get: {
+          tags: ['Dashboards'],
+          summary: 'Get the parent home dashboard aggregate',
+          parameters: [institutionIdHeaderSchema],
+          responses: {
+            200: {
+              description: 'Parent dashboard aggregate',
+              content: {
+                'application/json': {
+                  schema: parentDashboardResponseSchema,
+                },
+              },
+            },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/assignments': {
+        get: {
+          tags: ['Workflows'],
+          summary: 'List role-scoped assignments and evaluations',
+          description:
+            'Admins see all tenant assignments, teachers see assigned classrooms, and parents see assignments for linked students.',
+          parameters: [institutionIdHeaderSchema],
+          responses: {
+            200: {
+              description: 'Assignments visible to the authenticated role',
+              content: {
+                'application/json': {
+                  schema: workflowListResponseSchema(workflowAssignmentSchema),
+                },
+              },
+            },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+        post: {
+          tags: ['Workflows'],
+          summary: 'Create an assignment or exam',
+          description:
+            'Used by the admin workflow console and teacher workspace to publish homework, assignments, or exams. Teacher requests must target an assigned classroom.',
+          parameters: [institutionIdHeaderSchema],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['title'],
+                  properties: {
+                    classroomId: { type: 'string', format: 'uuid' },
+                    title: { type: 'string', example: 'Fractions practice' },
+                    type: {
+                      type: 'string',
+                      enum: ['homework', 'exam', 'assignment'],
+                      example: 'homework',
+                    },
+                    status: {
+                      type: 'string',
+                      enum: ['draft', 'published', 'reviewed'],
+                      example: 'published',
+                    },
+                    dueDate: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Assignment created',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: workflowAssignmentSchema },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
+      '/assignments/{assignmentId}': {
+        patch: {
+          tags: ['Workflows'],
+          summary: 'Update assignment status or details',
+          description:
+            'Supports workflow UI actions such as marking an assignment reviewed while preserving tenant and teacher-classroom scoping.',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'assignmentId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    classroomId: { type: 'string', format: 'uuid' },
+                    title: { type: 'string' },
+                    type: { type: 'string', enum: ['homework', 'exam', 'assignment'] },
+                    status: {
+                      type: 'string',
+                      enum: ['draft', 'published', 'reviewed'],
+                      example: 'reviewed',
+                    },
+                    dueDate: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Assignment updated',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: workflowAssignmentSchema },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
+      '/school-events': {
+        get: {
+          tags: ['Workflows'],
+          summary: 'List role-scoped school and classroom calendar events',
+          description:
+            'Admins see all tenant events, teachers see school-wide and assigned-classroom events, and parents see school-wide plus linked-student classroom events.',
+          parameters: [institutionIdHeaderSchema],
+          responses: {
+            200: {
+              description: 'Events visible to the authenticated role',
+              content: {
+                'application/json': {
+                  schema: workflowListResponseSchema(workflowEventSchema),
+                },
+              },
+            },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+        post: {
+          tags: ['Workflows'],
+          summary: 'Create a school or classroom event',
+          description:
+            'Used by admin and teacher workflow UIs. Teachers must target an assigned classroom.',
+          parameters: [institutionIdHeaderSchema],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['title', 'startsAt'],
+                  properties: {
+                    classroomId: { type: 'string', format: 'uuid', nullable: true },
+                    title: { type: 'string', example: 'Science exam' },
+                    eventType: { type: 'string', example: 'exam' },
+                    startsAt: { type: 'string', format: 'date-time' },
+                    endsAt: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Event created',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: workflowEventSchema },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
+      '/messages': {
+        get: {
+          tags: ['Workflows'],
+          summary: 'List sent and received messages for the authenticated user',
+          description:
+            'Returns the authenticated user inbox/sent-message stream for admin, teacher, and parent workflow UIs.',
+          parameters: [institutionIdHeaderSchema],
+          responses: {
+            200: {
+              description: 'Role-scoped inbox messages',
+              content: {
+                'application/json': {
+                  schema: workflowListResponseSchema(workflowMessageSchema),
+                },
+              },
+            },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+        post: {
+          tags: ['Workflows'],
+          summary: 'Send a message to another user in the institution',
+          description:
+            'Creates a simple message thread and emits a recipient-scoped notification.',
+          parameters: [institutionIdHeaderSchema],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['recipientUserId', 'subject', 'body'],
+                  properties: {
+                    recipientUserId: { type: 'string', format: 'uuid' },
+                    subject: { type: 'string', example: 'Welcome to the term' },
+                    body: { type: 'string', example: 'Please review the packet.' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Message sent',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: workflowMessageSchema },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
+      '/messages/{messageId}/read': {
+        patch: {
+          tags: ['Workflows'],
+          summary: 'Mark a received message as read',
+          description:
+            'Only the authenticated recipient can mark a message read.',
+          parameters: [
+            institutionIdHeaderSchema,
+            {
+              name: 'messageId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Message marked read',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: workflowMessageSchema },
+                  },
+                },
+              },
+            },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
       '/feature-flags': {
         get: {
           tags: ['Feature Flags'],
@@ -999,7 +1623,9 @@ export function buildOpenApiDocument() {
       '/notifications': {
         get: {
           tags: ['Notifications'],
-          summary: 'List internal notifications',
+          summary: 'List role-scoped notifications',
+          description:
+            'Returns notifications visible to the authenticated admin, teacher, or parent. Audience metadata plus linked-student/classroom filters are applied server-side.',
           parameters: [
             institutionIdHeaderSchema,
             { name: 'unreadOnly', in: 'query', schema: { type: 'boolean' } },
@@ -1007,7 +1633,7 @@ export function buildOpenApiDocument() {
           ],
           responses: {
             200: {
-              description: 'Notifications page',
+              description: 'Role-scoped notifications page',
               content: {
                 'application/json': {
                   schema: {
@@ -1026,7 +1652,9 @@ export function buildOpenApiDocument() {
       '/notifications/{notificationId}/read': {
         patch: {
           tags: ['Notifications'],
-          summary: 'Mark a notification as read',
+          summary: 'Mark a visible notification as read',
+          description:
+            'Marks a notification read only when it is visible to the authenticated user role and tenant.',
           parameters: [
             institutionIdHeaderSchema,
             {
@@ -1048,6 +1676,7 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/NotFound' },
           },
         },

@@ -35,7 +35,12 @@ export class EnrollmentsService {
     private readonly eventBus?: EventBus
   ) {}
 
-  async listEnrollments(input: ListEnrollmentsQuery & { institutionId: string }) {
+  async listEnrollments(
+    input: ListEnrollmentsQuery & {
+      institutionId: string;
+      teacherUserId?: string;
+    }
+  ) {
     const result = await this.enrollmentsRepository.list({
       ...input,
       search: input.search?.trim() || undefined,

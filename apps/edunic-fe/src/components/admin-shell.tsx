@@ -17,17 +17,18 @@ type AdminShellProps = {
 interface NavItem {
   label: string;
   href: string;
-  disabled?: boolean;
   group: 'Workspace' | 'Roadmap';
 }
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/admin/dashboard', group: 'Workspace' },
   { label: 'Institutions', href: '/admin/institutions', group: 'Workspace' },
-  { label: 'Students', href: '/admin/students', disabled: true, group: 'Roadmap' },
-  { label: 'Enrollments', href: '/admin/enrollments', disabled: true, group: 'Roadmap' },
-  { label: 'Grades & attendance', href: '/admin/academic-records', disabled: true, group: 'Roadmap' },
-  { label: 'Reports', href: '/admin/reports', disabled: true, group: 'Roadmap' },
-  { label: 'Billing', href: '/admin/billing', disabled: true, group: 'Roadmap' },
+  { label: 'Students', href: '/admin/students', group: 'Roadmap' },
+  { label: 'Enrollments', href: '/admin/enrollments', group: 'Roadmap' },
+  { label: 'Academic periods', href: '/admin/academic-periods', group: 'Roadmap' },
+  { label: 'Grades', href: '/admin/grades', group: 'Roadmap' },
+  { label: 'Attendance', href: '/admin/attendance', group: 'Roadmap' },
+  { label: 'Workflows', href: '/admin/workflows', group: 'Roadmap' },
+  { label: 'Reports', href: '/admin/reports', group: 'Roadmap' },
 ];
 
 export function AdminShell({ children }: AdminShellProps) {
@@ -88,29 +89,19 @@ export function AdminShell({ children }: AdminShellProps) {
             {Object.entries(groupedNavItems).map(([group, items]) => (
               <div className="admin-nav-group" key={group}>
                 <p>{group}</p>
-                {items.map((item) =>
-                  item.disabled ? (
-                    <span className="admin-nav-disabled" key={item.label}>
-                      <span className="admin-nav-icon" aria-hidden="true">
-                        {item.label.slice(0, 1)}
-                      </span>
-                      {item.label}
-                      <span className="admin-nav-pill">soon</span>
+                {items.map((item) => (
+                  <Link
+                    className="admin-nav-link"
+                    data-active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                    href={item.href}
+                    key={item.label}
+                  >
+                    <span className="admin-nav-icon" aria-hidden="true">
+                      {item.label.slice(0, 1)}
                     </span>
-                  ) : (
-                    <Link
-                      className="admin-nav-link"
-                      data-active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
-                      href={item.href}
-                      key={item.label}
-                    >
-                      <span className="admin-nav-icon" aria-hidden="true">
-                        {item.label.slice(0, 1)}
-                      </span>
-                      {item.label}
-                    </Link>
-                  )
-                )}
+                    {item.label}
+                  </Link>
+                ))}
               </div>
             ))}
           </nav>
@@ -166,6 +157,38 @@ function getPageLabel(pathname: string) {
 
   if (pathname.startsWith('/admin/institutions')) {
     return 'Institutions';
+  }
+
+  if (pathname.startsWith('/admin/students')) {
+    return 'Students';
+  }
+
+  if (pathname.startsWith('/admin/enrollments')) {
+    return 'Enrollments';
+  }
+
+  if (pathname.startsWith('/admin/academic-periods')) {
+    return 'Academic periods';
+  }
+
+  if (pathname.startsWith('/admin/grades')) {
+    return 'Grades';
+  }
+
+  if (pathname.startsWith('/admin/attendance')) {
+    return 'Attendance';
+  }
+
+  if (pathname.startsWith('/admin/workflows')) {
+    return 'Workflows';
+  }
+
+  if (pathname.startsWith('/admin/academic-records')) {
+    return 'Grades & attendance';
+  }
+
+  if (pathname.startsWith('/admin/reports')) {
+    return 'Reports';
   }
 
   return 'Dashboard';

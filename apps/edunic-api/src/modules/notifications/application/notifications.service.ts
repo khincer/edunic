@@ -33,7 +33,11 @@ export class NotificationsService {
   }
 
   async listNotifications(
-    input: ListNotificationsQuery & { institutionId: string }
+    input: ListNotificationsQuery & {
+      institutionId: string;
+      role?: string;
+      userId?: string;
+    }
   ) {
     const result = await this.notificationsRepository.list({
       ...input,
@@ -52,10 +56,14 @@ export class NotificationsService {
     };
   }
 
-  async markNotificationRead(institutionId: string, notificationId: string) {
+  async markNotificationRead(input: {
+    institutionId: string;
+    notificationId: string;
+    role?: string;
+    userId?: string;
+  }) {
     const notification = await this.notificationsRepository.markRead(
-      institutionId,
-      notificationId
+      input
     );
 
     if (!notification) {
