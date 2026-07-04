@@ -23,9 +23,10 @@ export class InstitutionsService {
     private readonly institutionsRepository: InstitutionsRepository
   ) {}
 
-  async listInstitutions(input: ListInstitutionsQuery) {
+  async listInstitutions(input: ListInstitutionsQuery & { institutionId?: string }) {
     const result = await this.institutionsRepository.list({
       ...input,
+      institutionId: input.institutionId,
       search: input.search?.trim() || undefined,
     });
 

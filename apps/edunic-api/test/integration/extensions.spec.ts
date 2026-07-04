@@ -84,4 +84,30 @@ describe('extensions routes', () => {
 
     expect(response.status).toBe(403);
   });
+
+  it('prevents admins from managing another institution extensions', async () => {
+    const institution = await createInstitutionFixture();
+    const otherInstitution = await createInstitutionFixture('Other School');
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
+    const headers = createAuthHeaders({
+      userId: adminUser.id,
+      institutionId: institution.id,
+    });
+
+    const listResponse = await client
+      .get(`/institutions/${otherInstitution.id}/extensions`)
+      .set(headers);
+    expect(listResponse.status).toBe(403);
+    expect(listResponse.body.message).toBe('Institution access denied');
+
+    const updateResponse = await client
+      .put(`/institutions/${otherInstitution.id}/extensions/notifications`)
+      .set(headers)
+      .send({ config: {} });
+    expect(updateResponse.status).toBe(403);
+    expect(updateResponse.body.message).toBe('Institution access denied');
+  });
 });

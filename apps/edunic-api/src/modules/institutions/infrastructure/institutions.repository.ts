@@ -28,14 +28,26 @@ export type UpdateInstitutionInput = {
   name?: string;
 };
 
-export type ListInstitutionsInput = ListInstitutionsQuery;
+export type ListInstitutionsInput = ListInstitutionsQuery & {
+  institutionId?: string;
+};
 
 export class InstitutionsRepository {
   constructor(private readonly db: Database) {}
 
   async list(input: ListInstitutionsInput) {
-    const searchFilter = input.search
-      ? sql`where name ilike ${`%${input.search}%`}`
+    const filters: SQL[] = [];
+
+    if (input.search) {
+      filters.push(sql`name ilike ${`%${input.search}%`}`);
+    }
+
+    if (input.institutionId) {
+      filters.push(sql`id = ${input.institutionId}`);
+    }
+
+    const whereClause = filters.length
+      ? sql`where ${sql.join(filters, sql` and `)}`
       : sql``;
 
     const [items, totalRows] = await Promise.all([
@@ -45,7 +57,7 @@ export class InstitutionsRepository {
           name,
           created_at as "createdAt"
         from institutions
-        ${searchFilter}
+        ${whereClause}
         order by ${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}
         limit ${input.limit}
         offset ${input.offset}
@@ -53,7 +65,7 @@ export class InstitutionsRepository {
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
         from institutions
-        ${searchFilter}
+        ${whereClause}
       `),
     ]);
 

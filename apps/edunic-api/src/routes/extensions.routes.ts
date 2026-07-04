@@ -34,6 +34,23 @@ function parseWithSchema<T>(
   }
 }
 
+function getUserInstitutionId(userInstitutionId: string | undefined) {
+  if (!userInstitutionId) {
+    throw new ExtensionsServiceError('Authentication is required', 401);
+  }
+
+  return userInstitutionId;
+}
+
+function assertInstitutionAccess(
+  userInstitutionId: string | undefined,
+  institutionId: string
+) {
+  if (getUserInstitutionId(userInstitutionId) !== institutionId) {
+    throw new ExtensionsServiceError('Institution access denied', 403);
+  }
+}
+
 export async function extensionRoutes(app: FastifyInstance) {
   const extensionsService = new ExtensionsService(
     new ExtensionsRepository(app.db)
@@ -70,6 +87,7 @@ export async function extensionRoutes(app: FastifyInstance) {
       institutionExtensionsParamsSchema,
       request.params
     );
+    assertInstitutionAccess(request.user?.institutionId, params.institutionId);
 
     return extensionsService.listInstitutionExtensions(params.institutionId);
   });
@@ -83,6 +101,7 @@ export async function extensionRoutes(app: FastifyInstance) {
       upsertInstitutionExtensionBodySchema,
       request.body
     );
+    assertInstitutionAccess(request.user?.institutionId, params.institutionId);
 
     return extensionsService.upsertInstitutionExtension({
       institutionId: params.institutionId,
@@ -96,6 +115,7 @@ export async function extensionRoutes(app: FastifyInstance) {
       institutionExtensionParamsSchema,
       request.params
     );
+    assertInstitutionAccess(request.user?.institutionId, params.institutionId);
 
     return extensionsService.deleteInstitutionExtension(
       params.institutionId,

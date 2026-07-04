@@ -1,5 +1,5 @@
 import { createTestApp, createHttpClient } from '../helpers/app.js';
-import { createBearerToken } from '../helpers/auth.js';
+import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
   createInstitutionFixture,
@@ -24,73 +24,102 @@ describe('institutions routes', () => {
     await app.close();
   });
 
-  it('supports full CRUD for institutions', async () => {
-    const bootstrapInstitution = await createInstitutionFixture('Bootstrap Institution');
+  it('scopes institution management to the authenticated tenant', async () => {
+    const institution = await createInstitutionFixture('Central School');
+    const otherInstitution = await createInstitutionFixture('North School');
     const adminUser = await createUserFixture({
-      institutionId: bootstrapInstitution.id,
+      institutionId: institution.id,
       role: 'admin',
     });
-    const authHeaders = {
-      authorization: `Bearer ${createBearerToken({
-        userId: adminUser.id,
-        institutionId: bootstrapInstitution.id,
-      })}`,
-    };
-
-    const createResponse = await client.post('/institutions').set(authHeaders).send({
-      name: '  Colegio Central ',
+    const authHeaders = createAuthHeaders({
+      userId: adminUser.id,
+      institutionId: institution.id,
     });
-
-    expect(createResponse.status).toBe(201);
-    expect(createResponse.body.data.name).toBe('Colegio Central');
-    const institutionId = createResponse.body.data.id;
 
     const listResponse = await client.get('/institutions').set(authHeaders);
     expect(listResponse.status).toBe(200);
-    expect(listResponse.body.meta.total).toBe(2);
-    expect(
-      listResponse.body.data.some(
-        (institution: { id: string }) => institution.id === institutionId
-      )
-    ).toBe(true);
+    expect(listResponse.body.meta.total).toBe(1);
+    expect(listResponse.body.data).toEqual([
+      expect.objectContaining({
+        id: institution.id,
+        name: 'Central School',
+      }),
+    ]);
 
     const detailResponse = await client
-      .get(`/institutions/${institutionId}`)
+      .get(`/institutions/${institution.id}`)
       .set(authHeaders);
     expect(detailResponse.status).toBe(200);
 
     const updateResponse = await client
-      .patch(`/institutions/${institutionId}`)
+      .patch(`/institutions/${institution.id}`)
       .set(authHeaders)
       .send({ name: 'Updated Institution' });
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body.data.name).toBe('Updated Institution');
 
-    const deleteResponse = await client
-      .delete(`/institutions/${institutionId}`)
+    const otherDetailResponse = await client
+      .get(`/institutions/${otherInstitution.id}`)
       .set(authHeaders);
-    expect(deleteResponse.status).toBe(200);
-    expect(deleteResponse.body.data.deleted).toBe(true);
+    expect(otherDetailResponse.status).toBe(403);
+    expect(otherDetailResponse.body.message).toBe('Institution access denied');
+
+    const otherUpdateResponse = await client
+      .patch(`/institutions/${otherInstitution.id}`)
+      .set(authHeaders);
+    expect(otherUpdateResponse.status).toBe(403);
+    expect(otherUpdateResponse.body.message).toBe('Institution access denied');
   });
 
-  it('returns 409 when deleting an institution with dependent records', async () => {
+  it('prevents tenant admins from creating or deleting institutions', async () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
       role: 'admin',
     });
-    await createStudentFixture({ institutionId: institution.id });
+    const authHeaders = createAuthHeaders({
+      userId: adminUser.id,
+      institutionId: institution.id,
+    });
+
+    const createResponse = await client.post('/institutions').set(authHeaders).send({
+      name: 'New School',
+    });
+
+    expect(createResponse.status).toBe(403);
+    expect(createResponse.body.message).toBe(
+      'Institution creation requires platform administrator access'
+    );
+
+    const deleteResponse = await client
+      .delete(`/institutions/${institution.id}`)
+      .set(authHeaders);
+
+    expect(deleteResponse.status).toBe(403);
+    expect(deleteResponse.body.message).toBe(
+      'Institution deletion requires platform administrator access'
+    );
+  });
+
+  it('checks tenant access before deleting another institution', async () => {
+    const institution = await createInstitutionFixture();
+    const otherInstitution = await createInstitutionFixture('Other School');
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
+    await createStudentFixture({ institutionId: otherInstitution.id });
 
     const response = await client
-      .delete(`/institutions/${institution.id}`)
-      .set({
-        authorization: `Bearer ${createBearerToken({
+      .delete(`/institutions/${otherInstitution.id}`)
+      .set(
+        createAuthHeaders({
           userId: adminUser.id,
           institutionId: institution.id,
-        })}`,
-      });
+        })
+      );
 
-    expect(response.status).toBe(409);
-    expect(response.body.message).toContain('dependent academic records');
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe('Institution access denied');
   });
 });

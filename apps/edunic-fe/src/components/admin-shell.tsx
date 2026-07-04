@@ -21,7 +21,7 @@ interface NavItem {
 }
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/admin/dashboard', group: 'Workspace' },
-  { label: 'Institutions', href: '/admin/institutions', group: 'Workspace' },
+  { label: 'Institution', href: '/admin/institutions', group: 'Workspace' },
   { label: 'Students', href: '/admin/students', group: 'Roadmap' },
   { label: 'Enrollments', href: '/admin/enrollments', group: 'Roadmap' },
   { label: 'Academic periods', href: '/admin/academic-periods', group: 'Roadmap' },
@@ -116,7 +116,7 @@ export function AdminShell({ children }: AdminShellProps) {
               <input
                 aria-label="Search institutions"
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search institutions"
+                placeholder="Search current school"
                 value={search}
               />
               <button type="submit">Search</button>
@@ -156,7 +156,7 @@ function getPageLabel(pathname: string) {
   }
 
   if (pathname.startsWith('/admin/institutions')) {
-    return 'Institutions';
+    return 'Institution';
   }
 
   if (pathname.startsWith('/admin/students')) {

@@ -143,12 +143,11 @@ export default function InstitutionsPage() {
       <header className="page-header">
         <div>
           <p className="eyebrow">Institutions</p>
-          <h1 className="page-title">Manage schools</h1>
+          <h1 className="page-title">Current school</h1>
           <p className="body-copy">
-            Search, create, rename, and open institution-scoped operations.
+            Open settings and institution-scoped operations for this tenant.
           </p>
         </div>
-        <ButtonLink href="/admin/institutions/new">New institution</ButtonLink>
       </header>
 
       <section className="card filter-panel">
@@ -186,7 +185,7 @@ export default function InstitutionsPage() {
 
       <div className="page-header pager-row">
         <p className="field-help">
-          Showing {institutions.length} of {total} institutions
+          Showing {institutions.length} of {total} institution
         </p>
         <div className="button-row">
           <Button

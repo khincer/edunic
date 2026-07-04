@@ -31,6 +31,23 @@ function parseWithSchema<T>(
   }
 }
 
+function getUserInstitutionId(userInstitutionId: string | undefined) {
+  if (!userInstitutionId) {
+    throw new InstitutionsServiceError('Authentication is required', 401);
+  }
+
+  return userInstitutionId;
+}
+
+function assertInstitutionAccess(
+  userInstitutionId: string | undefined,
+  institutionId: string
+) {
+  if (getUserInstitutionId(userInstitutionId) !== institutionId) {
+    throw new InstitutionsServiceError('Institution access denied', 403);
+  }
+}
+
 export async function institutionRoutes(app: FastifyInstance) {
   const institutionsService = new InstitutionsService(
     new InstitutionsRepository(app.db)
@@ -42,24 +59,29 @@ export async function institutionRoutes(app: FastifyInstance) {
   app.get('/', adminOnly, async (request) => {
     const query = parseWithSchema(listInstitutionsQuerySchema, request.query);
 
-    return institutionsService.listInstitutions(query);
+    return institutionsService.listInstitutions({
+      ...query,
+      institutionId: getUserInstitutionId(request.user?.institutionId),
+    });
   });
 
   app.get('/:institutionId', adminOnly, async (request) => {
     const params = parseWithSchema(institutionParamsSchema, request.params);
+    assertInstitutionAccess(request.user?.institutionId, params.institutionId);
 
     return institutionsService.getInstitution(params.institutionId);
   });
 
   app.post('/', adminOnly, async (request, reply) => {
-    const body = parseWithSchema(createInstitutionBodySchema, request.body);
-    const result = await institutionsService.createInstitution(body);
-
-    return reply.status(201).send(result);
+    parseWithSchema(createInstitutionBodySchema, request.body);
+    return reply.status(403).send({
+      message: 'Institution creation requires platform administrator access',
+    });
   });
 
   app.patch('/:institutionId', adminOnly, async (request) => {
     const params = parseWithSchema(institutionParamsSchema, request.params);
+    assertInstitutionAccess(request.user?.institutionId, params.institutionId);
     const body = parseWithSchema(updateInstitutionBodySchema, request.body);
 
     return institutionsService.updateInstitution({
@@ -70,7 +92,11 @@ export async function institutionRoutes(app: FastifyInstance) {
 
   app.delete('/:institutionId', adminOnly, async (request) => {
     const params = parseWithSchema(institutionParamsSchema, request.params);
+    assertInstitutionAccess(request.user?.institutionId, params.institutionId);
 
-    return institutionsService.deleteInstitution(params.institutionId);
+    throw new InstitutionsServiceError(
+      'Institution deletion requires platform administrator access',
+      403
+    );
   });
 }

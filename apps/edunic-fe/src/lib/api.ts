@@ -341,8 +341,10 @@ export async function apiRequest<T>(
     headers.Authorization = `Bearer ${session.token}`;
   }
 
-  if (options.institutionId) {
-    headers['x-institution-id'] = options.institutionId;
+  const institutionId = options.institutionId ?? session?.user.institutionId;
+
+  if (institutionId) {
+    headers['x-institution-id'] = institutionId;
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {

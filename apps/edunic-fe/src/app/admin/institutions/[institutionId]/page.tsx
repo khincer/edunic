@@ -1,11 +1,10 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
-import { Button, ButtonLink } from '@/components/button';
+import { ButtonLink } from '@/components/button';
 import { Card } from '@/components/card';
-import { ConfirmDialog } from '@/components/confirm-dialog';
 import {
   apiRequest,
   formatDate,
@@ -15,14 +14,10 @@ import {
 
 export default function InstitutionDetailPage() {
   const params = useParams<{ institutionId: string }>();
-  const router = useRouter();
   const institutionId = params.institutionId;
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [error, setError] = useState('');
-  const [deleteError, setDeleteError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     async function loadInstitution() {
@@ -43,24 +38,6 @@ export default function InstitutionDetailPage() {
 
     void loadInstitution();
   }, [institutionId]);
-
-  async function handleDelete() {
-    setBusy(true);
-    setDeleteError('');
-
-    try {
-      await apiRequest<ApiSingleResponse<{ id: string; deleted: boolean }>>(
-        `/institutions/${institutionId}`,
-        { method: 'DELETE' }
-      );
-      router.push('/admin/institutions');
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Unable to delete institution');
-      setConfirmOpen(false);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <AdminShell>
@@ -85,7 +62,6 @@ export default function InstitutionDetailPage() {
       </header>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
-      {deleteError ? <div className="alert alert-error">{deleteError}</div> : null}
       {loading ? <div className="empty-state body-copy">Loading institution...</div> : null}
 
       {institution ? (
@@ -111,7 +87,7 @@ export default function InstitutionDetailPage() {
             </Card>
           </section>
 
-          <section className="grid grid-2 section-stack">
+          <section className="section-stack">
             <Card>
               <p className="eyebrow">Operations</p>
               <h2 className="section-title">Manage this school</h2>
@@ -130,29 +106,9 @@ export default function InstitutionDetailPage() {
                 </ButtonLink>
               </div>
             </Card>
-            <Card>
-              <p className="eyebrow">Danger zone</p>
-              <h2 className="section-title">Delete institution</h2>
-              <p className="body-copy">
-                The API blocks deletion when academic records depend on this school.
-              </p>
-              <Button onClick={() => setConfirmOpen(true)} variant="danger">
-                Delete institution
-              </Button>
-            </Card>
           </section>
         </>
       ) : null}
-
-      <ConfirmDialog
-        body="This removes the institution record only if no students, classrooms, or enrollments depend on it."
-        busy={busy}
-        confirmLabel="Delete institution"
-        onCancel={() => setConfirmOpen(false)}
-        onConfirm={handleDelete}
-        open={confirmOpen}
-        title={`Delete ${institution?.name ?? 'institution'}?`}
-      />
     </AdminShell>
   );
 }
