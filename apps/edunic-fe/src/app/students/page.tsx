@@ -42,7 +42,7 @@ export default function StudentsPage() {
 
       <section className="portal-grid">
         {familyCards.map((card) => (
-          <article className="card" key={card.title}>
+          <article className="card metric-card" key={card.title}>
             <p className="eyebrow">{card.title}</p>
             <p className="metric">{card.metric}</p>
             <p className="body-copy">{card.text}</p>

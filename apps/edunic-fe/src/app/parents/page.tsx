@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { ActivityMark, getAssignmentActivityKind } from '@/components/activity-mark';
 import { Button } from '@/components/button';
 import { FormField, TextAreaField } from '@/components/form-field';
+import { PanelState } from '@/components/panel-state';
 import {
   apiRequest,
   type ApiSingleResponse,
@@ -225,22 +227,22 @@ export default function ParentsPage() {
       {canUseParentPortal ? (
         <>
           <section className="portal-grid">
-            <article className="card">
+            <article className="card metric-card">
               <p className="eyebrow">Linked children</p>
               <p className="metric">{students.length}</p>
               <p className="body-copy">students connected through guardian records</p>
             </article>
-            <article className="card">
+            <article className="card metric-card">
               <p className="eyebrow">Grades</p>
               <p className="metric">{gradeCount}</p>
               <p className="body-copy">recent scores available for review</p>
             </article>
-            <article className="card card-dark">
+            <article className="card card-dark metric-card">
               <p className="eyebrow">Attendance</p>
               <p className="metric">{attendanceMarked}</p>
               <p className="body-copy muted-on-dark">attendance marks recorded in the portal</p>
             </article>
-            <article className="card">
+            <article className="card metric-card">
               <p className="eyebrow">Messages</p>
               <p className="metric">{dashboard?.unreadMessages ?? 0}</p>
               <p className="body-copy">unread family messages</p>
@@ -299,9 +301,10 @@ export default function ParentsPage() {
               </article>
             ))}
             {students.length === 0 ? (
-              <div className="empty-state body-copy">
-                No linked students were found for this institution.
-              </div>
+              <PanelState
+                message={dashboard ? 'No linked students were found for this institution.' : 'Loading linked students...'}
+                tone={dashboard ? 'empty' : 'loading'}
+              />
             ) : null}
           </section>
 
@@ -316,7 +319,7 @@ export default function ParentsPage() {
               <div className="activity-list">
                 {(dashboard?.upcomingAssignments ?? []).map((assignment) => (
                   <article className="activity-row" key={assignment.id}>
-                    <span className="activity-mark">{assignment.type.slice(0, 1)}</span>
+                    <ActivityMark kind={getAssignmentActivityKind(assignment.type)} />
                     <span>
                       <strong>{assignment.title}</strong>
                       <p className="field-help">
@@ -326,6 +329,12 @@ export default function ParentsPage() {
                     </span>
                   </article>
                 ))}
+                {dashboard ? null : (
+                  <PanelState message="Loading homework and exams..." tone="loading" />
+                )}
+                {dashboard && dashboard.upcomingAssignments.length === 0 ? (
+                  <PanelState message="No upcoming homework or exams." />
+                ) : null}
               </div>
             </article>
 
@@ -339,7 +348,7 @@ export default function ParentsPage() {
               <div className="activity-list">
                 {(dashboard?.upcomingEvents ?? []).map((event) => (
                   <article className="activity-row" key={event.id}>
-                    <span className="activity-mark">E</span>
+                    <ActivityMark kind="calendar" />
                     <span>
                       <strong>{event.title}</strong>
                       <p className="field-help">
@@ -350,7 +359,7 @@ export default function ParentsPage() {
                 ))}
                 {(dashboard?.recentMessages ?? []).map((message) => (
                   <article className="activity-row activity-row-action" data-unread={!message.readAt} key={message.id}>
-                    <span className="activity-mark">M</span>
+                    <ActivityMark kind="message" />
                     <span>
                       <strong>{message.subject}</strong>
                       <p className="field-help">{message.body}</p>
@@ -364,6 +373,14 @@ export default function ParentsPage() {
                     </Button>
                   </article>
                 ))}
+                {dashboard ? null : (
+                  <PanelState message="Loading calendar and inbox..." tone="loading" />
+                )}
+                {dashboard &&
+                dashboard.upcomingEvents.length === 0 &&
+                dashboard.recentMessages.length === 0 ? (
+                  <PanelState message="No calendar items or messages yet." />
+                ) : null}
               </div>
             </article>
           </section>
@@ -393,7 +410,7 @@ export default function ParentsPage() {
             <div className="activity-list">
               {(dashboard?.recentNotifications ?? []).map((notification) => (
                 <article className="activity-row activity-row-action" data-unread={!notification.readAt} key={notification.id}>
-                  <span className="activity-mark">N</span>
+                  <ActivityMark kind="notification" />
                   <span>
                     <strong>{notification.title}</strong>
                     <p className="field-help">
@@ -409,6 +426,12 @@ export default function ParentsPage() {
                   </Button>
                 </article>
               ))}
+              {dashboard ? null : (
+                <PanelState message="Loading school updates..." tone="loading" />
+              )}
+              {dashboard && dashboard.recentNotifications.length === 0 ? (
+                <PanelState message="No school updates yet." />
+              ) : null}
             </div>
           </section>
         </>

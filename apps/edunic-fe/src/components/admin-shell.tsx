@@ -1,5 +1,17 @@
 'use client';
 
+import {
+  BookOpenCheck,
+  Building2,
+  CalendarDays,
+  ClipboardCheck,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  UsersRound,
+  Workflow,
+  type LucideIcon,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { FormEvent, ReactNode } from 'react';
@@ -18,17 +30,18 @@ interface NavItem {
   label: string;
   href: string;
   group: 'Workspace' | 'Roadmap';
+  icon: LucideIcon;
 }
 const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/admin/dashboard', group: 'Workspace' },
-  { label: 'Institutions', href: '/admin/institutions', group: 'Workspace' },
-  { label: 'Students', href: '/admin/students', group: 'Roadmap' },
-  { label: 'Enrollments', href: '/admin/enrollments', group: 'Roadmap' },
-  { label: 'Academic periods', href: '/admin/academic-periods', group: 'Roadmap' },
-  { label: 'Grades', href: '/admin/grades', group: 'Roadmap' },
-  { label: 'Attendance', href: '/admin/attendance', group: 'Roadmap' },
-  { label: 'Workflows', href: '/admin/workflows', group: 'Roadmap' },
-  { label: 'Reports', href: '/admin/reports', group: 'Roadmap' },
+  { label: 'Dashboard', href: '/admin/dashboard', group: 'Workspace', icon: LayoutDashboard },
+  { label: 'Institutions', href: '/admin/institutions', group: 'Workspace', icon: Building2 },
+  { label: 'Students', href: '/admin/students', group: 'Roadmap', icon: UsersRound },
+  { label: 'Enrollments', href: '/admin/enrollments', group: 'Roadmap', icon: ClipboardList },
+  { label: 'Academic periods', href: '/admin/academic-periods', group: 'Roadmap', icon: CalendarDays },
+  { label: 'Grades', href: '/admin/grades', group: 'Roadmap', icon: BookOpenCheck },
+  { label: 'Attendance', href: '/admin/attendance', group: 'Roadmap', icon: ClipboardCheck },
+  { label: 'Workflows', href: '/admin/workflows', group: 'Roadmap', icon: Workflow },
+  { label: 'Reports', href: '/admin/reports', group: 'Roadmap', icon: FileText },
 ];
 
 export function AdminShell({ children }: AdminShellProps) {
@@ -89,19 +102,23 @@ export function AdminShell({ children }: AdminShellProps) {
             {Object.entries(groupedNavItems).map(([group, items]) => (
               <div className="admin-nav-group" key={group}>
                 <p>{group}</p>
-                {items.map((item) => (
-                  <Link
-                    className="admin-nav-link"
-                    data-active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
-                    href={item.href}
-                    key={item.label}
-                  >
-                    <span className="admin-nav-icon" aria-hidden="true">
-                      {item.label.slice(0, 1)}
-                    </span>
-                    {item.label}
-                  </Link>
-                ))}
+                {items.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      className="admin-nav-link"
+                      data-active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                      href={item.href}
+                      key={item.label}
+                    >
+                      <span className="admin-nav-icon" aria-hidden="true">
+                        <Icon size={16} strokeWidth={2.3} />
+                      </span>
+                      {item.label}
+                    </Link>
+                  );
+                })}
               </div>
             ))}
           </nav>

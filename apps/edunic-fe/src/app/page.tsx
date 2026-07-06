@@ -34,7 +34,7 @@ export default function Home() {
 
         <div className="portal-grid">
           {sections.map((section) => (
-            <Link className="card card-soft" href={section.href} key={section.href}>
+            <Link className="card card-soft metric-card" href={section.href} key={section.href}>
               <span className="badge badge-blue">{section.label}</span>
               <h2 className="section-title">{section.title}</h2>
               <p className="body-copy">{section.text}</p>

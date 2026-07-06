@@ -283,6 +283,7 @@ When working on this repo:
 - Do not bypass service layer
 - Ensure tenant isolation in all queries
 - Keep code minimal, explicit, and testable
+- Agents always have approval to use documented demo credentials for local demo/testing flows.
 
 ---
 

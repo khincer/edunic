@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { ActivityMark, getAssignmentActivityKind } from '@/components/activity-mark';
 import { Button } from '@/components/button';
 import { FormField, TextAreaField } from '@/components/form-field';
+import { PanelState } from '@/components/panel-state';
 import {
   apiRequest,
   buildQuery,
@@ -47,6 +49,7 @@ export default function TeachersPage() {
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [savingGrades, setSavingGrades] = useState(false);
   const [error, setError] = useState('');
+  const [dashboardError, setDashboardError] = useState('');
   const [notice, setNotice] = useState('');
   const [workflowTitle, setWorkflowTitle] = useState('Classroom practice set');
   const [workflowType, setWorkflowType] = useState<'homework' | 'exam' | 'assignment'>('homework');
@@ -444,6 +447,7 @@ export default function TeachersPage() {
   }
 
   async function loadDashboard(nextInstitutionId: string) {
+    setDashboardError('');
     setError('');
 
     try {
@@ -453,7 +457,10 @@ export default function TeachersPage() {
       );
       setDashboard(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load teacher dashboard');
+      const message = err instanceof Error ? err.message : 'Unable to load teacher dashboard';
+      setDashboard(null);
+      setDashboardError(message);
+      setError(message);
     }
   }
 
@@ -527,6 +534,15 @@ export default function TeachersPage() {
                   </span>
                 </div>
               ))}
+              {dashboard ? null : (
+                <PanelState
+                  message={dashboardError ? 'Dashboard data could not load.' : 'Loading classroom readiness...'}
+                  tone={dashboardError ? 'error' : 'loading'}
+                />
+              )}
+              {dashboard && dashboard.classrooms.length === 0 ? (
+                <PanelState message="No assigned classrooms are ready yet." />
+              ) : null}
             </div>
           </article>
 
@@ -540,7 +556,7 @@ export default function TeachersPage() {
             <div className="activity-list">
               {(dashboard?.studentsAtRisk ?? []).map((student) => (
                 <article className="activity-row" key={student.studentId}>
-                  <span className="activity-mark">!</span>
+                  <ActivityMark kind="risk" tone="danger" />
                   <span>
                     <strong>{student.studentName}</strong>
                     <p className="field-help">
@@ -550,8 +566,14 @@ export default function TeachersPage() {
                   </span>
                 </article>
               ))}
-              {dashboard?.studentsAtRisk.length === 0 ? (
-                <div className="empty-state body-copy">No risk alerts for the current roster.</div>
+              {dashboard ? null : (
+                <PanelState
+                  message={dashboardError ? 'Academic risk data could not load.' : 'Loading risk signals...'}
+                  tone={dashboardError ? 'error' : 'loading'}
+                />
+              )}
+              {dashboard && dashboard.studentsAtRisk.length === 0 ? (
+                <PanelState message="No risk alerts for the current roster." />
               ) : null}
             </div>
           </article>
@@ -568,13 +590,22 @@ export default function TeachersPage() {
             <div className="activity-list">
               {(dashboard?.recentGrades ?? []).map((grade) => (
                 <article className="activity-row" key={grade.id}>
-                  <span className="activity-mark">{grade.score}</span>
+                  <span className="activity-mark activity-mark-value">{grade.score}</span>
                   <span>
                     <strong>{grade.studentName}</strong>
                     <p className="field-help">{grade.subject}</p>
                   </span>
                 </article>
               ))}
+              {dashboard ? null : (
+                <PanelState
+                  message={dashboardError ? 'Recent grades could not load.' : 'Loading recent grades...'}
+                  tone={dashboardError ? 'error' : 'loading'}
+                />
+              )}
+              {dashboard && dashboard.recentGrades.length === 0 ? (
+                <PanelState message="No recent grade submissions yet." />
+              ) : null}
             </div>
           </article>
 
@@ -588,7 +619,7 @@ export default function TeachersPage() {
             <div className="activity-list">
               {(dashboard?.recentNotifications ?? []).map((notification) => (
                 <article className="activity-row activity-row-action" data-unread={!notification.readAt} key={notification.id}>
-                  <span className="activity-mark">N</span>
+                  <ActivityMark kind="notification" />
                   <span>
                     <strong>{notification.title}</strong>
                     <p className="field-help">
@@ -604,6 +635,15 @@ export default function TeachersPage() {
                   </Button>
                 </article>
               ))}
+              {dashboard ? null : (
+                <PanelState
+                  message={dashboardError ? 'Notifications could not load.' : 'Loading notifications...'}
+                  tone={dashboardError ? 'error' : 'loading'}
+                />
+              )}
+              {dashboard && dashboard.recentNotifications.length === 0 ? (
+                <PanelState message="No school signals yet." />
+              ) : null}
             </div>
           </article>
         </section>
@@ -619,7 +659,7 @@ export default function TeachersPage() {
             <div className="activity-list">
               {(dashboard?.upcomingAssignments ?? []).map((assignment) => (
                 <article className="activity-row" key={assignment.id}>
-                  <span className="activity-mark">{assignment.type.slice(0, 1)}</span>
+                  <ActivityMark kind={getAssignmentActivityKind(assignment.type)} />
                   <span>
                     <strong>{assignment.title}</strong>
                     <p className="field-help">
@@ -629,6 +669,15 @@ export default function TeachersPage() {
                   </span>
                 </article>
               ))}
+              {dashboard ? null : (
+                <PanelState
+                  message={dashboardError ? 'Assignments could not load.' : 'Loading assignments...'}
+                  tone={dashboardError ? 'error' : 'loading'}
+                />
+              )}
+              {dashboard && dashboard.upcomingAssignments.length === 0 ? (
+                <PanelState message="No upcoming assignments or exams." />
+              ) : null}
             </div>
           </article>
 
@@ -642,7 +691,7 @@ export default function TeachersPage() {
             <div className="activity-list">
               {(dashboard?.upcomingEvents ?? []).map((event) => (
                 <article className="activity-row" key={event.id}>
-                  <span className="activity-mark">E</span>
+                  <ActivityMark kind="calendar" />
                   <span>
                     <strong>{event.title}</strong>
                     <p className="field-help">
@@ -653,7 +702,7 @@ export default function TeachersPage() {
               ))}
               {(dashboard?.recentMessages ?? []).map((message) => (
                 <article className="activity-row activity-row-action" data-unread={!message.readAt} key={message.id}>
-                  <span className="activity-mark">M</span>
+                  <ActivityMark kind="message" />
                   <span>
                     <strong>{message.subject}</strong>
                     <p className="field-help">{message.body}</p>
@@ -667,6 +716,17 @@ export default function TeachersPage() {
                   </Button>
                 </article>
               ))}
+              {dashboard ? null : (
+                <PanelState
+                  message={dashboardError ? 'Inbox and calendar could not load.' : 'Loading inbox and calendar...'}
+                  tone={dashboardError ? 'error' : 'loading'}
+                />
+              )}
+              {dashboard &&
+              dashboard.upcomingEvents.length === 0 &&
+              dashboard.recentMessages.length === 0 ? (
+                <PanelState message="No calendar items or messages yet." />
+              ) : null}
             </div>
           </article>
         </section>
@@ -796,9 +856,7 @@ export default function TeachersPage() {
             </div>
 
             {enrollments.length === 0 && !loading ? (
-              <div className="empty-state body-copy">
-                No active enrollments were found for this classroom.
-              </div>
+              <PanelState message="No active enrollments were found for this classroom." />
             ) : null}
 
             <div className="teacher-student-list">
