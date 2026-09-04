@@ -2,13 +2,11 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type {
   EnrollmentStatus,
   ListEnrollmentsQuery,
 } from '../schemas/enrollment.schemas.js';
-
-type Database = FastifyInstance['db'];
 
 type EnrollmentSortColumn = ListEnrollmentsQuery['sortBy'];
 
@@ -61,7 +59,7 @@ export type ListEnrollmentsInput = ListEnrollmentsQuery & {
 };
 
 export class EnrollmentsRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async list(input: ListEnrollmentsInput) {
     const filters: SQL[] = [sql`e.institution_id = ${input.institutionId}`];

@@ -3,15 +3,13 @@ import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared'
 import {
   AttendanceService,
   AttendanceServiceError,
-} from '../modules/attendance/application/attendance.service.js';
-import { AttendanceRepository } from '../modules/attendance/infrastructure/attendance.repository.js';
-import {
+  AttendanceRepository,
   attendanceParamsSchema,
-  createAttendanceBodySchema,
   institutionHeaderSchema,
   listAttendanceQuerySchema,
+  createAttendanceBodySchema,
   updateAttendanceBodySchema,
-} from '../modules/attendance/schemas/attendance.schemas.js';
+} from '@edunic/source/domain/attendance';
 
 export async function attendanceRoutes(app: FastifyInstance) {
   const attendanceService = new AttendanceService(

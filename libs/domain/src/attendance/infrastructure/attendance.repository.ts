@@ -2,12 +2,13 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
-import type { ListGradesQuery } from '../schemas/grade.schemas.js';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type {
+  AttendanceStatus,
+  ListAttendanceQuery,
+} from '../schemas/attendance.schemas.js';
 
-type Database = FastifyInstance['db'];
-
-type GradeSortColumn = ListGradesQuery['sortBy'];
+type AttendanceSortColumn = ListAttendanceQuery['sortBy'];
 
 type CountRow = {
   count: string | number;
@@ -17,63 +18,63 @@ type ExistsRow = {
   id: string;
 };
 
-export type GradeRecord = {
+export type AttendanceRecord = {
   id: string;
   institutionId: string;
   enrollmentId: string;
-  subject: string;
-  score: number;
+  date: Date;
+  status: AttendanceStatus;
   createdAt: Date | null;
 };
 
-export type CreateGradeInput = {
+export type CreateAttendanceInput = {
   institutionId: string;
   enrollmentId: string;
-  subject: string;
-  score: number;
+  date: string;
+  status: AttendanceStatus;
 };
 
-export type UpdateGradeInput = {
+export type UpdateAttendanceInput = {
   institutionId: string;
-  gradeId: string;
-  subject?: string;
-  score?: number;
+  attendanceId: string;
+  date?: string;
+  status?: AttendanceStatus;
 };
 
-export type ListGradesInput = ListGradesQuery & {
+export type ListAttendanceInput = ListAttendanceQuery & {
   institutionId: string;
 };
 
-export class GradesRepository {
-  constructor(private readonly db: Database) {}
+export class AttendanceRepository {
+  constructor(private readonly db: NodePgDatabase) {}
 
-  async list(input: ListGradesInput) {
+  async list(input: ListAttendanceInput) {
     const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
-
-    if (input.search) {
-      filters.push(sql`subject ilike ${`%${input.search}%`}`);
-    }
 
     if (input.enrollmentId) {
       filters.push(sql`enrollment_id = ${input.enrollmentId}`);
     }
 
-    if (input.subject) {
-      filters.push(sql`subject ilike ${`%${input.subject}%`}`);
+    if (input.status) {
+      filters.push(sql`status = ${input.status}`);
+    }
+
+    if (input.date) {
+      filters.push(sql`date::date = ${input.date}::date`);
     }
 
     const whereClause = sql`where ${sql.join(filters, sql` and `)}`;
 
     const [items, totalRows] = await Promise.all([
-      this.db.execute<GradeRecord>(sql`
+      this.db.execute<AttendanceRecord>(sql`
         select
           id,
           institution_id as "institutionId",
           enrollment_id as "enrollmentId",
-          subject,
-          score,
+          date,
+          status,
           created_at as "createdAt"
-        from grades
+        from attendance
         ${whereClause}
         order by ${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}
         limit ${input.limit}
@@ -81,7 +82,7 @@ export class GradesRepository {
       `),
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
-        from grades
+        from attendance
         ${whereClause}
       `),
     ]);
@@ -92,17 +93,17 @@ export class GradesRepository {
     };
   }
 
-  async findById(institutionId: string, gradeId: string) {
-    const result = await this.db.execute<GradeRecord>(sql`
+  async findById(institutionId: string, attendanceId: string) {
+    const result = await this.db.execute<AttendanceRecord>(sql`
       select
         id,
         institution_id as "institutionId",
         enrollment_id as "enrollmentId",
-        subject,
-        score,
+        date,
+        status,
         created_at as "createdAt"
-      from grades
-      where id = ${gradeId}
+      from attendance
+      where id = ${attendanceId}
         and institution_id = ${institutionId}
       limit 1
     `);
@@ -110,19 +111,19 @@ export class GradesRepository {
     return result.rows[0] ?? null;
   }
 
-  async create(input: CreateGradeInput) {
+  async create(input: CreateAttendanceInput) {
     const result = await this.db.execute<{ id: string }>(sql`
-      insert into grades (
+      insert into attendance (
         institution_id,
         enrollment_id,
-        subject,
-        score
+        date,
+        status
       )
       values (
         ${input.institutionId},
         ${input.enrollmentId},
-        ${input.subject},
-        ${input.score}
+        ${input.date},
+        ${input.status}
       )
       returning id
     `);
@@ -130,25 +131,25 @@ export class GradesRepository {
     return result.rows[0];
   }
 
-  async update(input: UpdateGradeInput) {
+  async update(input: UpdateAttendanceInput) {
     const assignments: SQL[] = [];
 
-    if (input.subject !== undefined) {
-      assignments.push(sql`subject = ${input.subject}`);
+    if (input.date !== undefined) {
+      assignments.push(sql`date = ${input.date}`);
     }
 
-    if (input.score !== undefined) {
-      assignments.push(sql`score = ${input.score}`);
+    if (input.status !== undefined) {
+      assignments.push(sql`status = ${input.status}`);
     }
 
     if (assignments.length === 0) {
-      return this.findById(input.institutionId, input.gradeId);
+      return this.findById(input.institutionId, input.attendanceId);
     }
 
     const result = await this.db.execute<{ id: string }>(sql`
-      update grades
+      update attendance
       set ${sql.join(assignments, sql`, `)}
-      where id = ${input.gradeId}
+      where id = ${input.attendanceId}
         and institution_id = ${input.institutionId}
       returning id
     `);
@@ -156,10 +157,10 @@ export class GradesRepository {
     return result.rows[0] ?? null;
   }
 
-  async delete(institutionId: string, gradeId: string) {
+  async delete(institutionId: string, attendanceId: string) {
     const result = await this.db.execute<{ id: string }>(sql`
-      delete from grades
-      where id = ${gradeId}
+      delete from attendance
+      where id = ${attendanceId}
         and institution_id = ${institutionId}
       returning id
     `);
@@ -179,18 +180,18 @@ export class GradesRepository {
     return result.rows[0] ?? null;
   }
 
-  private getSortColumn(sortBy: GradeSortColumn) {
+  private getSortColumn(sortBy: AttendanceSortColumn) {
     switch (sortBy) {
-      case 'subject':
-        return sql.raw('subject');
-      case 'score':
-        return sql.raw('score');
-      default:
+      case 'createdAt':
         return sql.raw('created_at');
+      case 'status':
+        return sql.raw('status');
+      default:
+        return sql.raw('date');
     }
   }
 
-  private getSortOrder(sortOrder: ListGradesQuery['sortOrder']) {
+  private getSortOrder(sortOrder: ListAttendanceQuery['sortOrder']) {
     return sql.raw(sortOrder === 'asc' ? 'asc' : 'desc');
   }
 

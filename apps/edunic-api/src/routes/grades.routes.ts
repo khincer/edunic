@@ -3,15 +3,13 @@ import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared'
 import {
   GradesService,
   GradesServiceError,
-} from '../modules/grades/application/grades.service.js';
-import { GradesRepository } from '../modules/grades/infrastructure/grades.repository.js';
-import {
+  GradesRepository,
   createGradeBodySchema,
   gradeParamsSchema,
   institutionHeaderSchema,
   listGradesQuerySchema,
   updateGradeBodySchema,
-} from '../modules/grades/schemas/grade.schemas.js';
+} from '@edunic/source/domain/grades';
 
 export async function gradeRoutes(app: FastifyInstance) {
   const gradesService = new GradesService(

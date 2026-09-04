@@ -3,16 +3,14 @@ import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared'
 import {
   EnrollmentsService,
   EnrollmentsServiceError,
-} from '../modules/enrollments/application/enrollments.service.js';
-import { EnrollmentsRepository } from '../modules/enrollments/infrastructure/enrollments.repository.js';
-import {
+  EnrollmentsRepository,
   createEnrollmentBodySchema,
   evaluatePromotionParamsSchema,
   enrollmentParamsSchema,
   institutionHeaderSchema,
   listEnrollmentsQuerySchema,
   updateEnrollmentBodySchema,
-} from '../modules/enrollments/schemas/enrollment.schemas.js';
+} from '@edunic/source/domain/enrollments';
 
 export async function enrollmentRoutes(app: FastifyInstance) {
   const enrollmentsService = new EnrollmentsService(

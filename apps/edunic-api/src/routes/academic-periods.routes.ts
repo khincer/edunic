@@ -3,15 +3,13 @@ import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared'
 import {
   AcademicPeriodsService,
   AcademicPeriodsServiceError,
-} from '../modules/academic-periods/application/academic-periods.service.js';
-import { AcademicPeriodsRepository } from '../modules/academic-periods/infrastructure/academic-periods.repository.js';
-import {
+  AcademicPeriodsRepository,
   academicPeriodParamsSchema,
-  createAcademicPeriodBodySchema,
   institutionHeaderSchema,
   listAcademicPeriodsQuerySchema,
+  createAcademicPeriodBodySchema,
   updateAcademicPeriodBodySchema,
-} from '../modules/academic-periods/schemas/academic-period.schemas.js';
+} from '@edunic/source/domain/academic-periods';
 
 export async function academicPeriodRoutes(app: FastifyInstance) {
   const academicPeriodsService = new AcademicPeriodsService(

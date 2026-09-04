@@ -2,10 +2,8 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { ListAcademicPeriodsQuery } from '../schemas/academic-period.schemas.js';
-
-type Database = FastifyInstance['db'];
 
 type AcademicPeriodSortColumn = ListAcademicPeriodsQuery['sortBy'];
 
@@ -45,7 +43,7 @@ export type ListAcademicPeriodsInput = ListAcademicPeriodsQuery & {
 };
 
 export class AcademicPeriodsRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async list(input: ListAcademicPeriodsInput) {
     const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
