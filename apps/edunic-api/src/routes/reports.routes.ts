@@ -1,16 +1,14 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
-import { ReportsPdfService } from '../modules/reports/application/reports-pdf.service.js';
 import {
   ReportsService,
   ReportsServiceError,
-} from '../modules/reports/application/reports.service.js';
-import { ReportsRepository } from '../modules/reports/infrastructure/reports.repository.js';
-import {
+  ReportsPdfService,
+  ReportsRepository,
   institutionHeaderSchema,
   studentReportParamsSchema,
   studentReportQuerySchema,
-} from '../modules/reports/schemas/reports.schemas.js';
+} from '@edunic/source/domain/reports';
 
 export async function reportRoutes(app: FastifyInstance) {
   const reportsService = new ReportsService(new ReportsRepository(app.db));

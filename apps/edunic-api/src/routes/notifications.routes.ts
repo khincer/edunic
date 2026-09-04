@@ -3,13 +3,11 @@ import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared'
 import {
   NotificationsService,
   NotificationsServiceError,
-} from '../modules/notifications/application/notifications.service.js';
-import { NotificationsRepository } from '../modules/notifications/infrastructure/notifications.repository.js';
-import {
+  NotificationsRepository,
   institutionHeaderSchema,
-  listNotificationsQuerySchema,
   notificationParamsSchema,
-} from '../modules/notifications/schemas/notification.schemas.js';
+  listNotificationsQuerySchema,
+} from '@edunic/source/domain/notifications';
 
 function getAuthenticatedUser(request: FastifyRequest) {
   if (!request.user) {

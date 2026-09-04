@@ -1,7 +1,5 @@
 import { sql } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
-
-type Database = FastifyInstance['db'];
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 type CountRow = {
   count: string | number;
@@ -140,7 +138,7 @@ export type StudentAverageRow = {
 };
 
 export class DashboardsRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async getInstitutionContext(institutionId: string) {
     const result = await this.db.execute<InstitutionContextRow>(sql`

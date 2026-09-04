@@ -1,4 +1,3 @@
-import { env } from '../../../config/env.js';
 import type { LoginBody } from '../schemas/auth.schemas.js';
 import { AuthRepository } from '../infrastructure/auth.repository.js';
 import { signJwt } from './jwt.js';
@@ -17,7 +16,7 @@ export class AuthServiceError extends Error {
 export class AuthService {
   constructor(private readonly authRepository: AuthRepository) {}
 
-  async login(input: LoginBody) {
+  async login(input: LoginBody, jwtSecret: string) {
     const user = await this.authRepository.findUserByEmail(input.email);
 
     if (!user || !verifyPassword(input.password, user.passwordHash)) {
@@ -38,7 +37,7 @@ export class AuthService {
         sub: user.id,
         institutionId: input.institutionId,
       },
-      env.JWT_SECRET
+      jwtSecret
     );
 
     return {

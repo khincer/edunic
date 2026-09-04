@@ -2,10 +2,8 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { ListNotificationsQuery } from '../schemas/notification.schemas.js';
-
-type Database = FastifyInstance['db'];
 
 type CountRow = {
   count: string | number;
@@ -23,7 +21,7 @@ export type NotificationRecord = {
 };
 
 export class NotificationsRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async isNotificationsExtensionEnabled(institutionId: string) {
     const result = await this.db.execute<CountRow>(sql`

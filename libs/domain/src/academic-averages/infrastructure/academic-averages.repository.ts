@@ -1,7 +1,5 @@
 import { sql } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
-
-type Database = FastifyInstance['db'];
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 type ExistsRow = {
   id: string;
@@ -16,7 +14,7 @@ export type StudentGradeRow = {
 };
 
 export class AcademicAveragesRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async findStudent(institutionId: string, studentId: string) {
     const result = await this.db.execute<ExistsRow>(sql`

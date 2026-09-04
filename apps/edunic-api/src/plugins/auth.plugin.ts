@@ -5,8 +5,7 @@ import type {
 } from 'fastify';
 import fp from 'fastify-plugin';
 import { env } from '../config/env.js';
-import { AuthRepository } from '../modules/auth/infrastructure/auth.repository.js';
-import { verifyJwt } from '../modules/auth/application/jwt.js';
+import { AuthRepository, verifyJwt } from '@edunic/source/domain/auth';
 
 const authPluginHandler: FastifyPluginAsync = async (app) => {
   const authRepository = new AuthRepository(app.db);

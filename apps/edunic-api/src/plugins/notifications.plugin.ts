@@ -5,8 +5,7 @@ import type {
   EnrollmentCreatedEvent,
   GradeSubmittedEvent,
 } from '@edunic/source/domain/events';
-import { NotificationsService } from '../modules/notifications/application/notifications.service.js';
-import { NotificationsRepository } from '../modules/notifications/infrastructure/notifications.repository.js';
+import { NotificationsService, NotificationsRepository } from '@edunic/source/domain/notifications';
 
 const notificationsPluginHandler: FastifyPluginAsync = async (app) => {
   const notificationsService = new NotificationsService(

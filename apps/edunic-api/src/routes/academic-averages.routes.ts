@@ -3,13 +3,11 @@ import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared'
 import {
   AcademicAveragesService,
   AcademicAveragesServiceError,
-} from '../modules/academic-averages/application/academic-averages.service.js';
-import { AcademicAveragesRepository } from '../modules/academic-averages/infrastructure/academic-averages.repository.js';
-import {
+  AcademicAveragesRepository,
   institutionHeaderSchema,
   studentAverageParamsSchema,
   studentAverageQuerySchema,
-} from '../modules/academic-averages/schemas/academic-averages.schemas.js';
+} from '@edunic/source/domain/academic-averages';
 
 export async function academicAverageRoutes(app: FastifyInstance) {
   const academicAveragesService = new AcademicAveragesService(

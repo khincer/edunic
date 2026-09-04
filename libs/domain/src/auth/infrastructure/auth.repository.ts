@@ -1,7 +1,5 @@
 import { sql } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
-
-type Database = FastifyInstance['db'];
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 export type UserRecord = {
   id: string;
@@ -17,7 +15,7 @@ export type UserRoleRecord = {
 };
 
 export class AuthRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async findUserByEmail(email: string) {
     const result = await this.db.execute<UserRecord>(sql`

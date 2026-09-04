@@ -3,21 +3,18 @@ import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared'
 import {
   WorkflowsService,
   WorkflowsServiceError,
-} from '../modules/workflows/application/workflows.service.js';
-import {
   WorkflowsRepository,
   type WorkflowRole,
-} from '../modules/workflows/infrastructure/workflows.repository.js';
-import {
-  assignmentParamsSchema,
-  createAssignmentBodySchema,
-  createEventBodySchema,
-  createMessageBodySchema,
   institutionHeaderSchema,
   listWorkflowQuerySchema,
-  messageParamsSchema,
+  assignmentParamsSchema,
+  createAssignmentBodySchema,
   updateAssignmentBodySchema,
-} from '../modules/workflows/schemas/workflow.schemas.js';
+  eventParamsSchema,
+  createEventBodySchema,
+  messageParamsSchema,
+  createMessageBodySchema,
+} from '@edunic/source/domain/workflows';
 
 function getAuthenticatedUser(request: FastifyRequest) {
   if (!request.user) {

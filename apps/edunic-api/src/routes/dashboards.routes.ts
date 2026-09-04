@@ -2,9 +2,9 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import {
   DashboardsService,
   DashboardsServiceError,
-} from '../modules/dashboards/application/dashboards.service.js';
-import { DashboardsRepository } from '../modules/dashboards/infrastructure/dashboards.repository.js';
-import { institutionHeaderSchema } from '../modules/dashboards/schemas/dashboard.schemas.js';
+  DashboardsRepository,
+  institutionHeaderSchema,
+} from '@edunic/source/domain/dashboards';
 import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 
 function getAuthenticatedUser(request: FastifyRequest) {

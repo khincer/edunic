@@ -2,7 +2,7 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type {
   CreateAssignmentBody,
   CreateEventBody,
@@ -10,8 +10,6 @@ import type {
   ListWorkflowQuery,
   UpdateAssignmentBody,
 } from '../schemas/workflow.schemas.js';
-
-type Database = FastifyInstance['db'];
 
 type CountRow = {
   count: string | number;
@@ -64,7 +62,7 @@ export type UserRoleRecord = {
 };
 
 export class WorkflowsRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async listAssignments(input: ListWorkflowQuery & {
     institutionId: string;
