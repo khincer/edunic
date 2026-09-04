@@ -28,8 +28,6 @@
       "@edunic/source/domain/attendance": ["libs/domain/src/attendance/index.ts"],
       "@edunic/source/domain/audit-logs": ["libs/domain/src/audit-logs/index.ts"],
       "@edunic/source/domain/auth": ["libs/domain/src/auth/index.ts"],
-      "@edunic/source/domain/attendance": ["libs/domain/src/attendance/index.ts"],
-      "@edunic/source/domain/audit-logs": ["libs/domain/src/audit-logs/index.ts"],
       "@edunic/source/domain/classrooms": ["libs/domain/src/classrooms/index.ts"],
       "@edunic/source/domain/custom-fields": ["libs/domain/src/custom-fields/index.ts"],
       "@edunic/source/domain/dashboards": ["libs/domain/src/dashboards/index.ts"],
