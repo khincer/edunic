@@ -1,6 +1,6 @@
 import { db } from '../libs/db/src/index.js';
 import { sql } from 'drizzle-orm';
-import { hashPassword } from '../apps/edunic-api/src/modules/auth/application/password.js';
+import { hashPassword } from '../libs/domain/src/auth/application/password.js';
 import {
   academicPeriods,
   assignments,
