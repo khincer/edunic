@@ -7,6 +7,7 @@
     "dev:web": "nx dev edunic-fe",
     "dev:admin": "nx dev edunic-fe",
     "dev:teachers": "nx dev edunic-fe",
+    "dev:all": "nx run-many --target=dev --projects=api,edunic-fe --parallel=2",
     "dev:api": "tsx apps/edunic-api/src/main.ts",
     "dev:api:nx": "nx run api:dev",
     "dev:api:watch": "tsx watch apps/edunic-api/src/main.ts",
