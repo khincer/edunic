@@ -13,9 +13,7 @@ const optionalPromotionStatusSchema = z.preprocess(
   z.string().trim().max(100, 'Promotion status must be 100 characters or less').nullable().optional()
 );
 
-export const institutionHeaderSchema = z.object({
-  'x-institution-id': uuidSchema,
-});
+export { institutionHeaderSchema } from '@edunic/source/domain/shared';
 
 export const enrollmentParamsSchema = z.object({
   enrollmentId: uuidSchema,

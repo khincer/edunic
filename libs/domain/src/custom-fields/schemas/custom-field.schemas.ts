@@ -9,9 +9,7 @@ export const customFieldTypeSchema = z.enum([
   'select',
 ]);
 
-export const institutionHeaderSchema = z.object({
-  'x-institution-id': uuidSchema,
-});
+export { institutionHeaderSchema } from '@edunic/source/domain/shared';
 
 export const customFieldParamsSchema = z.object({
   customFieldId: uuidSchema,

@@ -20,4 +20,3 @@ export type {
   StudentAverageRow,
 } from './infrastructure/dashboards.repository.js';
 export { institutionHeaderSchema } from './schemas/dashboard.schemas.js';
-export type { InstitutionHeader } from './schemas/dashboard.schemas.js';

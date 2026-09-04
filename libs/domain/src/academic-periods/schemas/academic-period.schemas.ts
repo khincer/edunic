@@ -14,9 +14,7 @@ const optionalDateStringSchema = z.preprocess(
   dateStringSchema.optional()
 );
 
-export const institutionHeaderSchema = z.object({
-  'x-institution-id': uuidSchema,
-});
+export { institutionHeaderSchema } from '@edunic/source/domain/shared';
 
 export const academicPeriodParamsSchema = z.object({
   academicPeriodId: uuidSchema,
