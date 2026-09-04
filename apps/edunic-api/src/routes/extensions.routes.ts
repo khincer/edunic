@@ -1,5 +1,4 @@
 import type { FastifyInstance } from 'fastify';
-import { ZodError } from 'zod';
 import {
   ExtensionsService,
   ExtensionsServiceError,
@@ -14,25 +13,7 @@ import {
   updateExtensionBodySchema,
   upsertInstitutionExtensionBodySchema,
 } from '../modules/extensions/schemas/extension.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new ExtensionsServiceError(
-        firstIssue?.message ?? 'Invalid request',
-        400
-      );
-    }
-
-    throw error;
-  }
-}
+import { parseWithSchema } from '@edunic/source/domain/shared';
 
 export async function extensionRoutes(app: FastifyInstance) {
   const extensionsService = new ExtensionsService(

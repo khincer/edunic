@@ -1,4 +1,4 @@
-import type { AcademicDomainEvent } from '../../../domain-events.js';
+import type { AcademicDomainEvent } from '@edunic/source/domain/events';
 import type { ListNotificationsQuery } from '../schemas/notification.schemas.js';
 import {
   NotificationsRepository,

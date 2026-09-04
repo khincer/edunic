@@ -5,6 +5,9 @@
   "references": [
     {
       "path": "./apps/edunic-fe"
+    },
+    {
+      "path": "./apps/edunic-api"
     }
   ]
 }

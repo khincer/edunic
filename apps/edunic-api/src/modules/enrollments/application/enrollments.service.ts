@@ -1,5 +1,6 @@
-import type { EventBus } from '../../../events.js';
-import { createEnrollmentCreatedEvent } from '../../../domain-events.js';
+import type { EventBus } from '@edunic/source/events';
+import { createEnrollmentCreatedEvent } from '@edunic/source/domain/events';
+import { PROMOTION_THRESHOLD } from '@edunic/source/domain/shared';
 import type {
   CreateEnrollmentBody,
   ListEnrollmentsQuery,
@@ -28,8 +29,6 @@ export class EnrollmentsServiceError extends Error {
 }
 
 export class EnrollmentsService {
-  private static readonly PROMOTION_THRESHOLD = 60;
-
   constructor(
     private readonly enrollmentsRepository: EnrollmentsRepository,
     private readonly eventBus?: EventBus
@@ -224,7 +223,7 @@ export class EnrollmentsService {
     const promotionStatus =
       average === null
         ? 'pending'
-        : average >= EnrollmentsService.PROMOTION_THRESHOLD
+        : average >= PROMOTION_THRESHOLD
           ? 'promoted'
           : 'retained';
 
@@ -245,7 +244,7 @@ export class EnrollmentsService {
         studentId: enrollment.studentId,
         gradeCount,
         average,
-        threshold: EnrollmentsService.PROMOTION_THRESHOLD,
+        threshold: PROMOTION_THRESHOLD,
         promotionStatus,
       },
     };

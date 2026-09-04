@@ -4,7 +4,7 @@ import type {
   AttendanceMarkedEvent,
   EnrollmentCreatedEvent,
   GradeSubmittedEvent,
-} from '../domain-events.js';
+} from '@edunic/source/domain/events';
 import { NotificationsService } from '../modules/notifications/application/notifications.service.js';
 import { NotificationsRepository } from '../modules/notifications/infrastructure/notifications.repository.js';
 

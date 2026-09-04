@@ -1,0 +1,1 @@
+export const PROMOTION_THRESHOLD = 60;

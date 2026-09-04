@@ -1,5 +1,5 @@
-import type { EventBus } from '../../../events.js';
-import { createGradeSubmittedEvent } from '../../../domain-events.js';
+import type { EventBus } from '@edunic/source/events';
+import { createGradeSubmittedEvent } from '@edunic/source/domain/events';
 import type {
   CreateGradeBody,
   ListGradesQuery,

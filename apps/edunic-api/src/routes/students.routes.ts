@@ -1,35 +1,15 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { ZodError } from 'zod';
+import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 import {
   StudentsService,
   StudentsServiceError,
-} from '../modules/students/application/students.service.js';
-import { StudentsRepository } from '../modules/students/infrastructure/students.repository.js';
-import {
+  StudentsRepository,
   createStudentBodySchema,
   institutionHeaderSchema,
   listStudentsQuerySchema,
   studentParamsSchema,
   updateStudentBodySchema,
-} from '../modules/students/schemas/student.schemas.js';
-
-function parseWithSchema<T>(schema: { parse: (value: unknown) => T }, value: unknown): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new StudentsServiceError(firstIssue?.message ?? 'Invalid request', 400);
-    }
-
-    throw error;
-  }
-}
-
-function getInstitutionId(request: FastifyRequest) {
-  const headers = parseWithSchema(institutionHeaderSchema, request.headers);
-  return headers['x-institution-id'];
-}
+} from '@edunic/source/domain/students';
 
 export async function studentRoutes(app: FastifyInstance) {
   const studentsService = new StudentsService(new StudentsRepository(app.db));

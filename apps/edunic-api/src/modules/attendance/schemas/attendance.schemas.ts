@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { uuidSchema } from '../../shared/uuid.schema.js';
+import { uuidSchema } from '@edunic/source/domain/shared';
 
 const attendanceStatusSchema = z.enum(['present', 'absent', 'late']);
 

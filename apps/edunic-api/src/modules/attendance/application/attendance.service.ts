@@ -1,5 +1,5 @@
-import type { EventBus } from '../../../events.js';
-import { createAttendanceMarkedEvent } from '../../../domain-events.js';
+import type { EventBus } from '@edunic/source/events';
+import { createAttendanceMarkedEvent } from '@edunic/source/domain/events';
 import type {
   CreateAttendanceBody,
   ListAttendanceQuery,

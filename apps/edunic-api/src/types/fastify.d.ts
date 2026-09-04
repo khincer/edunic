@@ -1,6 +1,6 @@
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { preHandlerHookHandler } from 'fastify';
-import type { EventBus } from '../events.js';
+import type { EventBus } from '@edunic/source/events';
 import type { AuditLogsRepository } from '../modules/audit-logs/infrastructure/audit-logs.repository.js';
 
 declare module 'fastify' {

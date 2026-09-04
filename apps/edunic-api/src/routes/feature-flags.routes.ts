@@ -1,5 +1,4 @@
 import type { FastifyInstance } from 'fastify';
-import { ZodError } from 'zod';
 import {
   FeatureFlagsService,
   FeatureFlagsServiceError,
@@ -10,25 +9,7 @@ import {
   institutionFeatureFlagsParamsSchema,
   updateInstitutionFeatureFlagBodySchema,
 } from '../modules/feature-flags/schemas/feature-flag.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new FeatureFlagsServiceError(
-        firstIssue?.message ?? 'Invalid request',
-        400
-      );
-    }
-
-    throw error;
-  }
-}
+import { parseWithSchema } from '@edunic/source/domain/shared';
 
 function assertInstitutionAccess(
   userInstitutionId: string | undefined,

@@ -1,7 +1,7 @@
 import {
   StudentsService,
   StudentsServiceError,
-} from '../../src/modules/students/application/students.service.js';
+} from '@edunic/source/domain/students';
 
 describe('StudentsService', () => {
   it('returns 409 when deleting a student with enrollments', async () => {

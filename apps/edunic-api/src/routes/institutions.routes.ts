@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { ZodError } from 'zod';
+import { parseWithSchema } from '@edunic/source/domain/shared';
 import {
   InstitutionsService,
   InstitutionsServiceError,
@@ -11,25 +11,6 @@ import {
   listInstitutionsQuerySchema,
   updateInstitutionBodySchema,
 } from '../modules/institutions/schemas/institution.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new InstitutionsServiceError(
-        firstIssue?.message ?? 'Invalid request',
-        400
-      );
-    }
-
-    throw error;
-  }
-}
 
 export async function institutionRoutes(app: FastifyInstance) {
   const institutionsService = new InstitutionsService(

@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
-import { createEventBusFromEnv } from '../events.js';
+import { createEventBusFromEnv } from '@edunic/source/events';
 
 const eventBusPluginHandler: FastifyPluginAsync = async (app) => {
   app.decorate('eventBus', createEventBusFromEnv());

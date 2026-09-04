@@ -22,6 +22,8 @@
       "@edunic/source/db": ["libs/db/src/index.ts"],
       "@edunic/source/db/schema": ["libs/db/src/schema/index.ts"],
       "@edunic/source/domain/events": ["libs/domain/src/events.ts"],
+      "@edunic/source/domain/shared": ["libs/domain/src/shared/index.ts"],
+      "@edunic/source/domain/students": ["libs/domain/src/students/index.ts"],
       "@edunic/source/events": ["libs/events/src/index.ts"]
     }
   }
