@@ -59,6 +59,7 @@
     "@types/supertest": "^6.0.3",
     "autoprefixer": "10.4.13",
     "drizzle-kit": "^0.31.10",
+    "esbuild": "^0.28.2",
     "eslint": "^9.8.0",
     "eslint-config-next": "16.2.4",
     "eslint-config-prettier": "^10.0.0",
