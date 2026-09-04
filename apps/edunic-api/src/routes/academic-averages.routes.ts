@@ -1,39 +1,13 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { ZodError } from 'zod';
+import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 import {
   AcademicAveragesService,
   AcademicAveragesServiceError,
-} from '../modules/academic-averages/application/academic-averages.service.js';
-import { AcademicAveragesRepository } from '../modules/academic-averages/infrastructure/academic-averages.repository.js';
-import {
+  AcademicAveragesRepository,
   institutionHeaderSchema,
   studentAverageParamsSchema,
   studentAverageQuerySchema,
-} from '../modules/academic-averages/schemas/academic-averages.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new AcademicAveragesServiceError(
-        firstIssue?.message ?? 'Invalid request',
-        400
-      );
-    }
-
-    throw error;
-  }
-}
-
-function getInstitutionId(request: FastifyRequest) {
-  const headers = parseWithSchema(institutionHeaderSchema, request.headers);
-  return headers['x-institution-id'];
-}
+} from '@edunic/source/domain/academic-averages';
 
 export async function academicAverageRoutes(app: FastifyInstance) {
   const academicAveragesService = new AcademicAveragesService(

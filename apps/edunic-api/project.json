@@ -5,12 +5,17 @@
   "projectType": "application",
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "@nx/esbuild:esbuild",
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/apps/api",
         "main": "apps/edunic-api/src/main.ts",
         "tsConfig": "apps/edunic-api/tsconfig.json",
+        "platform": "node",
+        "target": "esnext",
+        "format": ["cjs"],
+        "skipTypeCheck": true,
+        "bundle": true,
         "assets": []
       }
     },

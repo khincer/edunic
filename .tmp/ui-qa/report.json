@@ -1,0 +1,252 @@
+{
+  "generatedAt": "2026-07-06T16:49:28.437Z",
+  "baseUrl": "http://central.localtest.me:3001",
+  "results": [
+    {
+      "route": "home",
+      "path": "/",
+      "viewport": "desktop",
+      "screenshotPath": "C:\\Users\\Usuario\\Documents\\projects\\Edunic\\mrincer\\.tmp\\ui-qa\\home-desktop.png",
+      "consoleEntries": [],
+      "networkErrors": [],
+      "metrics": {
+        "h1": "One Next.js app, three focused workspaces.",
+        "activityRows": 0,
+        "svgMarks": 0,
+        "valueMarks": 0,
+        "functionalLetterMarkers": [],
+        "orphanLetterCandidates": [],
+        "panelStates": 0,
+        "loadingStates": 0,
+        "errorStates": 0,
+        "adminMobile": null,
+        "focusVisible": true
+      }
+    },
+    {
+      "route": "students",
+      "path": "/students",
+      "viewport": "desktop",
+      "screenshotPath": "C:\\Users\\Usuario\\Documents\\projects\\Edunic\\mrincer\\.tmp\\ui-qa\\students-desktop.png",
+      "consoleEntries": [],
+      "networkErrors": [],
+      "metrics": {
+        "h1": "A student view for academic progress.",
+        "activityRows": 0,
+        "svgMarks": 0,
+        "valueMarks": 0,
+        "functionalLetterMarkers": [],
+        "orphanLetterCandidates": [],
+        "panelStates": 0,
+        "loadingStates": 0,
+        "errorStates": 0,
+        "adminMobile": null,
+        "focusVisible": true
+      }
+    },
+    {
+      "route": "admin",
+      "path": "/admin/dashboard",
+      "viewport": "desktop",
+      "screenshotPath": "C:\\Users\\Usuario\\Documents\\projects\\Edunic\\mrincer\\.tmp\\ui-qa\\admin-desktop.png",
+      "consoleEntries": [],
+      "networkErrors": [],
+      "metrics": {
+        "h1": "Colegio Central",
+        "activityRows": 12,
+        "svgMarks": 12,
+        "valueMarks": 0,
+        "functionalLetterMarkers": [],
+        "orphanLetterCandidates": [],
+        "panelStates": 1,
+        "loadingStates": 0,
+        "errorStates": 0,
+        "adminMobile": {
+          "sidebarHeight": 920,
+          "contentTop": 0,
+          "firstPanelTop": 240,
+          "navDisplay": "grid",
+          "navOverflowX": "visible"
+        },
+        "focusVisible": true
+      }
+    },
+    {
+      "route": "teacher",
+      "path": "/teachers",
+      "viewport": "desktop",
+      "screenshotPath": "C:\\Users\\Usuario\\Documents\\projects\\Edunic\\mrincer\\.tmp\\ui-qa\\teacher-desktop.png",
+      "consoleEntries": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "networkErrors": [
+        {
+          "status": 500,
+          "url": "http://localhost:3000/dashboard/teacher"
+        }
+      ],
+      "metrics": {
+        "h1": "Attendance and grade submission.",
+        "activityRows": 0,
+        "svgMarks": 0,
+        "valueMarks": 0,
+        "functionalLetterMarkers": [],
+        "orphanLetterCandidates": [],
+        "panelStates": 6,
+        "loadingStates": 0,
+        "errorStates": 6,
+        "adminMobile": null,
+        "focusVisible": true
+      }
+    },
+    {
+      "route": "parent",
+      "path": "/parents",
+      "viewport": "desktop",
+      "screenshotPath": "C:\\Users\\Usuario\\Documents\\projects\\Edunic\\mrincer\\.tmp\\ui-qa\\parent-desktop.png",
+      "consoleEntries": [],
+      "networkErrors": [],
+      "metrics": {
+        "h1": "Family academic snapshot.",
+        "activityRows": 7,
+        "svgMarks": 7,
+        "valueMarks": 0,
+        "functionalLetterMarkers": [],
+        "orphanLetterCandidates": [],
+        "panelStates": 0,
+        "loadingStates": 0,
+        "errorStates": 0,
+        "adminMobile": null,
+        "focusVisible": true
+      }
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "viewport": "mobile",
+      "screenshotPath": "C:\\Users\\Usuario\\Documents\\projects\\Edunic\\mrincer\\.tmp\\ui-qa\\home-mobile.png",
+      "consoleEntries": [],
+      "networkErrors": [],
+      "metrics": {
+        "h1": "One Next.js app, three focused workspaces.",
+        "activityRows": 0,
+        "svgMarks": 0,
+        "valueMarks": 0,
+        "functionalLetterMarkers": [],
+        "orphanLetterCandidates": [],
+        "panelStates": 0,
+        "loadingStates": 0,
+        "errorStates": 0,
+        "adminMobile": null,
+        "focusVisible": true
+      }
+    },
+    {
+      "route": "students",
+      "path": "/students",
+      "viewport": "mobile",
+      "screenshotPath": "C:\\Users\\Usuario\\Documents\\projects\\Edunic\\mrincer\\.tmp\\ui-qa\\students-mobile.png",
+      "consoleEntries": [],
+      "networkErrors": [],
+      "metrics": {
+        "h1": "A student view for academic progress.",
+        "activityRows": 0,
+        "svgMarks": 0,
+        "valueMarks": 0,
+        "functionalLetterMarkers": [],
+        "orphanLetterCandidates": [],
+        "panelStates": 0,
+        "loadingStates": 0,
+        "errorStates": 0,
+        "adminMobile": null,
+        "focusVisible": true
+      }
+    },
+    {
+      "route": "admin",
+      "path": "/admin/dashboard",
+      "viewport": "mobile",
+      "screenshotPath": "C:\\Users\\Usuario\\Documents\\projects\\Edunic\\mrincer\\.tmp\\ui-qa\\admin-mobile.png",
+      "consoleEntries": [],
+      "networkErrors": [],
+      "metrics": {
+        "h1": "Colegio Central",
+        "activityRows": 12,
+        "svgMarks": 12,
+        "valueMarks": 0,
+        "functionalLetterMarkers": [],
+        "orphanLetterCandidates": [],
+        "panelStates": 1,
+        "loadingStates": 0,
+        "errorStates": 0,
+        "adminMobile": {
+          "sidebarHeight": 125,
+          "contentTop": 0,
+          "firstPanelTop": 509,
+          "navDisplay": "flex",
+          "navOverflowX": "auto"
+        },
+        "focusVisible": true
+      }
+    },
+    {
+      "route": "teacher",
+      "path": "/teachers",
+      "viewport": "mobile",
+      "screenshotPath": "C:\\Users\\Usuario\\Documents\\projects\\Edunic\\mrincer\\.tmp\\ui-qa\\teacher-mobile.png",
+      "consoleEntries": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "networkErrors": [
+        {
+          "status": 500,
+          "url": "http://localhost:3000/dashboard/teacher"
+        }
+      ],
+      "metrics": {
+        "h1": "Attendance and grade submission.",
+        "activityRows": 0,
+        "svgMarks": 0,
+        "valueMarks": 0,
+        "functionalLetterMarkers": [],
+        "orphanLetterCandidates": [],
+        "panelStates": 6,
+        "loadingStates": 0,
+        "errorStates": 6,
+        "adminMobile": null,
+        "focusVisible": true
+      }
+    },
+    {
+      "route": "parent",
+      "path": "/parents",
+      "viewport": "mobile",
+      "screenshotPath": "C:\\Users\\Usuario\\Documents\\projects\\Edunic\\mrincer\\.tmp\\ui-qa\\parent-mobile.png",
+      "consoleEntries": [],
+      "networkErrors": [],
+      "metrics": {
+        "h1": "Family academic snapshot.",
+        "activityRows": 7,
+        "svgMarks": 7,
+        "valueMarks": 0,
+        "functionalLetterMarkers": [],
+        "orphanLetterCandidates": [],
+        "panelStates": 0,
+        "loadingStates": 0,
+        "errorStates": 0,
+        "adminMobile": null,
+        "focusVisible": true
+      }
+    }
+  ],
+  "reducedMotion": {
+    "matches": true,
+    "maxTransitionDuration": 0.00001
+  }
+}

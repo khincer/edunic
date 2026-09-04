@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ActivityMark, getAssignmentActivityKind } from '@/components/activity-mark';
 import { AdminShell } from '@/components/admin-shell';
 import { Button, ButtonLink } from '@/components/button';
 import { Card } from '@/components/card';
+import { PanelState } from '@/components/panel-state';
 import {
   apiRequest,
   formatDate,
@@ -96,7 +98,7 @@ export default function DashboardPage() {
       {error ? <div className="alert alert-error">{error}</div> : null}
 
       <section className="dashboard-stat-grid">
-        <Card className="dashboard-stat-card">
+        <Card className="dashboard-stat-card metric-card">
           <p className="eyebrow">Students</p>
           <p className="metric">{loading ? '...' : dashboard?.counts.students ?? 0}</p>
           <p className="body-copy">
@@ -104,7 +106,7 @@ export default function DashboardPage() {
             {dashboard?.counts.classrooms ?? 0} classrooms
           </p>
         </Card>
-        <Card className="dashboard-stat-card">
+        <Card className="dashboard-stat-card metric-card">
           <p className="eyebrow">Today attendance</p>
           <p className="metric">{loading ? '...' : attendance?.marked ?? 0}</p>
           <p className="body-copy">
@@ -112,7 +114,7 @@ export default function DashboardPage() {
             {attendance?.absent ?? 0} absent
           </p>
         </Card>
-        <Card className="dashboard-stat-card" tone="dark">
+        <Card className="dashboard-stat-card metric-card" tone="dark">
           <p className="eyebrow">Grade progress</p>
           <p className="metric">{loading ? '...' : `${dashboard?.gradeSubmission.percent ?? 0}%`}</p>
           <p className="body-copy muted-on-dark">
@@ -123,17 +125,17 @@ export default function DashboardPage() {
       </section>
 
       <section className="dashboard-stat-grid section-stack">
-        <Card className="dashboard-stat-card">
+        <Card className="dashboard-stat-card metric-card">
           <p className="eyebrow">Assignments</p>
           <p className="metric">{loading ? '...' : dashboard?.upcomingAssignments.length ?? 0}</p>
           <p className="body-copy">published homework and exams coming up</p>
         </Card>
-        <Card className="dashboard-stat-card">
+        <Card className="dashboard-stat-card metric-card">
           <p className="eyebrow">Events</p>
           <p className="metric">{loading ? '...' : dashboard?.upcomingEvents.length ?? 0}</p>
           <p className="body-copy">school and classroom calendar items</p>
         </Card>
-        <Card className="dashboard-stat-card">
+        <Card className="dashboard-stat-card metric-card">
           <p className="eyebrow">Messages</p>
           <p className="metric">{loading ? '...' : dashboard?.unreadMessages ?? 0}</p>
           <p className="body-copy">unread messages for this admin account</p>
@@ -151,7 +153,7 @@ export default function DashboardPage() {
           <div className="activity-list">
             {(dashboard?.upcomingAssignments ?? []).map((assignment) => (
               <article className="activity-row" key={assignment.id}>
-                <span className="activity-mark">{assignment.type.slice(0, 1)}</span>
+                <ActivityMark kind={getAssignmentActivityKind(assignment.type)} />
                 <span>
                   <strong>{assignment.title}</strong>
                   <p className="field-help">
@@ -161,6 +163,10 @@ export default function DashboardPage() {
                 </span>
               </article>
             ))}
+            {loading ? <PanelState message="Loading assignments..." tone="loading" /> : null}
+            {!loading && dashboard?.upcomingAssignments.length === 0 ? (
+              <PanelState message="No upcoming assignments or exams." />
+            ) : null}
           </div>
         </Card>
 
@@ -174,7 +180,7 @@ export default function DashboardPage() {
           <div className="activity-list">
             {(dashboard?.upcomingEvents ?? []).map((event) => (
               <article className="activity-row" key={event.id}>
-                <span className="activity-mark">E</span>
+                <ActivityMark kind="calendar" />
                 <span>
                   <strong>{event.title}</strong>
                   <p className="field-help">
@@ -183,6 +189,10 @@ export default function DashboardPage() {
                 </span>
               </article>
             ))}
+            {loading ? <PanelState message="Loading events..." tone="loading" /> : null}
+            {!loading && dashboard?.upcomingEvents.length === 0 ? (
+              <PanelState message="No upcoming calendar items." />
+            ) : null}
           </div>
         </Card>
       </section>
@@ -209,6 +219,10 @@ export default function DashboardPage() {
                 </span>
               </div>
             ))}
+            {loading ? <PanelState message="Loading module status..." tone="loading" /> : null}
+            {!loading && modules.length === 0 ? (
+              <PanelState message="No modules are configured for this institution." />
+            ) : null}
           </div>
         </Card>
 
@@ -238,6 +252,7 @@ export default function DashboardPage() {
               <span>Period dates</span>
               <strong>{formatPeriodDates(dashboard)}</strong>
             </div>
+            {loading ? <PanelState message="Loading academic period..." tone="loading" /> : null}
           </div>
         </Card>
       </section>
@@ -253,7 +268,7 @@ export default function DashboardPage() {
           <div className="activity-list">
             {(dashboard?.recentNotifications ?? []).map((notification) => (
               <article className="activity-row activity-row-action" data-unread={!notification.readAt} key={notification.id}>
-                <span className="activity-mark">N</span>
+                <ActivityMark kind="notification" />
                 <span>
                   <strong>{notification.title}</strong>
                   <p className="field-help">
@@ -270,8 +285,9 @@ export default function DashboardPage() {
               </article>
             ))}
             {!loading && dashboard?.recentNotifications.length === 0 ? (
-              <div className="empty-state body-copy">No notifications yet.</div>
+              <PanelState message="No notifications yet." />
             ) : null}
+            {loading ? <PanelState message="Loading notifications..." tone="loading" /> : null}
           </div>
         </Card>
 
@@ -285,7 +301,7 @@ export default function DashboardPage() {
           <div className="activity-list">
             {(dashboard?.recentAuditActivity ?? []).map((activity) => (
               <article className="activity-row" key={activity.id}>
-                <span className="activity-mark">A</span>
+                <ActivityMark kind="audit" />
                 <span>
                   <strong>{activity.action} {activity.entity}</strong>
                   <p className="field-help">
@@ -295,8 +311,9 @@ export default function DashboardPage() {
               </article>
             ))}
             {!loading && dashboard?.recentAuditActivity.length === 0 ? (
-              <div className="empty-state body-copy">No audit activity yet.</div>
+              <PanelState message="No audit activity yet." />
             ) : null}
+            {loading ? <PanelState message="Loading audit activity..." tone="loading" /> : null}
           </div>
         </Card>
       </section>
@@ -312,7 +329,7 @@ export default function DashboardPage() {
           <div className="activity-list">
             {(dashboard?.recentMessages ?? []).map((message) => (
               <article className="activity-row" key={message.id}>
-                <span className="activity-mark">M</span>
+                <ActivityMark kind="message" />
                 <span>
                   <strong>{message.subject}</strong>
                   <p className="field-help">{message.body}</p>
@@ -320,8 +337,9 @@ export default function DashboardPage() {
               </article>
             ))}
             {!loading && dashboard?.recentMessages.length === 0 ? (
-              <div className="empty-state body-copy">No messages yet.</div>
+              <PanelState message="No messages yet." />
             ) : null}
+            {loading ? <PanelState message="Loading messages..." tone="loading" /> : null}
           </div>
         </Card>
 
@@ -338,7 +356,7 @@ export default function DashboardPage() {
           <div className="activity-list">
             {(dashboard?.reportHistory ?? []).map((report) => (
               <article className="activity-row" key={report.id}>
-                <span className="activity-mark">R</span>
+                <ActivityMark kind="report" />
                 <span>
                   <strong>{report.studentName}</strong>
                   <p className="field-help">
@@ -347,6 +365,10 @@ export default function DashboardPage() {
                 </span>
               </article>
             ))}
+            {loading ? <PanelState message="Loading report history..." tone="loading" /> : null}
+            {!loading && dashboard?.reportHistory.length === 0 ? (
+              <PanelState message="No reports have been generated yet." />
+            ) : null}
           </div>
         </Card>
       </section>

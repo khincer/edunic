@@ -1,25 +1,23 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
     "outDir": "../../dist/out-tsc",
+    "rootDir": "../..",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "esModuleInterop": true, "skipLibCheck": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "emitDecoratorMetadata": false,
     "experimentalDecorators": false,
     "emitDeclarationOnly": false
   },
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"],
   "ts-node": {
     "esm": true,
     "experimentalResolver": true

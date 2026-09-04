@@ -1,28 +1,13 @@
 import type { FastifyInstance } from 'fastify';
-import { ZodError } from 'zod';
+import { env } from '../config/env.js';
 import {
   AuthService,
   AuthServiceError,
-} from '../modules/auth/application/auth.service.js';
-import { LoginRateLimiter } from '../modules/auth/application/login-rate-limiter.js';
-import { AuthRepository } from '../modules/auth/infrastructure/auth.repository.js';
-import { loginBodySchema } from '../modules/auth/schemas/auth.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new AuthServiceError(firstIssue?.message ?? 'Invalid request', 400);
-    }
-
-    throw error;
-  }
-}
+  LoginRateLimiter,
+  AuthRepository,
+  loginBodySchema,
+} from '@edunic/source/domain/auth';
+import { parseWithSchema } from '@edunic/source/domain/shared';
 
 export async function authRoutes(app: FastifyInstance) {
   const authService = new AuthService(new AuthRepository(app.db));
@@ -34,7 +19,7 @@ export async function authRoutes(app: FastifyInstance) {
     loginRateLimiter.assertAllowed(request.ip, body.email);
 
     try {
-      const result = await authService.login(body);
+      const result = await authService.login(body, env.JWT_SECRET);
       loginRateLimiter.reset(request.ip, body.email);
       return result;
     } catch (error) {

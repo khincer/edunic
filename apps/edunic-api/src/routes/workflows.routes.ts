@@ -1,47 +1,20 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { ZodError } from 'zod';
+import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 import {
   WorkflowsService,
   WorkflowsServiceError,
-} from '../modules/workflows/application/workflows.service.js';
-import {
   WorkflowsRepository,
   type WorkflowRole,
-} from '../modules/workflows/infrastructure/workflows.repository.js';
-import {
-  assignmentParamsSchema,
-  createAssignmentBodySchema,
-  createEventBodySchema,
-  createMessageBodySchema,
   institutionHeaderSchema,
   listWorkflowQuerySchema,
-  messageParamsSchema,
+  assignmentParamsSchema,
+  createAssignmentBodySchema,
   updateAssignmentBodySchema,
-} from '../modules/workflows/schemas/workflow.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new WorkflowsServiceError(
-        firstIssue?.message ?? 'Invalid request',
-        400
-      );
-    }
-
-    throw error;
-  }
-}
-
-function getInstitutionId(request: FastifyRequest) {
-  const headers = parseWithSchema(institutionHeaderSchema, request.headers);
-  return headers['x-institution-id'];
-}
+  eventParamsSchema,
+  createEventBodySchema,
+  messageParamsSchema,
+  createMessageBodySchema,
+} from '@edunic/source/domain/workflows';
 
 function getAuthenticatedUser(request: FastifyRequest) {
   if (!request.user) {

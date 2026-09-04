@@ -18,10 +18,14 @@
   --color-hairline: #dee1e6;
   --color-success: #05b169;
   --color-danger: #cf202f;
-  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.04);
-  --radius-card: 24px;
+  --shadow-soft:
+    0 0 0 1px rgba(10, 11, 13, 0.04),
+    0 8px 24px rgba(10, 11, 13, 0.05);
+  --radius-card: 16px;
   --radius-field: 12px;
   --radius-pill: 100px;
+  --duration-ui: 160ms;
+  --ease-ui: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 * {
@@ -62,8 +66,19 @@ a {
   outline-offset: 3px;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 .admin-app {
-  min-height: 100vh;
+  min-height: 100dvh;
   background:
     linear-gradient(180deg, var(--color-surface-soft) 0%, var(--color-canvas) 62%);
   padding: 20px;
@@ -73,14 +88,13 @@ a {
   display: grid;
   grid-template-columns: 270px minmax(0, 1fr);
   gap: 22px;
-  min-height: calc(100vh - 40px);
+  min-height: calc(100dvh - 40px);
 }
 
 .admin-sidebar {
   position: sticky;
   top: 20px;
-  height: calc(100vh - 40px);
-  border-right: 1px solid var(--color-hairline);
+  height: calc(100dvh - 40px);
   border: 1px solid color-mix(in srgb, var(--color-hairline) 78%, transparent);
   border-radius: 18px;
   background: color-mix(in srgb, var(--color-canvas) 94%, transparent);
@@ -111,6 +125,7 @@ a {
 .admin-brand-title {
   margin: 0;
   color: var(--color-ink);
+  display: block;
   font-size: 15px;
   font-weight: 800;
 }
@@ -118,6 +133,7 @@ a {
 .admin-brand-subtitle {
   margin: 2px 0 0;
   color: var(--color-muted);
+  display: block;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
@@ -153,6 +169,10 @@ a {
   color: var(--color-body);
   font-size: 14px;
   font-weight: 750;
+  transition:
+    background var(--duration-ui) var(--ease-ui),
+    box-shadow var(--duration-ui) var(--ease-ui),
+    color var(--duration-ui) var(--ease-ui);
 }
 
 .admin-nav-icon {
@@ -164,8 +184,11 @@ a {
   border-radius: 8px;
   background: var(--color-surface-soft);
   color: var(--color-muted);
-  font-size: 12px;
-  font-weight: 900;
+}
+
+.admin-nav-icon svg,
+.activity-mark svg {
+  display: block;
 }
 
 .admin-nav-link:hover,
@@ -263,6 +286,13 @@ a {
   color: var(--color-canvas);
   font-size: 13px;
   font-weight: 700;
+  transition:
+    background var(--duration-ui) var(--ease-ui),
+    transform var(--duration-ui) var(--ease-ui);
+}
+
+.admin-search button:active {
+  transform: scale(0.98);
 }
 
 .admin-user {
@@ -342,10 +372,17 @@ a {
 
 .card {
   border: 1px solid var(--color-hairline);
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   background: var(--color-canvas);
   padding: 20px;
   box-shadow: var(--shadow-soft);
+}
+
+.metric-card {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-height: 156px;
 }
 
 .card-soft {
@@ -401,10 +438,6 @@ a {
   gap: 18px;
 }
 
-.dashboard-stat-card {
-  min-height: 156px;
-}
-
 .dashboard-workspace-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
@@ -439,11 +472,19 @@ a {
   border-radius: 12px;
   background: var(--color-canvas);
   padding: 12px;
+  transition:
+    background var(--duration-ui) var(--ease-ui),
+    border-color var(--duration-ui) var(--ease-ui),
+    transform var(--duration-ui) var(--ease-ui);
 }
 
 .institution-row:hover {
   border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-hairline));
   background: var(--color-primary-soft);
+}
+
+.institution-row:active {
+  transform: scale(0.99);
 }
 
 .institution-row-mark {
@@ -576,9 +617,40 @@ a {
   border-radius: 10px;
   background: var(--color-surface-soft);
   color: var(--color-primary);
+}
+
+.activity-mark[data-tone="danger"] {
+  background: color-mix(in srgb, var(--color-danger) 9%, var(--color-canvas));
+  color: var(--color-danger);
+}
+
+.activity-mark[data-tone="muted"] {
+  color: var(--color-muted);
+}
+
+.activity-mark-value {
   font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 900;
+}
+
+.panel-state {
+  min-width: 0;
+  border: 1px dashed color-mix(in srgb, var(--color-hairline) 88%, transparent);
+  border-radius: 12px;
+  background: var(--color-surface-soft);
+  padding: 12px;
+  text-align: left;
+}
+
+.panel-state-loading {
+  color: var(--color-muted);
+}
+
+.panel-state-error {
+  border-color: color-mix(in srgb, var(--color-danger) 24%, var(--color-hairline));
+  background: color-mix(in srgb, var(--color-danger) 7%, var(--color-canvas));
+  color: var(--color-danger);
 }
 
 .timeline-row span {
@@ -606,13 +678,17 @@ a {
   font-weight: 700;
   line-height: 1;
   transition:
-    background 160ms ease,
-    color 160ms ease,
-    transform 160ms ease;
+    background var(--duration-ui) var(--ease-ui),
+    color var(--duration-ui) var(--ease-ui),
+    transform var(--duration-ui) var(--ease-ui);
 }
 
 .button:hover {
   transform: translateY(-1px);
+}
+
+.button:active {
+  transform: scale(0.98);
 }
 
 .button-primary {
@@ -677,6 +753,9 @@ a {
   background: var(--color-canvas);
   color: var(--color-ink);
   padding: 0 16px;
+  transition:
+    border-color var(--duration-ui) var(--ease-ui),
+    box-shadow var(--duration-ui) var(--ease-ui);
 }
 
 .form-field select {
@@ -711,7 +790,8 @@ a {
 .form-field textarea:focus,
 .form-field select:focus {
   border-color: var(--color-primary);
-  outline: 1px solid var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  outline: 0;
 }
 
 .field-help {
@@ -838,7 +918,7 @@ a {
   --auth-panel-overlay-strong: color-mix(in srgb, var(--color-primary-active) 72%, var(--color-surface-dark));
   --auth-soft: var(--color-primary-soft);
   display: grid;
-  min-height: 100vh;
+  min-height: 100dvh;
   grid-template-columns: minmax(420px, 46vw) minmax(0, 1fr);
   gap: 18px;
   overflow: hidden;
@@ -856,7 +936,7 @@ a {
 }
 
 .login-panel {
-  min-height: calc(100vh - 36px);
+  min-height: calc(100dvh - 36px);
   justify-content: center;
   align-items: center;
   background: var(--color-canvas);
@@ -955,8 +1035,8 @@ a {
   background: var(--color-canvas);
   color: var(--color-ink);
   transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease;
+    border-color var(--duration-ui) var(--ease-ui),
+    box-shadow var(--duration-ui) var(--ease-ui);
 }
 
 .auth-input-wrap:focus-within {
@@ -1018,7 +1098,7 @@ a {
 }
 
 .login-hero {
-  min-height: calc(100vh - 36px);
+  min-height: calc(100dvh - 36px);
   justify-content: center;
   align-items: center;
   overflow: hidden;
@@ -1112,7 +1192,7 @@ a {
 }
 
 .portal-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   background:
     linear-gradient(180deg, var(--color-canvas) 0%, var(--color-surface-soft) 100%);
   color: var(--color-ink);
@@ -1124,7 +1204,7 @@ a {
   width: min(1200px, 100%);
   align-items: center;
   justify-content: space-between;
-  margin: 0 auto 56px;
+  margin: 0 auto 42px;
   color: var(--color-body);
   font-size: 14px;
   font-weight: 700;
@@ -1143,10 +1223,10 @@ a {
 .portal-hero {
   display: grid;
   width: min(1200px, 100%);
-  min-height: 42vh;
+  min-height: 30vh;
   align-content: center;
   margin: 0 auto;
-  padding: 56px 0;
+  padding: 38px 0;
 }
 
 .portal-hero .page-title {
@@ -1184,7 +1264,7 @@ a {
 }
 
 .parent-hero {
-  min-height: 32vh;
+  min-height: 22vh;
 }
 
 .parent-student-list {
@@ -1270,6 +1350,10 @@ a {
   color: var(--color-primary);
 }
 
+.link-button:active {
+  transform: scale(0.98);
+}
+
 .teacher-auth-panel,
 .teacher-header,
 .teacher-layout,
@@ -1289,7 +1373,7 @@ a {
 .teacher-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
-  align-items: end;
+  align-items: center;
   gap: 28px;
   margin-bottom: 24px;
 }
@@ -1398,6 +1482,9 @@ a {
   font-size: 13px;
   font-weight: 700;
   text-transform: capitalize;
+  transition:
+    background var(--duration-ui) var(--ease-ui),
+    color var(--duration-ui) var(--ease-ui);
 }
 
 .attendance-toggle button:last-child {
@@ -1437,7 +1524,7 @@ a {
   .admin-shell {
     grid-template-columns: 1fr;
     gap: 12px;
-    min-height: calc(100vh - 24px);
+    min-height: calc(100dvh - 24px);
   }
 
   .admin-sidebar {
@@ -1541,7 +1628,7 @@ a {
   }
 
   .admin-shell {
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .admin-sidebar,
@@ -1549,16 +1636,86 @@ a {
     border-radius: 0;
   }
 
+  .admin-sidebar {
+    position: sticky;
+    z-index: 20;
+    top: 0;
+    padding: 12px 14px 10px;
+  }
+
+  .admin-brand {
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 0 4px 10px;
+  }
+
+  .admin-brand-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .admin-brand-title {
+    font-size: 14px;
+  }
+
+  .admin-brand-subtitle {
+    font-size: 10px;
+  }
+
   .admin-content {
     width: min(100% - 28px, 1200px);
-    padding-top: 28px;
+    padding-top: 18px;
   }
 
   .admin-nav {
-    grid-template-columns: 1fr;
+    display: flex;
+    grid-template-columns: unset;
+    gap: 8px;
+    overflow-x: auto;
+    margin: 0 -14px;
+    padding: 0 14px 4px;
+    scrollbar-width: none;
+  }
+
+  .admin-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-nav-group {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .admin-nav-group p {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .admin-nav-link,
+  .admin-nav-disabled {
+    flex: 0 0 auto;
+    min-height: 38px;
+    border: 1px solid transparent;
+    background: color-mix(in srgb, var(--color-canvas) 86%, transparent);
+    padding: 0 10px;
+    white-space: nowrap;
+  }
+
+  .admin-nav-icon {
+    width: 24px;
+    height: 24px;
+    flex-basis: 24px;
+    border-radius: 7px;
   }
 
   .admin-topbar {
+    gap: 12px;
     padding: 16px;
   }
 

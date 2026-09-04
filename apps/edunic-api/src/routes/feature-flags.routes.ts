@@ -1,34 +1,13 @@
 import type { FastifyInstance } from 'fastify';
-import { ZodError } from 'zod';
 import {
   FeatureFlagsService,
   FeatureFlagsServiceError,
-} from '../modules/feature-flags/application/feature-flags.service.js';
-import { FeatureFlagsRepository } from '../modules/feature-flags/infrastructure/feature-flags.repository.js';
-import {
+  FeatureFlagsRepository,
   institutionFeatureFlagParamsSchema,
   institutionFeatureFlagsParamsSchema,
   updateInstitutionFeatureFlagBodySchema,
-} from '../modules/feature-flags/schemas/feature-flag.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new FeatureFlagsServiceError(
-        firstIssue?.message ?? 'Invalid request',
-        400
-      );
-    }
-
-    throw error;
-  }
-}
+} from '@edunic/source/domain/feature-flags';
+import { parseWithSchema } from '@edunic/source/domain/shared';
 
 function assertInstitutionAccess(
   userInstitutionId: string | undefined,

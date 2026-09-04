@@ -1,41 +1,15 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { ZodError } from 'zod';
+import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 import {
   AttendanceService,
   AttendanceServiceError,
-} from '../modules/attendance/application/attendance.service.js';
-import { AttendanceRepository } from '../modules/attendance/infrastructure/attendance.repository.js';
-import {
+  AttendanceRepository,
   attendanceParamsSchema,
-  createAttendanceBodySchema,
   institutionHeaderSchema,
   listAttendanceQuerySchema,
+  createAttendanceBodySchema,
   updateAttendanceBodySchema,
-} from '../modules/attendance/schemas/attendance.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new AttendanceServiceError(
-        firstIssue?.message ?? 'Invalid request',
-        400
-      );
-    }
-
-    throw error;
-  }
-}
-
-function getInstitutionId(request: FastifyRequest) {
-  const headers = parseWithSchema(institutionHeaderSchema, request.headers);
-  return headers['x-institution-id'];
-}
+} from '@edunic/source/domain/attendance';
 
 export async function attendanceRoutes(app: FastifyInstance) {
   const attendanceService = new AttendanceService(

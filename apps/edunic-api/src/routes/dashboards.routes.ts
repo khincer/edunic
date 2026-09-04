@@ -1,35 +1,11 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { ZodError } from 'zod';
 import {
   DashboardsService,
   DashboardsServiceError,
-} from '../modules/dashboards/application/dashboards.service.js';
-import { DashboardsRepository } from '../modules/dashboards/infrastructure/dashboards.repository.js';
-import { institutionHeaderSchema } from '../modules/dashboards/schemas/dashboard.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new DashboardsServiceError(
-        firstIssue?.message ?? 'Invalid request',
-        400
-      );
-    }
-
-    throw error;
-  }
-}
-
-function getInstitutionId(request: FastifyRequest) {
-  const headers = parseWithSchema(institutionHeaderSchema, request.headers);
-  return headers['x-institution-id'];
-}
+  DashboardsRepository,
+  institutionHeaderSchema,
+} from '@edunic/source/domain/dashboards';
+import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 
 function getAuthenticatedUser(request: FastifyRequest) {
   if (!request.user) {

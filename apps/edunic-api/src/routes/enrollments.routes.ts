@@ -1,42 +1,16 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { ZodError } from 'zod';
+import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 import {
   EnrollmentsService,
   EnrollmentsServiceError,
-} from '../modules/enrollments/application/enrollments.service.js';
-import { EnrollmentsRepository } from '../modules/enrollments/infrastructure/enrollments.repository.js';
-import {
+  EnrollmentsRepository,
   createEnrollmentBodySchema,
   evaluatePromotionParamsSchema,
   enrollmentParamsSchema,
   institutionHeaderSchema,
   listEnrollmentsQuerySchema,
   updateEnrollmentBodySchema,
-} from '../modules/enrollments/schemas/enrollment.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new EnrollmentsServiceError(
-        firstIssue?.message ?? 'Invalid request',
-        400
-      );
-    }
-
-    throw error;
-  }
-}
-
-function getInstitutionId(request: FastifyRequest) {
-  const headers = parseWithSchema(institutionHeaderSchema, request.headers);
-  return headers['x-institution-id'];
-}
+} from '@edunic/source/domain/enrollments';
 
 export async function enrollmentRoutes(app: FastifyInstance) {
   const enrollmentsService = new EnrollmentsService(

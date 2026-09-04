@@ -1,41 +1,15 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { ZodError } from 'zod';
+import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 import {
   ClassroomsService,
   ClassroomsServiceError,
-} from '../modules/classrooms/application/classrooms.service.js';
-import { ClassroomsRepository } from '../modules/classrooms/infrastructure/classrooms.repository.js';
-import {
+  ClassroomsRepository,
   classroomParamsSchema,
   createClassroomBodySchema,
   institutionHeaderSchema,
   listClassroomsQuerySchema,
   updateClassroomBodySchema,
-} from '../modules/classrooms/schemas/classroom.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new ClassroomsServiceError(
-        firstIssue?.message ?? 'Invalid request',
-        400
-      );
-    }
-
-    throw error;
-  }
-}
-
-function getInstitutionId(request: FastifyRequest) {
-  const headers = parseWithSchema(institutionHeaderSchema, request.headers);
-  return headers['x-institution-id'];
-}
+} from '@edunic/source/domain/classrooms';
 
 export async function classroomRoutes(app: FastifyInstance) {
   const classroomsService = new ClassroomsService(

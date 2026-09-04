@@ -1,41 +1,15 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { ZodError } from 'zod';
+import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 import {
   GradesService,
   GradesServiceError,
-} from '../modules/grades/application/grades.service.js';
-import { GradesRepository } from '../modules/grades/infrastructure/grades.repository.js';
-import {
+  GradesRepository,
   createGradeBodySchema,
   gradeParamsSchema,
   institutionHeaderSchema,
   listGradesQuerySchema,
   updateGradeBodySchema,
-} from '../modules/grades/schemas/grade.schemas.js';
-
-function parseWithSchema<T>(
-  schema: { parse: (value: unknown) => T },
-  value: unknown
-): T {
-  try {
-    return schema.parse(value);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const firstIssue = error.issues[0];
-      throw new GradesServiceError(
-        firstIssue?.message ?? 'Invalid request',
-        400
-      );
-    }
-
-    throw error;
-  }
-}
-
-function getInstitutionId(request: FastifyRequest) {
-  const headers = parseWithSchema(institutionHeaderSchema, request.headers);
-  return headers['x-institution-id'];
-}
+} from '@edunic/source/domain/grades';
 
 export async function gradeRoutes(app: FastifyInstance) {
   const gradesService = new GradesService(
