@@ -3,15 +3,13 @@ import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared'
 import {
   ClassroomsService,
   ClassroomsServiceError,
-} from '../modules/classrooms/application/classrooms.service.js';
-import { ClassroomsRepository } from '../modules/classrooms/infrastructure/classrooms.repository.js';
-import {
+  ClassroomsRepository,
   classroomParamsSchema,
   createClassroomBodySchema,
   institutionHeaderSchema,
   listClassroomsQuerySchema,
   updateClassroomBodySchema,
-} from '../modules/classrooms/schemas/classroom.schemas.js';
+} from '@edunic/source/domain/classrooms';
 
 export async function classroomRoutes(app: FastifyInstance) {
   const classroomsService = new ClassroomsService(

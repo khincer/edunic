@@ -2,9 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import {
   ExtensionsService,
   ExtensionsServiceError,
-} from '../modules/extensions/application/extensions.service.js';
-import { ExtensionsRepository } from '../modules/extensions/infrastructure/extensions.repository.js';
-import {
+  ExtensionsRepository,
   createExtensionBodySchema,
   extensionParamsSchema,
   institutionExtensionParamsSchema,
@@ -12,7 +10,7 @@ import {
   listExtensionsQuerySchema,
   updateExtensionBodySchema,
   upsertInstitutionExtensionBodySchema,
-} from '../modules/extensions/schemas/extension.schemas.js';
+} from '@edunic/source/domain/extensions';
 import { parseWithSchema } from '@edunic/source/domain/shared';
 
 export async function extensionRoutes(app: FastifyInstance) {

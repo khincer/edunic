@@ -2,13 +2,11 @@ import type { FastifyInstance } from 'fastify';
 import {
   FeatureFlagsService,
   FeatureFlagsServiceError,
-} from '../modules/feature-flags/application/feature-flags.service.js';
-import { FeatureFlagsRepository } from '../modules/feature-flags/infrastructure/feature-flags.repository.js';
-import {
+  FeatureFlagsRepository,
   institutionFeatureFlagParamsSchema,
   institutionFeatureFlagsParamsSchema,
   updateInstitutionFeatureFlagBodySchema,
-} from '../modules/feature-flags/schemas/feature-flag.schemas.js';
+} from '@edunic/source/domain/feature-flags';
 import { parseWithSchema } from '@edunic/source/domain/shared';
 
 function assertInstitutionAccess(

@@ -1,7 +1,5 @@
 import { sql } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
-
-type Database = FastifyInstance['db'];
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 export type EffectiveFeatureFlagRecord = {
   key: string;
@@ -16,7 +14,7 @@ export type FeatureFlagRecord = {
 };
 
 export class FeatureFlagsRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async listEffective(institutionId: string) {
     const result = await this.db.execute<EffectiveFeatureFlagRecord>(sql`

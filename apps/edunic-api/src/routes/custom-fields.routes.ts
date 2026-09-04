@@ -3,9 +3,7 @@ import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared'
 import {
   CustomFieldsService,
   CustomFieldsServiceError,
-} from '../modules/custom-fields/application/custom-fields.service.js';
-import { CustomFieldsRepository } from '../modules/custom-fields/infrastructure/custom-fields.repository.js';
-import {
+  CustomFieldsRepository,
   createCustomFieldBodySchema,
   customFieldParamsSchema,
   customFieldValuesParamsSchema,
@@ -13,7 +11,7 @@ import {
   listCustomFieldsQuerySchema,
   updateCustomFieldBodySchema,
   upsertCustomFieldValuesBodySchema,
-} from '../modules/custom-fields/schemas/custom-field.schemas.js';
+} from '@edunic/source/domain/custom-fields';
 
 export async function customFieldRoutes(app: FastifyInstance) {
   const customFieldsService = new CustomFieldsService(

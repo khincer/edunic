@@ -2,10 +2,8 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { ListInstitutionsQuery } from '../schemas/institution.schemas.js';
-
-type Database = FastifyInstance['db'];
 
 type InstitutionSortColumn = ListInstitutionsQuery['sortBy'];
 
@@ -31,7 +29,7 @@ export type UpdateInstitutionInput = {
 export type ListInstitutionsInput = ListInstitutionsQuery;
 
 export class InstitutionsRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async list(input: ListInstitutionsInput) {
     const searchFilter = input.search

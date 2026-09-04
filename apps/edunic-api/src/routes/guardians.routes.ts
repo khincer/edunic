@@ -3,9 +3,7 @@ import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared'
 import {
   GuardiansService,
   GuardiansServiceError,
-} from '../modules/guardians/application/guardians.service.js';
-import { GuardiansRepository } from '../modules/guardians/infrastructure/guardians.repository.js';
-import {
+  GuardiansRepository,
   createGuardianBodySchema,
   guardianParamsSchema,
   institutionHeaderSchema,
@@ -13,7 +11,7 @@ import {
   studentGuardianParamsSchema,
   studentGuardiansParamsSchema,
   updateGuardianBodySchema,
-} from '../modules/guardians/schemas/guardian.schemas.js';
+} from '@edunic/source/domain/guardians';
 
 export async function guardianRoutes(app: FastifyInstance) {
   const guardiansService = new GuardiansService(new GuardiansRepository(app.db));

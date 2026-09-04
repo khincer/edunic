@@ -2,10 +2,8 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { ListGuardiansQuery } from '../schemas/guardian.schemas.js';
-
-type Database = FastifyInstance['db'];
 
 type GuardianSortColumn = ListGuardiansQuery['sortBy'];
 
@@ -45,7 +43,7 @@ export type ListGuardiansInput = ListGuardiansQuery & {
 };
 
 export class GuardiansRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async list(input: ListGuardiansInput) {
     const searchFilter = input.search

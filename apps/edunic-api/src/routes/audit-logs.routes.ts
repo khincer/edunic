@@ -2,12 +2,10 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import {
   AuditLogsService,
   AuditLogsServiceError,
-} from '../modules/audit-logs/application/audit-logs.service.js';
-import { AuditLogsRepository } from '../modules/audit-logs/infrastructure/audit-logs.repository.js';
-import {
+  AuditLogsRepository,
   institutionHeaderSchema,
   listAuditLogsQuerySchema,
-} from '../modules/audit-logs/schemas/audit-log.schemas.js';
+} from '@edunic/source/domain/audit-logs';
 import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 
 export async function auditLogRoutes(app: FastifyInstance) {

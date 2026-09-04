@@ -3,14 +3,12 @@ import { parseWithSchema } from '@edunic/source/domain/shared';
 import {
   InstitutionsService,
   InstitutionsServiceError,
-} from '../modules/institutions/application/institutions.service.js';
-import { InstitutionsRepository } from '../modules/institutions/infrastructure/institutions.repository.js';
-import {
+  InstitutionsRepository,
   createInstitutionBodySchema,
   institutionParamsSchema,
   listInstitutionsQuerySchema,
   updateInstitutionBodySchema,
-} from '../modules/institutions/schemas/institution.schemas.js';
+} from '@edunic/source/domain/institutions';
 
 export async function institutionRoutes(app: FastifyInstance) {
   const institutionsService = new InstitutionsService(

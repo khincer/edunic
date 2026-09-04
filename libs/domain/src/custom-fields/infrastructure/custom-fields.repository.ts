@@ -2,13 +2,11 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type {
   CustomFieldType,
   ListCustomFieldsQuery,
 } from '../schemas/custom-field.schemas.js';
-
-type Database = FastifyInstance['db'];
 
 type CountRow = {
   count: string | number;
@@ -33,7 +31,7 @@ export type CustomFieldValueRecord = {
 };
 
 export class CustomFieldsRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async list(input: ListCustomFieldsQuery & { institutionId: string }) {
     const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];

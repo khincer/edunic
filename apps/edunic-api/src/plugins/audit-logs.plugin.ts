@@ -4,7 +4,7 @@ import type {
   FastifyRequest,
 } from 'fastify';
 import fp from 'fastify-plugin';
-import { AuditLogsRepository } from '../modules/audit-logs/infrastructure/audit-logs.repository.js';
+import { AuditLogsRepository } from '@edunic/source/domain/audit-logs';
 
 const MUTATING_METHODS = new Set(['POST', 'PATCH', 'DELETE']);
 

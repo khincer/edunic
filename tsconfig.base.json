@@ -23,6 +23,13 @@
       "@edunic/source/db/schema": ["libs/db/src/schema/index.ts"],
       "@edunic/source/domain/events": ["libs/domain/src/events.ts"],
       "@edunic/source/domain/shared": ["libs/domain/src/shared/index.ts"],
+      "@edunic/source/domain/audit-logs": ["libs/domain/src/audit-logs/index.ts"],
+      "@edunic/source/domain/classrooms": ["libs/domain/src/classrooms/index.ts"],
+      "@edunic/source/domain/custom-fields": ["libs/domain/src/custom-fields/index.ts"],
+      "@edunic/source/domain/extensions": ["libs/domain/src/extensions/index.ts"],
+      "@edunic/source/domain/feature-flags": ["libs/domain/src/feature-flags/index.ts"],
+      "@edunic/source/domain/guardians": ["libs/domain/src/guardians/index.ts"],
+      "@edunic/source/domain/institutions": ["libs/domain/src/institutions/index.ts"],
       "@edunic/source/domain/students": ["libs/domain/src/students/index.ts"],
       "@edunic/source/events": ["libs/events/src/index.ts"]
     }

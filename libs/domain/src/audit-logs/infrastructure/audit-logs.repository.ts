@@ -2,10 +2,8 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { ListAuditLogsQuery } from '../schemas/audit-log.schemas.js';
-
-type Database = FastifyInstance['db'];
 
 type CountRow = {
   count: string | number;
@@ -38,7 +36,7 @@ export type ListAuditLogsInput = ListAuditLogsQuery & {
 };
 
 export class AuditLogsRepository {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: NodePgDatabase) {}
 
   async create(input: CreateAuditLogInput) {
     const result = await this.db.execute<AuditLogRecord>(sql`
