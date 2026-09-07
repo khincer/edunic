@@ -1,5 +1,5 @@
 import { db } from '@edunic/source/db';
-import { hashPassword } from '../../src/modules/auth/application/password.js';
+import { hashPassword } from '../../../../libs/domain/src/auth/application/password.js';
 import {
   academicPeriods,
   attendance,

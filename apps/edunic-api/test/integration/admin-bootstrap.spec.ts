@@ -1,4 +1,4 @@
-import { createTestApp, createHttpClient } from '../helpers/app.js';
+﻿import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createBearerToken } from '../helpers/auth.js';
 import { ensureTestDatabaseReady, resetTestDatabase } from '../helpers/db.js';
 import {
@@ -36,7 +36,7 @@ describe('admin bootstrap route', () => {
     const response = await client
       .post('/admin/bootstrap')
       .set({
-        authorization: `Bearer ${createBearerToken({
+        authorization: `Bearer ${await createBearerToken({
           userId: adminUser.id,
           institutionId: institution.id,
         })}`,
@@ -64,7 +64,7 @@ describe('admin bootstrap route', () => {
     const response = await client
       .post('/admin/bootstrap')
       .set({
-        authorization: `Bearer ${createBearerToken({
+        authorization: `Bearer ${await createBearerToken({
           userId: adminUser.id,
           institutionId: institution.id,
         })}`,

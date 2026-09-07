@@ -1,4 +1,4 @@
-import { createTestApp, createHttpClient } from '../helpers/app.js';
+﻿import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
@@ -39,7 +39,7 @@ describe('grades routes', () => {
       studentId: student.id,
       academicPeriodId: period.id,
     });
-    const headers = createAuthHeaders({
+    const headers = await createAuthHeaders({
       userId: teacherUser.id,
       institutionId: institution.id,
     });
@@ -88,7 +88,7 @@ describe('grades routes', () => {
     const response = await client
       .post('/grades')
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: teacherUser.id,
           institutionId: institution.id,
         })

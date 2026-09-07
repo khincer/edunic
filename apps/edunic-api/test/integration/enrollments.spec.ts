@@ -1,4 +1,4 @@
-import { createTestApp, createHttpClient } from '../helpers/app.js';
+﻿import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
@@ -39,7 +39,7 @@ describe('enrollments routes', () => {
     const student = await createStudentFixture({ institutionId: institution.id });
     const period = await createAcademicPeriodFixture({ institutionId: institution.id });
     const classroom = await createClassroomFixture({ institutionId: institution.id });
-    const headers = createAuthHeaders({
+    const headers = await createAuthHeaders({
       userId: teacherUser.id,
       institutionId: institution.id,
     });
@@ -119,7 +119,7 @@ describe('enrollments routes', () => {
     const response = await client
       .get(`/enrollments?classroomId=${targetClassroom.id}`)
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: teacherUser.id,
           institutionId: institution.id,
         })
@@ -143,7 +143,7 @@ describe('enrollments routes', () => {
     const response = await client
       .post('/enrollments')
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: teacherUser.id,
           institutionId: institution.id,
         })
@@ -181,7 +181,7 @@ describe('enrollments routes', () => {
     const response = await client
       .delete(`/enrollments/${enrollment.id}`)
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: teacherUser.id,
           institutionId: institution.id,
         })

@@ -117,11 +117,11 @@ describe('auth and RBAC routes', () => {
     });
 
     const response = await client.get('/institutions').set({
-      authorization: createAuthHeaders({
+      authorization: (await createAuthHeaders({
         userId: adminUser.id,
         institutionId: institution.id,
         expiresAt: Math.floor(Date.now() / 1000) - 1,
-      }).authorization,
+      })).authorization,
     });
 
     expect(response.status).toBe(401);
@@ -138,7 +138,7 @@ describe('auth and RBAC routes', () => {
     const response = await client
       .post('/students')
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: parentUser.id,
           institutionId: institution.id,
         })
@@ -162,10 +162,10 @@ describe('auth and RBAC routes', () => {
     const response = await client
       .get('/institutions')
       .set({
-        authorization: createAuthHeaders({
+        authorization: (await createAuthHeaders({
           userId: teacherUser.id,
           institutionId: institution.id,
-        }).authorization,
+        })).authorization,
       });
 
     expect(response.status).toBe(403);

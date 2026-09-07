@@ -1,4 +1,4 @@
-import { createTestApp, createHttpClient } from '../helpers/app.js';
+﻿import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
@@ -32,7 +32,7 @@ describe('academic periods routes', () => {
       institutionId: institution.id,
       role: 'admin',
     });
-    const headers = createAuthHeaders({
+    const headers = await createAuthHeaders({
       userId: adminUser.id,
       institutionId: institution.id,
     });
@@ -83,7 +83,7 @@ describe('academic periods routes', () => {
     const response = await client
       .delete(`/academic-periods/${period.id}`)
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: adminUser.id,
           institutionId: institution.id,
         })

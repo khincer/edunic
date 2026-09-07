@@ -11,9 +11,7 @@ const configSchema = z
   .record(z.string(), z.unknown())
   .default({});
 
-export const institutionHeaderSchema = z.object({
-  'x-institution-id': uuidSchema,
-});
+export { institutionHeaderSchema } from '@edunic/source/domain/shared';
 
 export const extensionParamsSchema = z.object({
   extensionKey: extensionKeySchema,

@@ -2,11 +2,7 @@ export { uuidSchema } from './uuid.schema.js';
 
 export {
   AppError,
-  NotFoundError,
-  ConflictError,
   ValidationError,
-  UnauthorizedError,
-  ForbiddenError,
 } from './app-error.js';
 
 export { parseWithSchema } from './parse-with-schema.js';

@@ -28,7 +28,7 @@ const authPluginHandler: FastifyPluginAsync = async (app) => {
       let payload;
 
       try {
-        payload = verifyJwt(token, env.JWT_SECRET);
+        payload = await verifyJwt(token, env.JWT_SECRET);
       } catch (error) {
         const message =
           error instanceof Error && error.message === 'Token expired'

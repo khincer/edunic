@@ -1,4 +1,4 @@
-import { createTestApp, createHttpClient } from '../helpers/app.js';
+﻿import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
@@ -41,7 +41,7 @@ describe('notifications routes', () => {
       studentId: student.id,
       academicPeriodId: period.id,
     });
-    const headers = createAuthHeaders({
+    const headers = await createAuthHeaders({
       userId: adminUser.id,
       institutionId: institution.id,
     });
@@ -80,7 +80,7 @@ describe('notifications routes', () => {
     const response = await client
       .get('/notifications')
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: parentUser.id,
           institutionId: institution.id,
         })

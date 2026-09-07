@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { createConnection } from 'node:net';
+import Redis from 'ioredis';
 
 export type EventEnvelope<TName extends string = string, TPayload = unknown> = {
   id: string;
@@ -83,26 +83,13 @@ export class RedisStreamsEventBus implements EventBus {
   }
 
   private async xadd(event: EventEnvelope) {
-    const redisUrl = new URL(this.redisUrl);
-    const port = Number(redisUrl.port || 6379);
-    const host = redisUrl.hostname;
-    const password = decodeURIComponent(redisUrl.password || '');
-    const commandParts = [
-      'XADD',
-      this.streamName,
-      '*',
-      'event',
-      JSON.stringify(event),
-    ];
+    const client = new Redis(this.redisUrl, { maxRetriesPerRequest: 1 });
 
-    await sendRedisCommands({
-      host,
-      port,
-      commands: [
-        ...(password ? [['AUTH', password]] : []),
-        commandParts,
-      ],
-    });
+    try {
+      await client.xadd(this.streamName, '*', 'event', JSON.stringify(event));
+    } finally {
+      client.disconnect();
+    }
   }
 }
 
@@ -119,72 +106,4 @@ export function createEventBusFromEnv() {
   }
 
   return new InMemoryEventBus();
-}
-
-async function sendRedisCommands(input: {
-  host: string;
-  port: number;
-  commands: string[][];
-}) {
-  await new Promise<void>((resolve, reject) => {
-    let commandIndex = 0;
-    const firstCommand = input.commands[commandIndex];
-
-    if (!firstCommand) {
-      resolve();
-      return;
-    }
-
-    const socket = createConnection(
-      {
-        host: input.host,
-        port: input.port,
-      },
-      () => {
-        socket.write(encodeRespCommand(firstCommand));
-      }
-    );
-
-    socket.on('data', (chunk) => {
-      const response = chunk.toString('utf8');
-
-      if (response.startsWith('-')) {
-        socket.end();
-        reject(new Error(response.slice(1).trim()));
-        return;
-      }
-
-      commandIndex += 1;
-
-      if (commandIndex >= input.commands.length) {
-        socket.end();
-        resolve();
-        return;
-      }
-
-      const nextCommand = input.commands[commandIndex];
-
-      if (!nextCommand) {
-        socket.end();
-        resolve();
-        return;
-      }
-
-      socket.write(encodeRespCommand(nextCommand));
-    });
-
-    socket.once('error', reject);
-    socket.setTimeout(5000, () => {
-      socket.destroy();
-      reject(new Error('Redis command timed out'));
-    });
-  });
-}
-
-function encodeRespCommand(parts: string[]) {
-  return [
-    `*${parts.length}`,
-    ...parts.flatMap((part) => [`$${Buffer.byteLength(part)}`, part]),
-    '',
-  ].join('\r\n');
 }

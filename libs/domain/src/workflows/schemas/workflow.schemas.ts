@@ -1,9 +1,7 @@
 import { z } from 'zod';
 import { uuidSchema } from '@edunic/source/domain/shared';
 
-export const institutionHeaderSchema = z.object({
-  'x-institution-id': uuidSchema,
-});
+export { institutionHeaderSchema } from '@edunic/source/domain/shared';
 
 export const listWorkflowQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(25),

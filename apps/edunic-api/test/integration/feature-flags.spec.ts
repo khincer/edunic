@@ -1,4 +1,4 @@
-import { db } from '@edunic/source/db';
+﻿import { db } from '@edunic/source/db';
 import { featureFlags } from '@edunic/source/db/schema';
 import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createAuthHeaders } from '../helpers/auth.js';
@@ -35,7 +35,7 @@ describe('feature flag routes', () => {
       institutionId: institution.id,
       role: 'admin',
     });
-    const headers = createAuthHeaders({
+    const headers = await createAuthHeaders({
       userId: adminUser.id,
       institutionId: institution.id,
     });
@@ -96,7 +96,7 @@ describe('feature flag routes', () => {
     const response = await client
       .put(`/institutions/${institution.id}/feature-flags/parent_portal`)
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: teacherUser.id,
           institutionId: institution.id,
         })
@@ -119,7 +119,7 @@ describe('feature flag routes', () => {
         `/institutions/${otherInstitution.id}/feature-flags/parent_portal`
       )
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: adminUser.id,
           institutionId: institution.id,
         })
@@ -140,7 +140,7 @@ describe('feature flag routes', () => {
     const response = await client
       .put(`/institutions/${institution.id}/feature-flags/missing_feature`)
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: adminUser.id,
           institutionId: institution.id,
         })

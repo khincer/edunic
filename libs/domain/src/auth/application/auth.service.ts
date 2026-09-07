@@ -32,7 +32,7 @@ export class AuthService {
       throw new AuthServiceError('Invalid credentials', 401);
     }
 
-    const token = signJwt(
+    const token = await signJwt(
       {
         sub: user.id,
         institutionId: input.institutionId,
