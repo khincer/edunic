@@ -8,6 +8,7 @@ import {
   users,
 } from '../libs/db/src/schema/index.js';
 import { resolveTenantFromHost } from '../apps/edunic-fe/src/lib/tenant.js';
+import { getCliErrorMessage, renderHelp } from './cli-utils.js';
 
 const ROLES = ['admin', 'teacher', 'parent'] as const;
 const UUID_PATTERN =
@@ -23,23 +24,24 @@ type Args = {
   role?: string;
 };
 
-type ErrorWithCause = Error & {
-  cause?: unknown;
-};
-
-type PostgresErrorLike = {
-  code?: string;
-  constraint?: string;
-  detail?: string;
-  message?: string;
-  table?: string;
-};
-
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   if (args.help) {
-    printHelp();
+    renderHelp(
+      'Create an Edunic user.',
+      [
+        'npm run user:create -- --host central.localtest.me --role teacher --email teacher2@central.edu',
+        'npm run user:create -- --institution-id 00000000-0000-0000-0000-000000000001 --role parent --email parent2@central.edu --password parent1234',
+      ],
+      [
+        { name: 'email', description: 'User email address.' },
+        { name: 'role', description: 'One of: admin, teacher, parent.' },
+        { name: 'host', description: 'Institution domain or local test host.' },
+        { name: 'institution-id', description: 'Institution UUID. Used when no host is provided.' },
+        { name: 'password', description: 'Optional password. A temporary password is generated when omitted.' },
+      ],
+    );
     return;
   }
 
@@ -178,22 +180,6 @@ function generatePassword() {
   return `Edunic-${randomBytes(6).toString('base64url')}`;
 }
 
-function printHelp() {
-  console.log(`Create an Edunic user.
-
-Usage:
-  npm run user:create -- --host central.localtest.me --role teacher --email teacher2@central.edu
-  npm run user:create -- --institution-id 00000000-0000-0000-0000-000000000001 --role parent --email parent2@central.edu --password parent1234
-
-Options:
-  --email             User email address.
-  --role              One of: admin, teacher, parent.
-  --host              Institution domain or local test host.
-  --institution-id    Institution UUID. Used when no host is provided.
-  --password          Optional password. A temporary password is generated when omitted.
-`);
-}
-
 main()
   .catch((error: unknown) => {
     console.error(getCliErrorMessage(error));
@@ -202,73 +188,3 @@ main()
   .finally(async () => {
     await pool.end();
   });
-
-function getCliErrorMessage(error: unknown) {
-  const cause = getRootCause(error);
-  const postgresError = getPostgresError(cause);
-
-  if (postgresError?.code === '42P01') {
-    return [
-      'Database schema is missing or not migrated.',
-      'Run: npm run db:migrate',
-      'Then seed local institutions if needed: npm run db:seed',
-      `Original database error: ${postgresError.message ?? 'relation does not exist'}`,
-    ].join('\n');
-  }
-
-  if (postgresError?.code === '28P01') {
-    return 'Database authentication failed. Check DATABASE_URL credentials.';
-  }
-
-  if (postgresError?.code === '3D000') {
-    return 'Database does not exist. Check DATABASE_URL or create the database before running this command.';
-  }
-
-  if (postgresError?.code === '23505') {
-    return `Database unique constraint failed${postgresError.constraint ? `: ${postgresError.constraint}` : ''}.`;
-  }
-
-  if (postgresError?.code === '23503') {
-    return `Database foreign key constraint failed${postgresError.constraint ? `: ${postgresError.constraint}` : ''}.`;
-  }
-
-  if (postgresError?.code === 'ECONNREFUSED') {
-    return 'Could not connect to the database. Check that Postgres is running and DATABASE_URL points to it.';
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return String(error);
-}
-
-function getRootCause(error: unknown): unknown {
-  let current = error;
-
-  while (current instanceof Error && 'cause' in current) {
-    const cause = (current as ErrorWithCause).cause;
-
-    if (!cause || cause === current) {
-      break;
-    }
-
-    current = cause;
-  }
-
-  return current;
-}
-
-function getPostgresError(error: unknown): PostgresErrorLike | null {
-  if (!error || typeof error !== 'object') {
-    return null;
-  }
-
-  const value = error as PostgresErrorLike;
-
-  if (typeof value.code === 'string') {
-    return value;
-  }
-
-  return null;
-}
