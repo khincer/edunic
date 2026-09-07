@@ -1,4 +1,4 @@
-import { createTestApp, createHttpClient } from '../helpers/app.js';
+﻿import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
@@ -31,7 +31,7 @@ describe('custom fields routes', () => {
       role: 'admin',
     });
     const student = await createStudentFixture({ institutionId: institution.id });
-    const headers = createAuthHeaders({
+    const headers = await createAuthHeaders({
       userId: adminUser.id,
       institutionId: institution.id,
     });
@@ -68,7 +68,7 @@ describe('custom fields routes', () => {
       role: 'admin',
     });
     const student = await createStudentFixture({ institutionId: institution.id });
-    const headers = createAuthHeaders({
+    const headers = await createAuthHeaders({
       userId: adminUser.id,
       institutionId: institution.id,
     });

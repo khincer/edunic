@@ -1,7 +1,7 @@
 import { env } from '../../src/config/env.js';
-import { signJwt } from '../../src/modules/auth/application/jwt.js';
+import { signJwt } from '../../../../libs/domain/src/auth/application/jwt.js';
 
-export function createBearerToken(input: {
+export async function createBearerToken(input: {
   userId: string;
   institutionId: string;
   expiresAt?: number;
@@ -16,13 +16,13 @@ export function createBearerToken(input: {
   );
 }
 
-export function createAuthHeaders(input: {
+export async function createAuthHeaders(input: {
   userId: string;
   institutionId: string;
   expiresAt?: number;
 }) {
   return {
-    authorization: `Bearer ${createBearerToken(input)}`,
+    authorization: `Bearer ${await createBearerToken(input)}`,
     'x-institution-id': input.institutionId,
   };
 }

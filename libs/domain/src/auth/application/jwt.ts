@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { SignJWT, jwtVerify } from 'jose';
 
 export type JwtPayload = {
   sub: string;
@@ -6,80 +6,50 @@ export type JwtPayload = {
   exp: number;
 };
 
-function toBase64Url(value: string | Buffer) {
-  return Buffer.from(value)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
+function keyFor(secret: string) {
+  return new TextEncoder().encode(secret);
 }
 
-function fromBase64Url(value: string) {
-  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
-  const padding = normalized.length % 4 === 0 ? '' : '='.repeat(4 - (normalized.length % 4));
-
-  return Buffer.from(normalized + padding, 'base64').toString('utf8');
-}
-
-function sign(value: string, secret: string) {
-  return toBase64Url(createHmac('sha256', secret).update(value).digest());
-}
-
-export function signJwt(
+export async function signJwt(
   payload: Omit<JwtPayload, 'exp'> & { exp?: number },
   secret: string,
   expiresInSeconds = 60 * 60 * 12
 ) {
-  const header = {
-    alg: 'HS256',
-    typ: 'JWT',
-  };
+  const exp = payload.exp ?? Math.floor(Date.now() / 1000) + expiresInSeconds;
 
-  const completePayload: JwtPayload = {
-    ...payload,
-    exp: payload.exp ?? Math.floor(Date.now() / 1000) + expiresInSeconds,
-  };
-
-  const encodedHeader = toBase64Url(JSON.stringify(header));
-  const encodedPayload = toBase64Url(JSON.stringify(completePayload));
-  const signature = sign(`${encodedHeader}.${encodedPayload}`, secret);
-
-  return `${encodedHeader}.${encodedPayload}.${signature}`;
+  return new SignJWT({ institutionId: payload.institutionId })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(payload.sub)
+    .setExpirationTime(exp)
+    .sign(keyFor(secret));
 }
 
-export function verifyJwt(token: string, secret: string) {
-  const [encodedHeader, encodedPayload, providedSignature] = token.split('.');
+export async function verifyJwt(token: string, secret: string): Promise<JwtPayload> {
+  let verified: Awaited<ReturnType<typeof jwtVerify>>;
 
-  if (!encodedHeader || !encodedPayload || !providedSignature) {
+  try {
+    verified = await jwtVerify(token, keyFor(secret));
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error as { code?: string }).code === 'ERR_JWT_EXPIRED'
+    ) {
+      throw new Error('Token expired');
+    }
+
     throw new Error('Invalid token');
   }
 
-  const expectedSignature = sign(`${encodedHeader}.${encodedPayload}`, secret);
+  const { sub, institutionId, exp } = verified.payload;
 
-  if (!safeEquals(expectedSignature, providedSignature)) {
+  if (!sub || typeof institutionId !== 'string' || typeof exp !== 'number') {
     throw new Error('Invalid token');
   }
 
-  const payload = JSON.parse(fromBase64Url(encodedPayload)) as JwtPayload;
-
-  if (!payload.sub || !payload.institutionId || !payload.exp) {
-    throw new Error('Invalid token');
-  }
-
-  if (payload.exp < Math.floor(Date.now() / 1000)) {
-    throw new Error('Token expired');
-  }
-
-  return payload;
-}
-
-function safeEquals(expected: string, provided: string) {
-  const expectedBuffer = Buffer.from(expected);
-  const providedBuffer = Buffer.from(provided);
-
-  if (expectedBuffer.length !== providedBuffer.length) {
-    return false;
-  }
-
-  return timingSafeEqual(expectedBuffer, providedBuffer);
+  return {
+    sub,
+    institutionId,
+    exp,
+  };
 }

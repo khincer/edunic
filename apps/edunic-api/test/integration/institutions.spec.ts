@@ -1,4 +1,4 @@
-import { createTestApp, createHttpClient } from '../helpers/app.js';
+﻿import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createBearerToken } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
@@ -31,7 +31,7 @@ describe('institutions routes', () => {
       role: 'admin',
     });
     const authHeaders = {
-      authorization: `Bearer ${createBearerToken({
+      authorization: `Bearer ${await createBearerToken({
         userId: adminUser.id,
         institutionId: bootstrapInstitution.id,
       })}`,
@@ -84,7 +84,7 @@ describe('institutions routes', () => {
     const response = await client
       .delete(`/institutions/${institution.id}`)
       .set({
-        authorization: `Bearer ${createBearerToken({
+        authorization: `Bearer ${await createBearerToken({
           userId: adminUser.id,
           institutionId: institution.id,
         })}`,

@@ -1,4 +1,4 @@
-import { createTestApp, createHttpClient } from '../helpers/app.js';
+﻿import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
@@ -29,7 +29,7 @@ describe('extensions routes', () => {
       institutionId: institution.id,
       role: 'admin',
     });
-    const headers = createAuthHeaders({
+    const headers = await createAuthHeaders({
       userId: adminUser.id,
       institutionId: institution.id,
     });
@@ -72,7 +72,7 @@ describe('extensions routes', () => {
     const response = await client
       .post('/extensions')
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: teacherUser.id,
           institutionId: institution.id,
         })

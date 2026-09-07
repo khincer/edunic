@@ -1,4 +1,4 @@
-import { createTestApp, createHttpClient } from '../helpers/app.js';
+﻿import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
@@ -30,7 +30,7 @@ describe('audit logs routes', () => {
       institutionId: institution.id,
       role: 'admin',
     });
-    const headers = createAuthHeaders({
+    const headers = await createAuthHeaders({
       userId: adminUser.id,
       institutionId: institution.id,
     });
@@ -60,7 +60,7 @@ describe('audit logs routes', () => {
     const response = await client
       .get('/audit-logs')
       .set(
-        createAuthHeaders({
+        await createAuthHeaders({
           userId: teacherUser.id,
           institutionId: institution.id,
         })
@@ -75,7 +75,7 @@ describe('audit logs routes', () => {
       institutionId: institution.id,
       role: 'admin',
     });
-    const headers = createAuthHeaders({
+    const headers = await createAuthHeaders({
       userId: adminUser.id,
       institutionId: institution.id,
     });
