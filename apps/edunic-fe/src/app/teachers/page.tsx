@@ -1,6 +1,12 @@
 'use client';
 
-import Link from 'next/link';
+import {
+  CalendarDays,
+  ClipboardCheck,
+  LayoutDashboard,
+  Mail,
+  Workflow,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityMark, getAssignmentActivityKind } from '@/components/activity-mark';
@@ -60,6 +66,7 @@ export default function TeachersPage() {
   const [messageSubject, setMessageSubject] = useState('Classroom update');
   const [messageBody, setMessageBody] = useState('A quick note from the teacher workspace.');
   const [savingWorkflow, setSavingWorkflow] = useState('');
+  const [activeSection, setActiveSection] = useState<'overview' | 'roster' | 'messages' | 'events' | 'publish'>('overview');
 
   const canUseTeacherTools = session?.user.role === 'teacher' || session?.user.role === 'admin';
   const selectedClassroom = useMemo(
@@ -302,16 +309,10 @@ export default function TeachersPage() {
 
   if (!ready || !session) {
     return (
-      <main className="portal-page">
-        <nav className="portal-topnav" aria-label="Teacher section navigation">
-          <Link href="/">Edunic</Link>
-          <div>
-            <Link href="/admin">Admin</Link>
-            <Link href="/students">Students</Link>
-          </div>
-        </nav>
-
-        <section className="empty-state body-copy">Opening teacher workspace...</section>
+      <main className="teacher-app">
+        <div className="teacher-content">
+          <section className="empty-state body-copy">Opening teacher workspace...</section>
+        </div>
       </main>
     );
   }
@@ -464,448 +465,670 @@ export default function TeachersPage() {
     }
   }
 
+  const sectionLabel: Record<string, string> = {
+    overview: 'Overview',
+    roster: 'Roster',
+    messages: 'Messages',
+    events: 'Events',
+    publish: 'Publish work',
+  };
+
   return (
-    <main className="portal-page">
-      <nav className="portal-topnav" aria-label="Teacher section navigation">
-        <Link href="/">Edunic</Link>
-        <div>
-          <Link href="/admin">Admin</Link>
-          <Link href="/students">Students</Link>
-          <button className="link-button" onClick={handleSignOut} type="button">
-            Sign out
-          </button>
-        </div>
-      </nav>
-
-      <section className="teacher-header">
-        <div>
-          <p className="eyebrow">Teacher workspace</p>
-          <h1 className="page-title">Attendance and grade submission.</h1>
-          <p className="body-copy">
-            {session.user.email} is working inside institution {session.user.institutionId}.
-          </p>
-        </div>
-        <div className="teacher-summary">
-          <div>
-            <span>Present</span>
-            <strong>{dashboard?.attendanceToday.present ?? attendanceSummary.present}</strong>
+    <main className="teacher-app">
+      <div className="teacher-shell">
+        <aside className="teacher-sidebar">
+          <div className="teacher-brand">
+            <span className="teacher-brand-mark">E</span>
+            <span>
+              <strong className="teacher-brand-title">Edunic Teacher</strong>
+              <span className="teacher-brand-subtitle">Teaching console</span>
+            </span>
           </div>
-          <div>
-            <span>Late</span>
-            <strong>{dashboard?.attendanceToday.late ?? attendanceSummary.late}</strong>
-          </div>
-          <div>
-            <span>Absent</span>
-            <strong>{dashboard?.attendanceToday.absent ?? attendanceSummary.absent}</strong>
-          </div>
-        </div>
-      </section>
-
-      {!canUseTeacherTools ? (
-        <div className="alert alert-error">
-          This account cannot use teacher tools. Sign in as a teacher or admin.
-        </div>
-      ) : null}
-      {error ? <div className="alert alert-error">{error}</div> : null}
-      {notice ? <div className="alert alert-info">{notice}</div> : null}
-
-      {canUseTeacherTools ? (
-        <>
-        <section className="teacher-home-grid">
-          <article className="card teacher-home-panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Today</p>
-                <h2 className="section-title">Classroom readiness</h2>
-              </div>
-              <span className="badge badge-blue">
-                {dashboard?.pendingAttendance ?? 0} pending
-              </span>
-            </div>
-            <div className="classroom-snapshot-list">
-              {(dashboard?.classrooms ?? []).map((classroom) => (
-                <div className="classroom-snapshot-row" key={classroom.id}>
-                  <span>
-                    <strong>{classroom.name}</strong>
-                    <p className="field-help">{classroom.rosterCount} active students</p>
-                  </span>
-                  <span className="badge">
-                    {classroom.attendanceMarkedToday}/{classroom.rosterCount} marked
-                  </span>
-                </div>
-              ))}
-              {dashboard ? null : (
-                <PanelState
-                  message={dashboardError ? 'Dashboard data could not load.' : 'Loading classroom readiness...'}
-                  tone={dashboardError ? 'error' : 'loading'}
-                />
-              )}
-              {dashboard && dashboard.classrooms.length === 0 ? (
-                <PanelState message="No assigned classrooms are ready yet." />
-              ) : null}
-            </div>
-          </article>
-
-          <article className="card teacher-home-panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Academic risk</p>
-                <h2 className="section-title">Needs attention</h2>
-              </div>
-            </div>
-            <div className="activity-list">
-              {(dashboard?.studentsAtRisk ?? []).map((student) => (
-                <article className="activity-row" key={student.studentId}>
-                  <ActivityMark kind="risk" tone="danger" />
-                  <span>
-                    <strong>{student.studentName}</strong>
-                    <p className="field-help">
-                      {student.classroomName ?? 'No classroom'} - avg{' '}
-                      {student.average ?? 'n/a'} - {student.absences} absences
-                    </p>
-                  </span>
-                </article>
-              ))}
-              {dashboard ? null : (
-                <PanelState
-                  message={dashboardError ? 'Academic risk data could not load.' : 'Loading risk signals...'}
-                  tone={dashboardError ? 'error' : 'loading'}
-                />
-              )}
-              {dashboard && dashboard.studentsAtRisk.length === 0 ? (
-                <PanelState message="No risk alerts for the current roster." />
-              ) : null}
-            </div>
-          </article>
-        </section>
-
-        <section className="teacher-home-grid">
-          <article className="card teacher-home-panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Recent grades</p>
-                <h2 className="section-title">Latest submissions</h2>
-              </div>
-            </div>
-            <div className="activity-list">
-              {(dashboard?.recentGrades ?? []).map((grade) => (
-                <article className="activity-row" key={grade.id}>
-                  <span className="activity-mark activity-mark-value">{grade.score}</span>
-                  <span>
-                    <strong>{grade.studentName}</strong>
-                    <p className="field-help">{grade.subject}</p>
-                  </span>
-                </article>
-              ))}
-              {dashboard ? null : (
-                <PanelState
-                  message={dashboardError ? 'Recent grades could not load.' : 'Loading recent grades...'}
-                  tone={dashboardError ? 'error' : 'loading'}
-                />
-              )}
-              {dashboard && dashboard.recentGrades.length === 0 ? (
-                <PanelState message="No recent grade submissions yet." />
-              ) : null}
-            </div>
-          </article>
-
-          <article className="card teacher-home-panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Notifications</p>
-                <h2 className="section-title">School signals</h2>
-              </div>
-            </div>
-            <div className="activity-list">
-              {(dashboard?.recentNotifications ?? []).map((notification) => (
-                <article className="activity-row activity-row-action" data-unread={!notification.readAt} key={notification.id}>
-                  <ActivityMark kind="notification" />
-                  <span>
-                    <strong>{notification.title}</strong>
-                    <p className="field-help">
-                      {notification.message} - {notification.readAt ? 'read' : 'unread'}
-                    </p>
-                  </span>
-                  <Button
-                    disabled={Boolean(notification.readAt) || savingWorkflow === notification.id}
-                    onClick={() => void markNotificationRead(notification.id)}
-                    variant="secondary"
-                  >
-                    {notification.readAt ? 'Read' : 'Mark read'}
-                  </Button>
-                </article>
-              ))}
-              {dashboard ? null : (
-                <PanelState
-                  message={dashboardError ? 'Notifications could not load.' : 'Loading notifications...'}
-                  tone={dashboardError ? 'error' : 'loading'}
-                />
-              )}
-              {dashboard && dashboard.recentNotifications.length === 0 ? (
-                <PanelState message="No school signals yet." />
-              ) : null}
-            </div>
-          </article>
-        </section>
-
-        <section className="teacher-home-grid">
-          <article className="card teacher-home-panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Upcoming work</p>
-                <h2 className="section-title">Assignments and exams</h2>
-              </div>
-            </div>
-            <div className="activity-list">
-              {(dashboard?.upcomingAssignments ?? []).map((assignment) => (
-                <article className="activity-row" key={assignment.id}>
-                  <ActivityMark kind={getAssignmentActivityKind(assignment.type)} />
-                  <span>
-                    <strong>{assignment.title}</strong>
-                    <p className="field-help">
-                      {assignment.classroomName ?? 'Classroom'} -{' '}
-                      {assignment.dueDate ? assignment.dueDate.slice(0, 10) : 'No due date'}
-                    </p>
-                  </span>
-                </article>
-              ))}
-              {dashboard ? null : (
-                <PanelState
-                  message={dashboardError ? 'Assignments could not load.' : 'Loading assignments...'}
-                  tone={dashboardError ? 'error' : 'loading'}
-                />
-              )}
-              {dashboard && dashboard.upcomingAssignments.length === 0 ? (
-                <PanelState message="No upcoming assignments or exams." />
-              ) : null}
-            </div>
-          </article>
-
-          <article className="card teacher-home-panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Inbox and calendar</p>
-                <h2 className="section-title">{dashboard?.unreadMessages ?? 0} unread messages</h2>
-              </div>
-            </div>
-            <div className="activity-list">
-              {(dashboard?.upcomingEvents ?? []).map((event) => (
-                <article className="activity-row" key={event.id}>
-                  <ActivityMark kind="calendar" />
-                  <span>
-                    <strong>{event.title}</strong>
-                    <p className="field-help">
-                      {event.classroomName ?? 'School-wide'} - {event.startsAt.slice(0, 10)}
-                    </p>
-                  </span>
-                </article>
-              ))}
-              {(dashboard?.recentMessages ?? []).map((message) => (
-                <article className="activity-row activity-row-action" data-unread={!message.readAt} key={message.id}>
-                  <ActivityMark kind="message" />
-                  <span>
-                    <strong>{message.subject}</strong>
-                    <p className="field-help">{message.body}</p>
-                  </span>
-                  <Button
-                    disabled={Boolean(message.readAt) || savingWorkflow === message.id}
-                    onClick={() => void markMessageRead(message.id)}
-                    variant="secondary"
-                  >
-                    {message.readAt ? 'Read' : 'Mark read'}
-                  </Button>
-                </article>
-              ))}
-              {dashboard ? null : (
-                <PanelState
-                  message={dashboardError ? 'Inbox and calendar could not load.' : 'Loading inbox and calendar...'}
-                  tone={dashboardError ? 'error' : 'loading'}
-                />
-              )}
-              {dashboard &&
-              dashboard.upcomingEvents.length === 0 &&
-              dashboard.recentMessages.length === 0 ? (
-                <PanelState message="No calendar items or messages yet." />
-              ) : null}
-            </div>
-          </article>
-        </section>
-
-        <section className="workflow-console-grid">
-          <article className="card">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Publish</p>
-                <h2 className="section-title">Classroom work</h2>
-              </div>
-            </div>
-            <div className="form">
-              <FormField label="Title" name="workflowTitle" onChange={(event) => setWorkflowTitle(event.target.value)} value={workflowTitle} />
-              <label className="form-field" htmlFor="workflowType">
-                <span>Type</span>
-                <select id="workflowType" onChange={(event) => setWorkflowType(event.target.value as 'homework' | 'exam' | 'assignment')} value={workflowType}>
-                  <option value="homework">homework</option>
-                  <option value="exam">exam</option>
-                  <option value="assignment">assignment</option>
-                </select>
-              </label>
-              <FormField label="Due date" name="workflowDueDate" onChange={(event) => setWorkflowDueDate(event.target.value)} type="datetime-local" value={workflowDueDate} />
-              <Button disabled={savingWorkflow === 'assignment' || !selectedClassroomId || !workflowTitle.trim()} onClick={() => void createAssignment()}>
-                {savingWorkflow === 'assignment' ? 'Publishing...' : 'Publish work'}
-              </Button>
-            </div>
-          </article>
-
-          <article className="card">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Calendar</p>
-                <h2 className="section-title">Classroom event</h2>
-              </div>
-            </div>
-            <div className="form">
-              <FormField label="Title" name="teacherEventTitle" onChange={(event) => setEventTitle(event.target.value)} value={eventTitle} />
-              <FormField label="Starts at" name="teacherEventStartsAt" onChange={(event) => setEventStartsAt(event.target.value)} type="datetime-local" value={eventStartsAt} />
-              <Button disabled={savingWorkflow === 'event' || !selectedClassroomId || !eventTitle.trim()} onClick={() => void createClassroomEvent()}>
-                {savingWorkflow === 'event' ? 'Scheduling...' : 'Schedule event'}
-              </Button>
-            </div>
-          </article>
-
-          <article className="card">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Message</p>
-                <h2 className="section-title">Family/admin thread</h2>
-              </div>
-            </div>
-            <div className="form">
-              <FormField label="Recipient user ID" name="teacherRecipientUserId" onChange={(event) => setRecipientUserId(event.target.value)} value={recipientUserId} />
-              <FormField label="Subject" name="teacherMessageSubject" onChange={(event) => setMessageSubject(event.target.value)} value={messageSubject} />
-              <TextAreaField label="Message" name="teacherMessageBody" onChange={(event) => setMessageBody(event.target.value)} rows={4} value={messageBody} />
-              <Button disabled={savingWorkflow === 'message' || !recipientUserId.trim() || !messageSubject.trim() || !messageBody.trim()} onClick={() => void sendMessage()}>
-                {savingWorkflow === 'message' ? 'Sending...' : 'Send message'}
-              </Button>
-            </div>
-          </article>
-        </section>
-
-        <section className="teacher-layout">
-          <aside className="card teacher-controls">
-            <div className="form-field">
-              <label htmlFor="classroom">Classroom</label>
-              <select
-                disabled={loading || classrooms.length === 0}
-                id="classroom"
-                onChange={(event) => setSelectedClassroomId(event.target.value)}
-                value={selectedClassroomId}
+          <nav aria-label="Teacher navigation" className="teacher-nav">
+            <div className="teacher-nav-group">
+              <p>Workspace</p>
+              <button
+                className="teacher-nav-link"
+                data-active={activeSection === 'overview'}
+                onClick={() => setActiveSection('overview')}
+                type="button"
               >
-                {classrooms.map((classroom) => (
-                  <option key={classroom.id} value={classroom.id}>
-                    {classroom.name}
-                  </option>
-                ))}
-              </select>
+                <span className="teacher-nav-icon" aria-hidden="true">
+                  <LayoutDashboard size={16} strokeWidth={2.3} />
+                </span>
+                Overview
+              </button>
+              <button
+                className="teacher-nav-link"
+                data-active={activeSection === 'roster'}
+                onClick={() => setActiveSection('roster')}
+                type="button"
+              >
+                <span className="teacher-nav-icon" aria-hidden="true">
+                  <ClipboardCheck size={16} strokeWidth={2.3} />
+                </span>
+                Roster
+              </button>
+              <button
+                className="teacher-nav-link"
+                data-active={activeSection === 'messages'}
+                onClick={() => setActiveSection('messages')}
+                type="button"
+              >
+                <span className="teacher-nav-icon" aria-hidden="true">
+                  <Mail size={16} strokeWidth={2.3} />
+                </span>
+                Messages
+              </button>
             </div>
-            <FormField
-              label="Attendance date"
-              name="attendanceDate"
-              onChange={(event) => setAttendanceDate(event.target.value)}
-              type="date"
-              value={attendanceDate}
-            />
-            <FormField
-              label="Grade subject"
-              name="gradeSubject"
-              onChange={(event) => setGradeSubject(event.target.value)}
-              required
-              type="text"
-              value={gradeSubject}
-            />
-            <div className="classroom-context">
-              <span className="badge badge-blue">{selectedClassroom?.name ?? 'No classroom'}</span>
-              <p className="body-copy">
-                {loading
-                  ? 'Loading classroom data...'
-                  : `${enrollments.length} active enrollment${enrollments.length === 1 ? '' : 's'}`}
-              </p>
+            <div className="teacher-nav-group">
+              <p>Publish</p>
+              <button
+                className="teacher-nav-link"
+                data-active={activeSection === 'events'}
+                onClick={() => setActiveSection('events')}
+                type="button"
+              >
+                <span className="teacher-nav-icon" aria-hidden="true">
+                  <CalendarDays size={16} strokeWidth={2.3} />
+                </span>
+                Events
+              </button>
+              <button
+                className="teacher-nav-link"
+                data-active={activeSection === 'publish'}
+                onClick={() => setActiveSection('publish')}
+                type="button"
+              >
+                <span className="teacher-nav-icon" aria-hidden="true">
+                  <Workflow size={16} strokeWidth={2.3} />
+                </span>
+                Publish work
+              </button>
             </div>
-          </aside>
+          </nav>
+          <div className="teacher-sidebar-footer">
+            <span className="body-copy">{session.user.email}</span>
+            <Button onClick={handleSignOut} variant="secondary">
+              Sign out
+            </Button>
+          </div>
+        </aside>
 
-          <section className="card teacher-roster">
-            <div className="page-header">
-              <div>
-                <p className="eyebrow">Daily roster</p>
-                <h2 className="section-title">Mark attendance and enter scores</h2>
-              </div>
-              <div className="button-row">
-                <Button
-                  disabled={savingAttendance || enrollments.length === 0}
-                  onClick={saveAttendance}
-                >
-                  {savingAttendance ? 'Saving...' : 'Save attendance'}
-                </Button>
-                <Button
-                  disabled={savingGrades || enrollments.length === 0 || !gradeSubject.trim()}
-                  onClick={submitGrades}
-                  variant="secondary"
-                >
-                  {savingGrades ? 'Submitting...' : 'Submit grades'}
-                </Button>
-              </div>
+        <section className="teacher-main">
+          <header className="teacher-topbar">
+            <div className="teacher-page-trail" aria-label="Current section">
+              <span>Teacher</span>
+              <strong>{sectionLabel[activeSection]}</strong>
             </div>
+            <div className="teacher-user">
+              <span>
+                <strong>{session.user.email}</strong>
+                {session.user.role}
+              </span>
+              <Button onClick={handleSignOut} variant="secondary">
+                Sign out
+              </Button>
+            </div>
+          </header>
 
-            {enrollments.length === 0 && !loading ? (
-              <PanelState message="No active enrollments were found for this classroom." />
+          <div className="teacher-content">
+            {!canUseTeacherTools ? (
+              <div className="alert alert-error">
+                This account cannot use teacher tools. Sign in as a teacher or admin.
+              </div>
+            ) : null}
+            {error ? <div className="alert alert-error">{error}</div> : null}
+            {notice ? <div className="alert alert-info">{notice}</div> : null}
+
+            {activeSection === 'overview' ? (
+              <section className="teacher-section">
+                <nav className="teacher-kpis" aria-label="Teacher dashboard overview">
+                  <button
+                    className="teacher-kpi"
+                    onClick={() => setActiveSection('roster')}
+                    type="button"
+                  >
+                    <strong>{dashboard ? dashboard.pendingAttendance : '\u2014'}</strong>
+                    <span>Attendance pending</span>
+                  </button>
+                  <button
+                    className={
+                      dashboard && dashboard.studentsAtRisk.length > 0
+                        ? 'teacher-kpi teacher-kpi-danger'
+                        : 'teacher-kpi'
+                    }
+                    onClick={() => setActiveSection('overview')}
+                    type="button"
+                  >
+                    <strong>{dashboard ? dashboard.studentsAtRisk.length : '\u2014'}</strong>
+                    <span>Students at risk</span>
+                  </button>
+                  <button
+                    className="teacher-kpi"
+                    onClick={() => setActiveSection('messages')}
+                    type="button"
+                  >
+                    <strong>{dashboard ? dashboard.unreadMessages : '\u2014'}</strong>
+                    <span>Unread messages</span>
+                  </button>
+                  <button
+                    className="teacher-kpi"
+                    onClick={() => setActiveSection('events')}
+                    type="button"
+                  >
+                    <strong>
+                      {dashboard
+                        ? dashboard.upcomingAssignments.length + dashboard.upcomingEvents.length
+                        : '\u2014'}
+                    </strong>
+                    <span>Upcoming items</span>
+                  </button>
+                </nav>
+
+                <div className="teacher-summary" style={{ width: '100%' }}>
+                  <div>
+                    <span>Present</span>
+                    <strong>{dashboard?.attendanceToday.present ?? attendanceSummary.present}</strong>
+                  </div>
+                  <div>
+                    <span>Late</span>
+                    <strong>{dashboard?.attendanceToday.late ?? attendanceSummary.late}</strong>
+                  </div>
+                  <div>
+                    <span>Absent</span>
+                    <strong>{dashboard?.attendanceToday.absent ?? attendanceSummary.absent}</strong>
+                  </div>
+                </div>
+
+                <div className="teacher-section-heading">
+                  <p className="eyebrow">Today</p>
+                  <h2 className="section-title">At a glance</h2>
+                </div>
+                <div className="teacher-home-grid">
+                  <article className="card teacher-home-panel">
+                    <div className="panel-header">
+                      <div>
+                        <p className="eyebrow">Today</p>
+                        <h2 className="section-title">Classroom readiness</h2>
+                      </div>
+                      <span className="badge badge-blue">
+                        {dashboard?.pendingAttendance ?? 0} pending
+                      </span>
+                    </div>
+                    <div className="classroom-snapshot-list">
+                      {(dashboard?.classrooms ?? []).map((classroom) => (
+                        <div className="classroom-snapshot-row" key={classroom.id}>
+                          <span>
+                            <strong>{classroom.name}</strong>
+                            <p className="field-help">{classroom.rosterCount} active students</p>
+                          </span>
+                          <span className="badge">
+                            {classroom.attendanceMarkedToday}/{classroom.rosterCount} marked
+                          </span>
+                        </div>
+                      ))}
+                      {dashboard ? null : (
+                        <PanelState
+                          message={dashboardError ? 'Dashboard data could not load.' : 'Loading classroom readiness...'}
+                          tone={dashboardError ? 'error' : 'loading'}
+                        />
+                      )}
+                      {dashboard && dashboard.classrooms.length === 0 ? (
+                        <PanelState message="No assigned classrooms are ready yet." />
+                      ) : null}
+                    </div>
+                  </article>
+
+                  <article className="card teacher-home-panel">
+                    <div className="panel-header">
+                      <div>
+                        <p className="eyebrow">Academic risk</p>
+                        <h2 className="section-title">Needs attention</h2>
+                      </div>
+                    </div>
+                    <div className="activity-list">
+                      {(dashboard?.studentsAtRisk ?? []).map((student) => (
+                        <article className="activity-row" key={student.studentId}>
+                          <ActivityMark kind="risk" tone="danger" />
+                          <span>
+                            <strong>{student.studentName}</strong>
+                            <p className="field-help">
+                              {student.classroomName ?? 'No classroom'} - avg{' '}
+                              {student.average ?? 'n/a'} - {student.absences} absences
+                            </p>
+                          </span>
+                        </article>
+                      ))}
+                      {dashboard ? null : (
+                        <PanelState
+                          message={dashboardError ? 'Academic risk data could not load.' : 'Loading risk signals...'}
+                          tone={dashboardError ? 'error' : 'loading'}
+                        />
+                      )}
+                      {dashboard && dashboard.studentsAtRisk.length === 0 ? (
+                        <PanelState message="No risk alerts for the current roster." />
+                      ) : null}
+                    </div>
+                  </article>
+                </div>
+
+                <div className="teacher-home-grid">
+                  <article className="card teacher-home-panel">
+                    <div className="panel-header">
+                      <div>
+                        <p className="eyebrow">Upcoming work</p>
+                        <h2 className="section-title">Assignments and exams</h2>
+                      </div>
+                    </div>
+                    <div className="activity-list">
+                      {(dashboard?.upcomingAssignments ?? []).map((assignment) => (
+                        <article className="activity-row" key={assignment.id}>
+                          <ActivityMark kind={getAssignmentActivityKind(assignment.type)} />
+                          <span>
+                            <strong>{assignment.title}</strong>
+                            <p className="field-help">
+                              {assignment.classroomName ?? 'Classroom'} -{' '}
+                              {assignment.dueDate ? assignment.dueDate.slice(0, 10) : 'No due date'}
+                            </p>
+                          </span>
+                        </article>
+                      ))}
+                      {dashboard ? null : (
+                        <PanelState
+                          message={dashboardError ? 'Assignments could not load.' : 'Loading assignments...'}
+                          tone={dashboardError ? 'error' : 'loading'}
+                        />
+                      )}
+                      {dashboard && dashboard.upcomingAssignments.length === 0 ? (
+                        <PanelState message="No upcoming assignments or exams." />
+                      ) : null}
+                    </div>
+                  </article>
+
+                  <article className="card teacher-home-panel">
+                    <div className="panel-header">
+                      <div>
+                        <p className="eyebrow">Calendar</p>
+                        <h2 className="section-title">Upcoming events</h2>
+                      </div>
+                    </div>
+                    <div className="activity-list">
+                      {(dashboard?.upcomingEvents ?? []).map((event) => (
+                        <article className="activity-row" key={event.id}>
+                          <ActivityMark kind="calendar" />
+                          <span>
+                            <strong>{event.title}</strong>
+                            <p className="field-help">
+                              {event.classroomName ?? 'School-wide'} - {event.startsAt.slice(0, 10)}
+                            </p>
+                          </span>
+                        </article>
+                      ))}
+                      {dashboard ? null : (
+                        <PanelState
+                          message={dashboardError ? 'Upcoming events could not load.' : 'Loading upcoming events...'}
+                          tone={dashboardError ? 'error' : 'loading'}
+                        />
+                      )}
+                      {dashboard && dashboard.upcomingEvents.length === 0 ? (
+                        <PanelState message="No upcoming events." />
+                      ) : null}
+                    </div>
+                  </article>
+                </div>
+              </section>
             ) : null}
 
-            <div className="teacher-student-list">
-              {enrollments.map((enrollment) => (
-                <article className="teacher-student-row" key={enrollment.id}>
-                  <div>
-                    <strong>{enrollment.student.fullName}</strong>
-                    <p className="field-help">Enrollment {enrollment.id}</p>
-                  </div>
-                  <div className="attendance-toggle" aria-label={`${enrollment.student.fullName} attendance`}>
-                    {(['present', 'late', 'absent'] as AttendanceStatus[]).map((status) => (
-                      <button
-                        data-active={(attendanceStatus[enrollment.id] ?? 'present') === status}
-                        key={status}
-                        onClick={() =>
-                          setAttendanceStatus((current) => ({
-                            ...current,
-                            [enrollment.id]: status,
-                          }))
-                        }
-                        type="button"
+            {activeSection === 'roster' ? (
+              <section className="teacher-section">
+                <div className="teacher-section-heading">
+                  <p className="eyebrow">Workspace</p>
+                  <h2 className="section-title">Daily roster</h2>
+                </div>
+                <div className="teacher-layout">
+                  <aside className="card teacher-controls">
+                    <div className="form-field">
+                      <label htmlFor="classroom">Classroom</label>
+                      <select
+                        disabled={loading || classrooms.length === 0}
+                        id="classroom"
+                        onChange={(event) => setSelectedClassroomId(event.target.value)}
+                        value={selectedClassroomId}
                       >
-                        {status}
-                      </button>
-                    ))}
-                  </div>
-                  <label className="score-cell">
-                    <span>Score</span>
-                    <input
-                      max={100}
-                      min={0}
-                      onChange={(event) =>
-                        setGradeScores((current) => ({
-                          ...current,
-                          [enrollment.id]: event.target.value,
-                        }))
-                      }
-                      placeholder="0-100"
-                      type="number"
-                      value={gradeScores[enrollment.id] ?? ''}
+                        {classrooms.map((classroom) => (
+                          <option key={classroom.id} value={classroom.id}>
+                            {classroom.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <FormField
+                      label="Attendance date"
+                      name="attendanceDate"
+                      onChange={(event) => setAttendanceDate(event.target.value)}
+                      type="date"
+                      value={attendanceDate}
                     />
-                  </label>
-                </article>
-              ))}
-            </div>
-          </section>
+                    <FormField
+                      label="Grade subject"
+                      name="gradeSubject"
+                      onChange={(event) => setGradeSubject(event.target.value)}
+                      required
+                      type="text"
+                      value={gradeSubject}
+                    />
+                    <div className="classroom-context">
+                      <span className="badge badge-blue">{selectedClassroom?.name ?? 'No classroom'}</span>
+                      <p className="body-copy">
+                        {loading
+                          ? 'Loading classroom data...'
+                          : `${enrollments.length} active enrollment${enrollments.length === 1 ? '' : 's'}`}
+                      </p>
+                    </div>
+                  </aside>
+
+                  <section className="card teacher-roster">
+                    <div className="page-header">
+                      <div>
+                        <p className="eyebrow">Daily roster</p>
+                        <h2 className="section-title">Mark attendance and enter scores</h2>
+                      </div>
+                      <div className="button-row">
+                        <Button
+                          disabled={savingAttendance || enrollments.length === 0}
+                          onClick={saveAttendance}
+                        >
+                          {savingAttendance ? 'Saving...' : 'Save attendance'}
+                        </Button>
+                        <Button
+                          disabled={savingGrades || enrollments.length === 0 || !gradeSubject.trim()}
+                          onClick={submitGrades}
+                          variant="secondary"
+                        >
+                          {savingGrades ? 'Submitting...' : 'Submit grades'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {enrollments.length === 0 && !loading ? (
+                      <PanelState message="No active enrollments were found for this classroom." />
+                    ) : null}
+
+                    <div className="teacher-student-list">
+                      {enrollments.map((enrollment) => (
+                        <article className="teacher-student-row" key={enrollment.id}>
+                          <div>
+                            <strong>{enrollment.student.fullName}</strong>
+                            <p className="field-help">Enrollment {enrollment.id}</p>
+                          </div>
+                          <div className="attendance-toggle" aria-label={`${enrollment.student.fullName} attendance`}>
+                            {(['present', 'late', 'absent'] as AttendanceStatus[]).map((status) => (
+                              <button
+                                data-active={(attendanceStatus[enrollment.id] ?? 'present') === status}
+                                key={status}
+                                onClick={() =>
+                                  setAttendanceStatus((current) => ({
+                                    ...current,
+                                    [enrollment.id]: status,
+                                  }))
+                                }
+                                type="button"
+                              >
+                                {status}
+                              </button>
+                            ))}
+                          </div>
+                          <label className="score-cell">
+                            <span>Score</span>
+                            <input
+                              max={100}
+                              min={0}
+                              onChange={(event) =>
+                                setGradeScores((current) => ({
+                                  ...current,
+                                  [enrollment.id]: event.target.value,
+                                }))
+                              }
+                              placeholder="0-100"
+                              type="number"
+                              value={gradeScores[enrollment.id] ?? ''}
+                            />
+                          </label>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              </section>
+            ) : null}
+
+            {activeSection === 'messages' ? (
+              <section className="teacher-section">
+                <div className="teacher-section-heading">
+                  <p className="eyebrow">Messages</p>
+                  <h2 className="section-title">Inbox</h2>
+                </div>
+
+                <div className="teacher-home-grid" style={{ gridTemplateColumns: '1fr' }}>
+                  <article className="card teacher-home-panel">
+                    <div className="panel-header">
+                      <div>
+                        <p className="eyebrow">Recent grades</p>
+                        <h2 className="section-title">Latest submissions</h2>
+                      </div>
+                    </div>
+                    <div className="activity-list">
+                      {(dashboard?.recentGrades ?? []).map((grade) => (
+                        <article className="activity-row" key={grade.id}>
+                          <span className="activity-mark activity-mark-value">{grade.score}</span>
+                          <span>
+                            <strong>{grade.studentName}</strong>
+                            <p className="field-help">{grade.subject}</p>
+                          </span>
+                        </article>
+                      ))}
+                      {dashboard ? null : (
+                        <PanelState
+                          message={dashboardError ? 'Recent grades could not load.' : 'Loading recent grades...'}
+                          tone={dashboardError ? 'error' : 'loading'}
+                        />
+                      )}
+                      {dashboard && dashboard.recentGrades.length === 0 ? (
+                        <PanelState message="No recent grade submissions yet." />
+                      ) : null}
+                    </div>
+                  </article>
+
+                  <article className="card teacher-home-panel">
+                    <div className="panel-header">
+                      <div>
+                        <p className="eyebrow">Notifications</p>
+                        <h2 className="section-title">School signals</h2>
+                      </div>
+                    </div>
+                    <div className="activity-list">
+                      {(dashboard?.recentNotifications ?? []).map((notification) => (
+                        <article className="activity-row activity-row-action" data-unread={!notification.readAt} key={notification.id}>
+                          <ActivityMark kind="notification" />
+                          <span>
+                            <strong>{notification.title}</strong>
+                            <p className="field-help">
+                              {notification.message} - {notification.readAt ? 'read' : 'unread'}
+                            </p>
+                          </span>
+                          <Button
+                            disabled={Boolean(notification.readAt) || savingWorkflow === notification.id}
+                            onClick={() => void markNotificationRead(notification.id)}
+                            variant="secondary"
+                          >
+                            {notification.readAt ? 'Read' : 'Mark read'}
+                          </Button>
+                        </article>
+                      ))}
+                      {dashboard ? null : (
+                        <PanelState
+                          message={dashboardError ? 'Notifications could not load.' : 'Loading notifications...'}
+                          tone={dashboardError ? 'error' : 'loading'}
+                        />
+                      )}
+                      {dashboard && dashboard.recentNotifications.length === 0 ? (
+                        <PanelState message="No school signals yet." />
+                      ) : null}
+                    </div>
+                  </article>
+                </div>
+
+                <div className="teacher-home-grid" style={{ gridTemplateColumns: '1fr' }}>
+                  <article className="card teacher-home-panel teacher-home-panel-wide">
+                    <div className="panel-header">
+                      <div>
+                        <p className="eyebrow">Inbox</p>
+                        <h2 className="section-title">{dashboard?.unreadMessages ?? 0} unread messages</h2>
+                      </div>
+                    </div>
+                    <div className="activity-list">
+                      {(dashboard?.recentMessages ?? []).map((message) => (
+                        <article className="activity-row activity-row-action" data-unread={!message.readAt} key={message.id}>
+                          <ActivityMark kind="message" />
+                          <span>
+                            <strong>{message.subject}</strong>
+                            <p className="field-help">{message.body}</p>
+                          </span>
+                          <Button
+                            disabled={Boolean(message.readAt) || savingWorkflow === message.id}
+                            onClick={() => void markMessageRead(message.id)}
+                            variant="secondary"
+                          >
+                            {message.readAt ? 'Read' : 'Mark read'}
+                          </Button>
+                        </article>
+                      ))}
+                      {dashboard ? null : (
+                        <PanelState
+                          message={dashboardError ? 'Inbox could not load.' : 'Loading inbox...'}
+                          tone={dashboardError ? 'error' : 'loading'}
+                        />
+                      )}
+                      {dashboard && dashboard.recentMessages.length === 0 ? (
+                        <PanelState message="No messages yet." />
+                      ) : null}
+                    </div>
+                  </article>
+                </div>
+              </section>
+            ) : null}
+
+            {activeSection === 'events' ? (
+              <section className="teacher-section">
+                <div className="teacher-section-heading">
+                  <p className="eyebrow">Calendar</p>
+                  <h2 className="section-title">Upcoming events</h2>
+                </div>
+                <div className="teacher-home-grid" style={{ gridTemplateColumns: '1fr' }}>
+                  <article className="card teacher-home-panel">
+                    <div className="panel-header">
+                      <div>
+                        <p className="eyebrow">Calendar</p>
+                        <h2 className="section-title">Upcoming events</h2>
+                      </div>
+                    </div>
+                    <div className="activity-list">
+                      {(dashboard?.upcomingEvents ?? []).map((event) => (
+                        <article className="activity-row" key={event.id}>
+                          <ActivityMark kind="calendar" />
+                          <span>
+                            <strong>{event.title}</strong>
+                            <p className="field-help">
+                              {event.classroomName ?? 'School-wide'} - {event.startsAt.slice(0, 10)}
+                            </p>
+                          </span>
+                        </article>
+                      ))}
+                      {dashboard ? null : (
+                        <PanelState
+                          message={dashboardError ? 'Upcoming events could not load.' : 'Loading upcoming events...'}
+                          tone={dashboardError ? 'error' : 'loading'}
+                        />
+                      )}
+                      {dashboard && dashboard.upcomingEvents.length === 0 ? (
+                        <PanelState message="No upcoming events." />
+                      ) : null}
+                    </div>
+                  </article>
+                </div>
+              </section>
+            ) : null}
+
+            {activeSection === 'publish' ? (
+              <section className="teacher-section">
+                <div className="teacher-section-heading">
+                  <p className="eyebrow">Publish</p>
+                  <h2 className="section-title">Create work, events and messages</h2>
+                </div>
+                <div className="workflow-console-grid">
+                  <article className="card">
+                    <div className="panel-header">
+                      <div>
+                        <p className="eyebrow">Publish</p>
+                        <h2 className="section-title">Classroom work</h2>
+                      </div>
+                    </div>
+                    <div className="form">
+                      <FormField label="Title" name="workflowTitle" onChange={(event) => setWorkflowTitle(event.target.value)} value={workflowTitle} />
+                      <label className="form-field" htmlFor="workflowType">
+                        <span>Type</span>
+                        <select id="workflowType" onChange={(event) => setWorkflowType(event.target.value as 'homework' | 'exam' | 'assignment')} value={workflowType}>
+                          <option value="homework">homework</option>
+                          <option value="exam">exam</option>
+                          <option value="assignment">assignment</option>
+                        </select>
+                      </label>
+                      <FormField label="Due date" name="workflowDueDate" onChange={(event) => setWorkflowDueDate(event.target.value)} type="datetime-local" value={workflowDueDate} />
+                      <Button disabled={savingWorkflow === 'assignment' || !selectedClassroomId || !workflowTitle.trim()} onClick={() => void createAssignment()}>
+                        {savingWorkflow === 'assignment' ? 'Publishing...' : 'Publish work'}
+                      </Button>
+                    </div>
+                  </article>
+
+                  <article className="card">
+                    <div className="panel-header">
+                      <div>
+                        <p className="eyebrow">Calendar</p>
+                        <h2 className="section-title">Classroom event</h2>
+                      </div>
+                    </div>
+                    <div className="form">
+                      <FormField label="Title" name="teacherEventTitle" onChange={(event) => setEventTitle(event.target.value)} value={eventTitle} />
+                      <FormField label="Starts at" name="teacherEventStartsAt" onChange={(event) => setEventStartsAt(event.target.value)} type="datetime-local" value={eventStartsAt} />
+                      <Button disabled={savingWorkflow === 'event' || !selectedClassroomId || !eventTitle.trim()} onClick={() => void createClassroomEvent()}>
+                        {savingWorkflow === 'event' ? 'Scheduling...' : 'Schedule event'}
+                      </Button>
+                    </div>
+                  </article>
+
+                  <article className="card">
+                    <div className="panel-header">
+                      <div>
+                        <p className="eyebrow">Message</p>
+                        <h2 className="section-title">Family/admin thread</h2>
+                      </div>
+                    </div>
+                    <div className="form">
+                      <FormField label="Recipient user ID" name="teacherRecipientUserId" onChange={(event) => setRecipientUserId(event.target.value)} value={recipientUserId} />
+                      <FormField label="Subject" name="teacherMessageSubject" onChange={(event) => setMessageSubject(event.target.value)} value={messageSubject} />
+                      <TextAreaField label="Message" name="teacherMessageBody" onChange={(event) => setMessageBody(event.target.value)} rows={4} value={messageBody} />
+                      <Button disabled={savingWorkflow === 'message' || !recipientUserId.trim() || !messageSubject.trim() || !messageBody.trim()} onClick={() => void sendMessage()}>
+                        {savingWorkflow === 'message' ? 'Sending...' : 'Send message'}
+                      </Button>
+                    </div>
+                  </article>
+                </div>
+              </section>
+            ) : null}
+          </div>
         </section>
-        </>
-      ) : null}
+      </div>
     </main>
   );
 }
