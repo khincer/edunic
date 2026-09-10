@@ -243,9 +243,9 @@ export class DashboardsRepository {
 
     const result = await this.db.execute<AttendanceSummaryRow>(sql`
       select
-        count(*) filter (where status = 'present')::int as present,
-        count(*) filter (where status = 'late')::int as late,
-        count(*) filter (where status = 'absent')::int as absent,
+        count(*) filter (where attendance.status = 'present')::int as present,
+        count(*) filter (where attendance.status = 'late')::int as late,
+        count(*) filter (where attendance.status = 'absent')::int as absent,
         count(*)::int as marked
       from attendance
       ${assignmentJoin}
