@@ -16,6 +16,9 @@
         "format": ["cjs"],
         "skipTypeCheck": true,
         "bundle": true,
+        "esbuildOptions": {
+          "external": ["pdfkit"]
+        },
         "assets": []
       }
     },

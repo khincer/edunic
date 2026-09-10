@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
 import { db } from '../libs/db/src/index.js';
 import { sql } from 'drizzle-orm';
 import { hashPassword } from '../libs/domain/src/auth/application/password.js';
+import { getCliErrorMessage, parseFlags, renderHelp, requireEnv } from './cli-utils.js';
 import {
   academicPeriods,
   assignments,
@@ -860,7 +862,22 @@ export async function seedDatabase() {
   console.log('Seed complete');
 }
 
+dotenv.config();
+
+const flags = parseFlags(process.argv.slice(2), []);
+
+if (flags.help) {
+  renderHelp(
+    'Seed the database with initial data.',
+    ['npm run db:seed'],
+    [],
+  );
+  process.exit(0);
+}
+
+requireEnv('DATABASE_URL');
+
 seedDatabase().catch((error) => {
-  console.error('Seed failed:', error);
+  console.error(getCliErrorMessage(error));
   process.exit(1);
 });
