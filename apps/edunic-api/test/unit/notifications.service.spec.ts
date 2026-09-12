@@ -1,5 +1,5 @@
-import { createGradeSubmittedEvent } from '../../../../libs/domain/src/events.js';
-import { NotificationsService } from '../../../../libs/domain/src/notifications/application/notifications.service.js';
+import { createGradeSubmittedEvent } from '@edunic/source/domain/events';
+import { NotificationsService } from '@edunic/source/domain/notifications';
 
 describe('NotificationsService', () => {
   it('creates a notification when the extension is enabled', async () => {

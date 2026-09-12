@@ -1,5 +1,5 @@
-import { InMemoryEventBus } from '../../../../libs/events/src/index.js';
-import { createEnrollmentCreatedEvent } from '../../../../libs/domain/src/events.js';
+import { InMemoryEventBus } from '@edunic/source/events';
+import { createEnrollmentCreatedEvent } from '@edunic/source/domain/events';
 
 describe('InMemoryEventBus', () => {
   it('publishes events to subscribed handlers', async () => {

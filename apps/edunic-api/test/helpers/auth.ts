@@ -1,5 +1,5 @@
 import { env } from '../../src/config/env.js';
-import { signJwt } from '../../../../libs/domain/src/auth/application/jwt.js';
+import { signJwt } from '@edunic/source/domain/auth';
 
 export async function createBearerToken(input: {
   userId: string;

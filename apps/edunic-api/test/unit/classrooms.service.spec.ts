@@ -1,7 +1,7 @@
 import {
   ClassroomsService,
   ClassroomsServiceError,
-} from '../../../../libs/domain/src/classrooms/application/classrooms.service.js';
+} from '@edunic/source/domain/classrooms';
 
 describe('ClassroomsService', () => {
   it('returns 409 when a duplicate grade and section already exist', async () => {

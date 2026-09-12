@@ -1,7 +1,7 @@
 import {
   AcademicPeriodsService,
   AcademicPeriodsServiceError,
-} from '../../../../libs/domain/src/academic-periods/application/academic-periods.service.js';
+} from '@edunic/source/domain/academic-periods';
 
 describe('AcademicPeriodsService', () => {
   it('returns 409 when a duplicate year and term already exist', async () => {

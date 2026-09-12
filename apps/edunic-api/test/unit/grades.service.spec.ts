@@ -1,7 +1,7 @@
 import {
   GradesService,
   GradesServiceError,
-} from '../../../../libs/domain/src/grades/application/grades.service.js';
+} from '@edunic/source/domain/grades';
 
 describe('GradesService', () => {
   it('returns 404 when the enrollment does not exist', async () => {

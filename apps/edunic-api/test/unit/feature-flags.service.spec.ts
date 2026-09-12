@@ -1,7 +1,7 @@
 import {
   FeatureFlagsService,
   FeatureFlagsServiceError,
-} from '../../../../libs/domain/src/feature-flags/application/feature-flags.service.js';
+} from '@edunic/source/domain/feature-flags';
 
 describe('FeatureFlagsService', () => {
   it('allows enabled features', async () => {

@@ -1,7 +1,7 @@
 import {
   AttendanceService,
   AttendanceServiceError,
-} from '../../../../libs/domain/src/attendance/application/attendance.service.js';
+} from '@edunic/source/domain/attendance';
 
 describe('AttendanceService', () => {
   it('returns 404 when the enrollment does not exist', async () => {

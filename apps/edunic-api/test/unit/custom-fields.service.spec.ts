@@ -1,7 +1,7 @@
 import {
   CustomFieldsService,
   CustomFieldsServiceError,
-} from '../../../../libs/domain/src/custom-fields/application/custom-fields.service.js';
+} from '@edunic/source/domain/custom-fields';
 
 describe('CustomFieldsService', () => {
   it('rejects values that do not match the custom field type', async () => {
