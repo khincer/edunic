@@ -17,9 +17,5 @@
     "emitDeclarationOnly": false
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"],
-  "ts-node": {
-    "esm": true,
-    "experimentalResolver": true
-  }
+  "exclude": ["node_modules", "dist"]
 }
