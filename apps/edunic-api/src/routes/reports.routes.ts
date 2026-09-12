@@ -5,7 +5,6 @@ import {
   ReportsServiceError,
   ReportsPdfService,
   ReportsRepository,
-  institutionHeaderSchema,
   studentReportParamsSchema,
   studentReportQuerySchema,
 } from '@edunic/source/domain/reports';

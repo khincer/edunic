@@ -6,8 +6,6 @@ const optionalPhoneSchema = z.preprocess(
   z.string().trim().max(50, 'Phone must be 50 characters or less').nullable().optional()
 );
 
-export { institutionHeaderSchema } from '@edunic/source/domain/shared';
-
 export const guardianParamsSchema = z.object({
   guardianId: uuidSchema,
 });

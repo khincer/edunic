@@ -6,7 +6,6 @@ import {
   GradesRepository,
   createGradeBodySchema,
   gradeParamsSchema,
-  institutionHeaderSchema,
   listGradesQuerySchema,
   updateGradeBodySchema,
 } from '@edunic/source/domain/grades';

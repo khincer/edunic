@@ -5,7 +5,6 @@ import {
   AttendanceServiceError,
   AttendanceRepository,
   attendanceParamsSchema,
-  institutionHeaderSchema,
   listAttendanceQuerySchema,
   createAttendanceBodySchema,
   updateAttendanceBodySchema,

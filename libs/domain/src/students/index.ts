@@ -7,7 +7,6 @@ export type {
   ListStudentsInput,
 } from './infrastructure/students.repository.js';
 export {
-  institutionHeaderSchema,
   studentParamsSchema,
   listStudentsQuerySchema,
   createStudentBodySchema,

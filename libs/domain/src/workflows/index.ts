@@ -8,7 +8,6 @@ export type {
   UserRoleRecord,
 } from './infrastructure/workflows.repository.js';
 export {
-  institutionHeaderSchema,
   listWorkflowQuerySchema,
   assignmentParamsSchema,
   createAssignmentBodySchema,

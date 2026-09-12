@@ -16,8 +16,6 @@ const optionalDateOfBirthSchema = z.preprocess(
     .optional()
 );
 
-export { institutionHeaderSchema } from '@edunic/source/domain/shared';
-
 export const studentParamsSchema = z.object({
   studentId: uuidSchema,
 });

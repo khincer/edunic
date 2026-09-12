@@ -3,7 +3,7 @@ import type { FastifyRequest } from 'fastify';
 import { parseWithSchema } from './parse-with-schema.js';
 import { uuidSchema } from './uuid.schema.js';
 
-export const institutionHeaderSchema = z.object({
+const institutionHeaderSchema = z.object({
   'x-institution-id': uuidSchema,
 });
 

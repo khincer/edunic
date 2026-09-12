@@ -3,7 +3,6 @@ import {
   DashboardsService,
   DashboardsServiceError,
   DashboardsRepository,
-  institutionHeaderSchema,
 } from '@edunic/source/domain/dashboards';
 import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 

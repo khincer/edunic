@@ -5,7 +5,6 @@ import {
   StudentsServiceError,
   StudentsRepository,
   createStudentBodySchema,
-  institutionHeaderSchema,
   listStudentsQuerySchema,
   studentParamsSchema,
   updateStudentBodySchema,

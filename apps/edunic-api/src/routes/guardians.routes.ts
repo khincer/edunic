@@ -6,7 +6,6 @@ import {
   GuardiansRepository,
   createGuardianBodySchema,
   guardianParamsSchema,
-  institutionHeaderSchema,
   listGuardiansQuerySchema,
   studentGuardianParamsSchema,
   studentGuardiansParamsSchema,

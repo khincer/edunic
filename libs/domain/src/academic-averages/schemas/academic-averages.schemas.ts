@@ -1,8 +1,6 @@
 import { z } from 'zod';
 import { uuidSchema } from '@edunic/source/domain/shared';
 
-export { institutionHeaderSchema } from '@edunic/source/domain/shared';
-
 export const studentAverageParamsSchema = z.object({
   studentId: uuidSchema,
 });

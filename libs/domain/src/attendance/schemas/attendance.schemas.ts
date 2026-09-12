@@ -11,8 +11,6 @@ const attendanceDateSchema = z
     'Expected format YYYY-MM-DD or ISO datetime'
   );
 
-export { institutionHeaderSchema } from '@edunic/source/domain/shared';
-
 export const attendanceParamsSchema = z.object({
   attendanceId: uuidSchema,
 });

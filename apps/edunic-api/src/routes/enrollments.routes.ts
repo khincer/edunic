@@ -7,7 +7,6 @@ import {
   createEnrollmentBodySchema,
   evaluatePromotionParamsSchema,
   enrollmentParamsSchema,
-  institutionHeaderSchema,
   listEnrollmentsQuerySchema,
   updateEnrollmentBodySchema,
 } from '@edunic/source/domain/enrollments';

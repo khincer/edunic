@@ -6,8 +6,6 @@ const sectionSchema = z.preprocess(
   z.string().trim().max(20, 'Section must be 20 characters or less').nullable().optional()
 );
 
-export { institutionHeaderSchema } from '@edunic/source/domain/shared';
-
 export const classroomParamsSchema = z.object({
   classroomId: uuidSchema,
 });

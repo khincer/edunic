@@ -4,7 +4,6 @@ import {
   NotificationsService,
   NotificationsServiceError,
   NotificationsRepository,
-  institutionHeaderSchema,
   notificationParamsSchema,
   listNotificationsQuerySchema,
 } from '@edunic/source/domain/notifications';

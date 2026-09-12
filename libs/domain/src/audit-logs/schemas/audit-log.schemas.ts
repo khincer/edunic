@@ -1,8 +1,6 @@
 import { z } from 'zod';
 import { uuidSchema } from '@edunic/source/domain/shared';
 
-export { institutionHeaderSchema } from '@edunic/source/domain/shared';
-
 export const listAuditLogsQuerySchema = z.object({
   entity: z.string().trim().max(100).optional(),
   action: z.enum(['create', 'update', 'delete']).optional(),

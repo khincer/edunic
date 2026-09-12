@@ -19,4 +19,3 @@ export type {
   ParentStudentRow,
   StudentAverageRow,
 } from './infrastructure/dashboards.repository.js';
-export { institutionHeaderSchema } from './schemas/dashboard.schemas.js';

@@ -5,7 +5,6 @@ import {
   WorkflowsServiceError,
   WorkflowsRepository,
   type WorkflowRole,
-  institutionHeaderSchema,
   listWorkflowQuerySchema,
   assignmentParamsSchema,
   createAssignmentBodySchema,

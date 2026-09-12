@@ -4,7 +4,6 @@ import {
   AcademicAveragesService,
   AcademicAveragesServiceError,
   AcademicAveragesRepository,
-  institutionHeaderSchema,
   studentAverageParamsSchema,
   studentAverageQuerySchema,
 } from '@edunic/source/domain/academic-averages';

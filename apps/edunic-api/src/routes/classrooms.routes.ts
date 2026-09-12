@@ -6,7 +6,6 @@ import {
   ClassroomsRepository,
   classroomParamsSchema,
   createClassroomBodySchema,
-  institutionHeaderSchema,
   listClassroomsQuerySchema,
   updateClassroomBodySchema,
 } from '@edunic/source/domain/classrooms';

@@ -13,8 +13,6 @@ const subjectSchema = z
   .min(1, 'Subject is required')
   .max(120, 'Subject must be 120 characters or less');
 
-export { institutionHeaderSchema } from '@edunic/source/domain/shared';
-
 export const gradeParamsSchema = z.object({
   gradeId: uuidSchema,
 });

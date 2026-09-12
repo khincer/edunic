@@ -7,7 +7,6 @@ import {
   createCustomFieldBodySchema,
   customFieldParamsSchema,
   customFieldValuesParamsSchema,
-  institutionHeaderSchema,
   listCustomFieldsQuerySchema,
   updateCustomFieldBodySchema,
   upsertCustomFieldValuesBodySchema,

@@ -6,5 +6,5 @@ export type {
   StudentReportGradeRow,
   StudentReportEnrollmentRow,
 } from './infrastructure/reports.repository.js';
-export { institutionHeaderSchema, studentReportParamsSchema, studentReportQuerySchema } from './schemas/reports.schemas.js';
+export { studentReportParamsSchema, studentReportQuerySchema } from './schemas/reports.schemas.js';
 export type { StudentReportQuery } from './schemas/reports.schemas.js';

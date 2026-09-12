@@ -5,7 +5,6 @@ import {
   AcademicPeriodsServiceError,
   AcademicPeriodsRepository,
   academicPeriodParamsSchema,
-  institutionHeaderSchema,
   listAcademicPeriodsQuerySchema,
   createAcademicPeriodBodySchema,
   updateAcademicPeriodBodySchema,

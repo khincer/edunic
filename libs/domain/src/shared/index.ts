@@ -8,7 +8,6 @@ export {
 export { parseWithSchema } from './parse-with-schema.js';
 
 export {
-  institutionHeaderSchema,
   getInstitutionId,
 } from './institution.js';
 

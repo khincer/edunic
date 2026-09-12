@@ -3,7 +3,6 @@ import {
   AuditLogsService,
   AuditLogsServiceError,
   AuditLogsRepository,
-  institutionHeaderSchema,
   listAuditLogsQuerySchema,
 } from '@edunic/source/domain/audit-logs';
 import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
