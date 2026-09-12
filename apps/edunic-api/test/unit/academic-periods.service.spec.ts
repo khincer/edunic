@@ -1,7 +1,7 @@
 import {
   AcademicPeriodsService,
   AcademicPeriodsServiceError,
-} from '../../src/modules/academic-periods/application/academic-periods.service.js';
+} from '../../../../libs/domain/src/academic-periods/application/academic-periods.service.js';
 
 describe('AcademicPeriodsService', () => {
   it('returns 409 when a duplicate year and term already exist', async () => {

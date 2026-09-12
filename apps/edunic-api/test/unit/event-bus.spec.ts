@@ -1,5 +1,5 @@
-import { InMemoryEventBus } from '../../src/events.js';
-import { createEnrollmentCreatedEvent } from '../../src/domain-events.js';
+import { InMemoryEventBus } from '../../../../libs/events/src/index.js';
+import { createEnrollmentCreatedEvent } from '../../../../libs/domain/src/events.js';
 
 describe('InMemoryEventBus', () => {
   it('publishes events to subscribed handlers', async () => {

@@ -1,5 +1,5 @@
-import { createGradeSubmittedEvent } from '../../src/domain-events.js';
-import { NotificationsService } from '../../src/modules/notifications/application/notifications.service.js';
+import { createGradeSubmittedEvent } from '../../../../libs/domain/src/events.js';
+import { NotificationsService } from '../../../../libs/domain/src/notifications/application/notifications.service.js';
 
 describe('NotificationsService', () => {
   it('creates a notification when the extension is enabled', async () => {

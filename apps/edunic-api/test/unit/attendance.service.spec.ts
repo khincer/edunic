@@ -1,7 +1,7 @@
 import {
   AttendanceService,
   AttendanceServiceError,
-} from '../../src/modules/attendance/application/attendance.service.js';
+} from '../../../../libs/domain/src/attendance/application/attendance.service.js';
 
 describe('AttendanceService', () => {
   it('returns 404 when the enrollment does not exist', async () => {

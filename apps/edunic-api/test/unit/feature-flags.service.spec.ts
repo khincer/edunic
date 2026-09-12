@@ -1,7 +1,7 @@
 import {
   FeatureFlagsService,
   FeatureFlagsServiceError,
-} from '../../src/modules/feature-flags/application/feature-flags.service.js';
+} from '../../../../libs/domain/src/feature-flags/application/feature-flags.service.js';
 
 describe('FeatureFlagsService', () => {
   it('allows enabled features', async () => {

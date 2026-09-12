@@ -1,7 +1,7 @@
 import {
   GradesService,
   GradesServiceError,
-} from '../../src/modules/grades/application/grades.service.js';
+} from '../../../../libs/domain/src/grades/application/grades.service.js';
 
 describe('GradesService', () => {
   it('returns 404 when the enrollment does not exist', async () => {

@@ -1,7 +1,7 @@
 import {
   EnrollmentsService,
   EnrollmentsServiceError,
-} from '../../src/modules/enrollments/application/enrollments.service.js';
+} from '../../../../libs/domain/src/enrollments/application/enrollments.service.js';
 
 describe('EnrollmentsService', () => {
   it('returns 404 when student is outside the institution', async () => {
