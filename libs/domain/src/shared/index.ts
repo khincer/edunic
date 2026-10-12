@@ -20,3 +20,12 @@ export {
 } from './grade-average.js';
 
 export { PROMOTION_THRESHOLD } from './constants.js';
+
+export {
+  ErrorCode,
+  createEnvelope,
+  createErrorEnvelope,
+  type ResponseEnvelope,
+  type ErrorEnvelope,
+  type EnvelopeLinks,
+} from './http/response-envelope.js';
