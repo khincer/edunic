@@ -1,12 +1,10 @@
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import dotenv from 'dotenv';
-import pg from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { runMigrations } from '../libs/db/src/run-migrations.js';
 import { getCliErrorMessage, parseFlags, renderHelp, requireEnv } from './cli-utils.js';
 
 dotenv.config();
 
-async function runMigrations() {
+async function main() {
   const flags = parseFlags(process.argv.slice(2), []);
 
   if (flags.help) {
@@ -18,26 +16,16 @@ async function runMigrations() {
     return;
   }
 
-  const databaseUrl = requireEnv('DATABASE_URL');
-
-  const pool = new pg.Pool({
-    connectionString: databaseUrl,
-  });
-
-  const db = drizzle(pool);
+  requireEnv('DATABASE_URL');
 
   try {
     console.log('Running migrations...');
-    await migrate(db, {
-      migrationsFolder: 'libs/db/src/migrations',
-    });
+    await runMigrations();
     console.log('Migrations completed successfully.');
   } catch (error) {
     console.error(getCliErrorMessage(error));
     process.exitCode = 1;
-  } finally {
-    await pool.end();
   }
 }
 
-runMigrations();
+main();

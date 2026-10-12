@@ -1,6 +1,5 @@
-import { execSync } from 'node:child_process';
 import { sql } from 'drizzle-orm';
-import { db, pool } from '@edunic/source/db';
+import { db, pool, runMigrations } from '@edunic/source/db';
 
 let migrationsApplied = false;
 
@@ -13,9 +12,7 @@ export async function ensureTestDatabaseReady() {
     return;
   }
 
-  execSync('npx drizzle-kit migrate --config=libs/db/src/drizzle.config.ts', {
-    stdio: 'inherit',
-  });
+  await runMigrations();
   migrationsApplied = true;
 }
 

@@ -50,3 +50,6 @@ out
 .nx/polygraph
 .obsidian
 .env
+
+# CodeGraph index
+.codegraph/

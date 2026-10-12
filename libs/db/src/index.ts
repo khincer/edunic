@@ -1,17 +1,13 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
 import dotenv from 'dotenv';
-import pg from 'pg';
-import * as schema from './schema';
+import { createDb } from './create-db';
+import { runMigrations } from './run-migrations';
 
 dotenv.config();
 
-const databaseUrl =
-  process.env.DATABASE_URL ??
-  'postgres://postgres:postgres@localhost:5432/edu_platform';
-
-export const pool = new pg.Pool({
-  connectionString: databaseUrl,
-  allowExitOnIdle: process.env.NODE_ENV === 'test' || Boolean(process.env.JEST_WORKER_ID),
+export const { pool, db } = createDb({
+  databaseUrl:
+    process.env.DATABASE_URL ??
+    'postgres://postgres:postgres@localhost:5432/edu_platform',
 });
 
-export const db = drizzle(pool, { schema });
+export { createDb, runMigrations };
