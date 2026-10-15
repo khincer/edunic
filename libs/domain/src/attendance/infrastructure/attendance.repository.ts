@@ -3,12 +3,35 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import {
+  applyCursorPagination,
+  buildFilterConditions,
+  buildSortSql,
+  type CursorOrderSpec,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   AttendanceStatus,
   ListAttendanceQuery,
 } from '../schemas/attendance.schemas.js';
 
 type AttendanceSortColumn = ListAttendanceQuery['sortBy'];
+
+// Stable keyset order for cursor pagination (P2-R4): date, id.
+export const ATTENDANCE_CURSOR_ORDER: CursorOrderSpec = {
+  columns: ['date', 'id'],
+  direction: 'desc',
+};
+
+// Whitelisted columns for the uniform filter/sort convention. Constant
+// literals — never derived from user input.
+export const ATTENDANCE_LIST_COLUMNS = {
+  status: 'status',
+  date: 'date',
+  enrollmentId: 'enrollment_id',
+  createdAt: 'created_at',
+} as const;
 
 type CountRow = {
   count: string | number;
@@ -43,12 +66,19 @@ export type UpdateAttendanceInput = {
 
 export type ListAttendanceInput = ListAttendanceQuery & {
   institutionId: string;
+  filters?: FilterSpec[];
+  sort?: SortSpec | null;
+};
+
+export type ListAttendanceResult = {
+  items: AttendanceRecord[];
+  total?: number;
 };
 
 export class AttendanceRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
-  async list(input: ListAttendanceInput) {
+  async list(input: ListAttendanceInput): Promise<ListAttendanceResult> {
     const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
 
     if (input.enrollmentId) {
@@ -63,23 +93,43 @@ export class AttendanceRepository {
       filters.push(sql`date::date = ${input.date}::date`);
     }
 
+    filters.push(
+      ...buildFilterConditions(input.filters ?? [], ATTENDANCE_LIST_COLUMNS)
+    );
+
+    const plan = applyCursorPagination(input, ATTENDANCE_CURSOR_ORDER);
+
+    if (plan.keyset) {
+      filters.push(plan.keyset);
+    }
+
     const whereClause = sql`where ${sql.join(filters, sql` and `)}`;
+    const orderBy = plan.orderBy ?? this.legacyOrderBy(input);
+    const offsetClause =
+      plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
+
+    const itemsQuery = sql`
+      select
+        id,
+        institution_id as "institutionId",
+        enrollment_id as "enrollmentId",
+        date,
+        status,
+        created_at as "createdAt"
+      from attendance
+      ${whereClause}
+      order by ${orderBy}
+      limit ${plan.fetchLimit}
+      ${offsetClause}
+    `;
+
+    if (plan.offset === null) {
+      const items = await this.db.execute<AttendanceRecord>(itemsQuery);
+      return { items: items.rows };
+    }
 
     const [items, totalRows] = await Promise.all([
-      this.db.execute<AttendanceRecord>(sql`
-        select
-          id,
-          institution_id as "institutionId",
-          enrollment_id as "enrollmentId",
-          date,
-          status,
-          created_at as "createdAt"
-        from attendance
-        ${whereClause}
-        order by ${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}
-        limit ${input.limit}
-        offset ${input.offset}
-      `),
+      this.db.execute<AttendanceRecord>(itemsQuery),
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
         from attendance
@@ -189,6 +239,17 @@ export class AttendanceRepository {
       default:
         return sql.raw('date');
     }
+  }
+
+  // The standard `sort` param wins over the legacy sortBy/sortOrder pair;
+  // cursor mode never reaches here (stable order wins).
+  private legacyOrderBy(input: ListAttendanceInput): SQL {
+    const standardSort = buildSortSql(input.sort ?? null, ATTENDANCE_LIST_COLUMNS);
+
+    return (
+      standardSort ??
+      sql`${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}`
+    );
   }
 
   private getSortOrder(sortOrder: ListAttendanceQuery['sortOrder']) {

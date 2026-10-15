@@ -3,9 +3,32 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import {
+  applyCursorPagination,
+  buildFilterConditions,
+  buildSortSql,
+  type CursorOrderSpec,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type { ListGradesQuery } from '../schemas/grade.schemas.js';
 
 type GradeSortColumn = ListGradesQuery['sortBy'];
+
+// Stable keyset order for cursor pagination (P2-R4): created_at, id.
+export const GRADE_CURSOR_ORDER: CursorOrderSpec = {
+  columns: ['created_at', 'id'],
+  direction: 'desc',
+};
+
+// Whitelisted columns for the uniform filter/sort convention. Constant
+// literals — never derived from user input.
+export const GRADE_LIST_COLUMNS = {
+  subject: 'subject',
+  score: 'score',
+  enrollmentId: 'enrollment_id',
+  createdAt: 'created_at',
+} as const;
 
 type CountRow = {
   count: string | number;
@@ -40,12 +63,19 @@ export type UpdateGradeInput = {
 
 export type ListGradesInput = ListGradesQuery & {
   institutionId: string;
+  filters?: FilterSpec[];
+  sort?: SortSpec | null;
+};
+
+export type ListGradesResult = {
+  items: GradeRecord[];
+  total?: number;
 };
 
 export class GradesRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
-  async list(input: ListGradesInput) {
+  async list(input: ListGradesInput): Promise<ListGradesResult> {
     const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
 
     if (input.search) {
@@ -60,23 +90,43 @@ export class GradesRepository {
       filters.push(sql`subject ilike ${`%${input.subject}%`}`);
     }
 
+    filters.push(
+      ...buildFilterConditions(input.filters ?? [], GRADE_LIST_COLUMNS)
+    );
+
+    const plan = applyCursorPagination(input, GRADE_CURSOR_ORDER);
+
+    if (plan.keyset) {
+      filters.push(plan.keyset);
+    }
+
     const whereClause = sql`where ${sql.join(filters, sql` and `)}`;
+    const orderBy = plan.orderBy ?? this.legacyOrderBy(input);
+    const offsetClause =
+      plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
+
+    const itemsQuery = sql`
+      select
+        id,
+        institution_id as "institutionId",
+        enrollment_id as "enrollmentId",
+        subject,
+        score,
+        created_at as "createdAt"
+      from grades
+      ${whereClause}
+      order by ${orderBy}
+      limit ${plan.fetchLimit}
+      ${offsetClause}
+    `;
+
+    if (plan.offset === null) {
+      const items = await this.db.execute<GradeRecord>(itemsQuery);
+      return { items: items.rows };
+    }
 
     const [items, totalRows] = await Promise.all([
-      this.db.execute<GradeRecord>(sql`
-        select
-          id,
-          institution_id as "institutionId",
-          enrollment_id as "enrollmentId",
-          subject,
-          score,
-          created_at as "createdAt"
-        from grades
-        ${whereClause}
-        order by ${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}
-        limit ${input.limit}
-        offset ${input.offset}
-      `),
+      this.db.execute<GradeRecord>(itemsQuery),
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
         from grades
@@ -186,6 +236,17 @@ export class GradesRepository {
       default:
         return sql.raw('created_at');
     }
+  }
+
+  // The standard `sort` param wins over the legacy sortBy/sortOrder pair;
+  // cursor mode never reaches here (stable order wins).
+  private legacyOrderBy(input: ListGradesInput): SQL {
+    const standardSort = buildSortSql(input.sort ?? null, GRADE_LIST_COLUMNS);
+
+    return (
+      standardSort ??
+      sql`${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}`
+    );
   }
 
   private getSortOrder(sortOrder: ListGradesQuery['sortOrder']) {

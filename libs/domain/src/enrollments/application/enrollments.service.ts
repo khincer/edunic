@@ -1,6 +1,11 @@
 import type { EventBus } from '@edunic/source/events';
 import { createEnrollmentCreatedEvent } from '@edunic/source/domain/events';
-import { PROMOTION_THRESHOLD } from '@edunic/source/domain/shared';
+import {
+  PROMOTION_THRESHOLD,
+  buildCursorPage,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   CreateEnrollmentBody,
   ListEnrollmentsQuery,
@@ -38,6 +43,8 @@ export class EnrollmentsService {
     input: ListEnrollmentsQuery & {
       institutionId: string;
       teacherUserId?: string;
+      filters?: FilterSpec[];
+      sort?: SortSpec | null;
     }
   ) {
     const result = await this.enrollmentsRepository.list({
@@ -45,15 +52,24 @@ export class EnrollmentsService {
       search: input.search?.trim() || undefined,
     });
 
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        // created_at is always set by defaultNow(); the column is typed nullable.
+        sortKey: (enrollment) => enrollment.createdAt as Date,
+        id: (enrollment) => enrollment.id,
+      },
+      result.total
+    );
+
     return {
-      data: result.items.map((enrollment) =>
+      data: page.data.map((enrollment) =>
         this.toEnrollmentResponse(enrollment)
       ),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
-      },
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 

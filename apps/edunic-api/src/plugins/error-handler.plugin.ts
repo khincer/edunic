@@ -1,0 +1,61 @@
+import { randomUUID } from 'node:crypto';
+import type { FastifyPluginAsync } from 'fastify';
+import fp from 'fastify-plugin';
+import { createErrorEnvelope, ErrorCode } from '@edunic/source/domain/shared';
+
+const CODE_BY_STATUS: Record<number, ErrorCode> = {
+  400: ErrorCode.VALIDATION_ERROR,
+  401: ErrorCode.UNAUTHORIZED,
+  403: ErrorCode.FORBIDDEN,
+  404: ErrorCode.NOT_FOUND,
+  409: ErrorCode.CONFLICT,
+  503: ErrorCode.SERVICE_UNAVAILABLE,
+};
+
+const errorHandlerPluginHandler: FastifyPluginAsync = async (app) => {
+  app.addHook('onRequest', async (request) => {
+    request.correlationId = randomUUID();
+  });
+
+  app.setErrorHandler((error, request, reply) => {
+    const statusCode = resolveStatusCode(error);
+    const isExpected = typeof error.statusCode === 'number';
+
+    request.log.error(error);
+
+    reply.status(statusCode).send(
+      createErrorEnvelope(
+        resolveErrorCode(statusCode),
+        isExpected ? error.message : 'Internal Server Error',
+        request.correlationId ?? String(request.id)
+      )
+    );
+  });
+};
+
+function resolveStatusCode(error: { statusCode?: number }) {
+  const statusCode = error.statusCode;
+
+  if (typeof statusCode === 'number' && statusCode >= 400 && statusCode <= 599) {
+    return statusCode;
+  }
+
+  return 500;
+}
+
+// Unmapped statuses fall back to a client-error code for 4xx and INTERNAL_ERROR
+// for 5xx. 429 (login rate limit) is not part of the stable set, so it keeps its
+// HTTP status while reusing the generic client-error code.
+function resolveErrorCode(statusCode: number) {
+  const mapped = CODE_BY_STATUS[statusCode];
+
+  if (mapped) {
+    return mapped;
+  }
+
+  return statusCode >= 500 ? ErrorCode.INTERNAL_ERROR : ErrorCode.VALIDATION_ERROR;
+}
+
+export const errorHandlerPlugin = fp(errorHandlerPluginHandler, {
+  name: 'error-handler-plugin',
+});

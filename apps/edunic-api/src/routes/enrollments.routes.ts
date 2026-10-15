@@ -1,5 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import {
+  parseWithSchema,
+  getInstitutionId,
+  parseFilterSort,
+} from '@edunic/source/domain/shared';
 import {
   EnrollmentsService,
   EnrollmentsServiceError,
@@ -10,6 +14,17 @@ import {
   listEnrollmentsQuerySchema,
   updateEnrollmentBodySchema,
 } from '@edunic/source/domain/enrollments';
+
+const ENROLLMENT_FILTER_SORT_OPTIONS = {
+  filterFields: [
+    'status',
+    'studentId',
+    'academicPeriodId',
+    'classroomId',
+    'createdAt',
+  ],
+  sortFields: ['status', 'createdAt'],
+};
 
 export async function enrollmentRoutes(app: FastifyInstance) {
   const enrollmentsService = new EnrollmentsService(
@@ -23,14 +38,24 @@ export async function enrollmentRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher'])],
   };
 
-  app.get('/', readAccess, async (request) => {
+  app.get('/', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listEnrollmentsQuerySchema, request.query);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      ENROLLMENT_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return enrollmentsService.listEnrollments({
       institutionId,
       teacherUserId: request.user?.role === 'teacher' ? request.user.id : undefined,
       ...query,
+      filters,
+      sort,
     });
   });
 

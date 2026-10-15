@@ -1,5 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import {
+  parseWithSchema,
+  getInstitutionId,
+  parseFilterSort,
+} from '@edunic/source/domain/shared';
 import {
   AttendanceService,
   AttendanceServiceError,
@@ -9,6 +13,11 @@ import {
   createAttendanceBodySchema,
   updateAttendanceBodySchema,
 } from '@edunic/source/domain/attendance';
+
+const ATTENDANCE_FILTER_SORT_OPTIONS = {
+  filterFields: ['status', 'date', 'enrollmentId', 'createdAt'],
+  sortFields: ['status', 'date', 'createdAt'],
+};
 
 export async function attendanceRoutes(app: FastifyInstance) {
   const attendanceService = new AttendanceService(
@@ -22,13 +31,23 @@ export async function attendanceRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher'])],
   };
 
-  app.get('/', readAccess, async (request) => {
+  app.get('/', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listAttendanceQuerySchema, request.query);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      ATTENDANCE_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return attendanceService.listAttendance({
       institutionId,
       ...query,
+      filters,
+      sort,
     });
   });
 

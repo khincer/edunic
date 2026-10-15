@@ -19,6 +19,7 @@ export const gradeParamsSchema = z.object({
 
 export const listGradesQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
+  cursor: z.string().trim().min(1).max(512).optional(),
   enrollmentId: uuidSchema.optional(),
   subject: z.string().trim().max(120).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
