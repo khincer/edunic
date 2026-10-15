@@ -1,5 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import {
+  parseWithSchema,
+  getInstitutionId,
+  parseFilterSort,
+} from '@edunic/source/domain/shared';
 import {
   GradesService,
   GradesServiceError,
@@ -9,6 +13,11 @@ import {
   listGradesQuerySchema,
   updateGradeBodySchema,
 } from '@edunic/source/domain/grades';
+
+const GRADE_FILTER_SORT_OPTIONS = {
+  filterFields: ['subject', 'score', 'enrollmentId', 'createdAt'],
+  sortFields: ['subject', 'score', 'createdAt'],
+};
 
 export async function gradeRoutes(app: FastifyInstance) {
   const gradesService = new GradesService(
@@ -22,13 +31,23 @@ export async function gradeRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher'])],
   };
 
-  app.get('/', readAccess, async (request) => {
+  app.get('/', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listGradesQuerySchema, request.query);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      GRADE_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return gradesService.listGrades({
       institutionId,
       ...query,
+      filters,
+      sort,
     });
   });
 

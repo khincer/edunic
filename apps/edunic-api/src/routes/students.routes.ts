@@ -1,5 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import {
+  parseWithSchema,
+  getInstitutionId,
+  parseFilterSort,
+} from '@edunic/source/domain/shared';
 import {
   StudentsService,
   StudentsServiceError,
@@ -10,6 +14,11 @@ import {
   updateStudentBodySchema,
 } from '@edunic/source/domain/students';
 
+const STUDENT_FILTER_SORT_OPTIONS = {
+  filterFields: ['firstName', 'lastName', 'dateOfBirth', 'createdAt'],
+  sortFields: ['firstName', 'lastName', 'dateOfBirth', 'createdAt'],
+};
+
 export async function studentRoutes(app: FastifyInstance) {
   const studentsService = new StudentsService(new StudentsRepository(app.db));
   const readAccess = {
@@ -19,13 +28,23 @@ export async function studentRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
   };
 
-  app.get('/', readAccess, async (request) => {
+  app.get('/', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listStudentsQuerySchema, request.query);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      STUDENT_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return studentsService.listStudents({
       institutionId,
       ...query,
+      filters,
+      sort,
     });
   });
 

@@ -1,3 +1,8 @@
+import {
+  buildCursorPage,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   CreateStudentBody,
   ListStudentsQuery,
@@ -21,19 +26,33 @@ export class StudentsServiceError extends Error {
 export class StudentsService {
   constructor(private readonly studentsRepository: StudentsRepository) {}
 
-  async listStudents(input: ListStudentsQuery & { institutionId: string }) {
+  async listStudents(
+    input: ListStudentsQuery & {
+      institutionId: string;
+      filters?: FilterSpec[];
+      sort?: SortSpec | null;
+    }
+  ) {
     const result = await this.studentsRepository.list({
       ...input,
       search: input.search?.trim() || undefined,
     });
 
-    return {
-      data: result.items.map((student) => this.toStudentResponse(student)),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        sortKey: (student) => [student.lastName, student.firstName],
+        id: (student) => student.id,
       },
+      result.total
+    );
+
+    return {
+      data: page.data.map((student) => this.toStudentResponse(student)),
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 

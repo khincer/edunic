@@ -3,12 +3,36 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import {
+  applyCursorPagination,
+  buildFilterConditions,
+  buildSortSql,
+  type CursorOrderSpec,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   EnrollmentStatus,
   ListEnrollmentsQuery,
 } from '../schemas/enrollment.schemas.js';
 
 type EnrollmentSortColumn = ListEnrollmentsQuery['sortBy'];
+
+// Stable keyset order for cursor pagination (P2-R4): created_at, id.
+export const ENROLLMENT_CURSOR_ORDER: CursorOrderSpec = {
+  columns: ['e.created_at', 'e.id'],
+  direction: 'desc',
+};
+
+// Whitelisted columns for the uniform filter/sort convention. Constant
+// literals — never derived from user input.
+export const ENROLLMENT_LIST_COLUMNS = {
+  status: 'e.status',
+  studentId: 'e.student_id',
+  academicPeriodId: 'e.academic_period_id',
+  classroomId: 'e.classroom_id',
+  createdAt: 'e.created_at',
+} as const;
 
 type CountRow = {
   count: string | number;
@@ -56,12 +80,19 @@ export type UpdateEnrollmentInput = {
 export type ListEnrollmentsInput = ListEnrollmentsQuery & {
   institutionId: string;
   teacherUserId?: string;
+  filters?: FilterSpec[];
+  sort?: SortSpec | null;
+};
+
+export type ListEnrollmentsResult = {
+  items: EnrollmentRecord[];
+  total?: number;
 };
 
 export class EnrollmentsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
-  async list(input: ListEnrollmentsInput) {
+  async list(input: ListEnrollmentsInput): Promise<ListEnrollmentsResult> {
     const filters: SQL[] = [sql`e.institution_id = ${input.institutionId}`];
     const assignmentJoin = input.teacherUserId
       ? sql`
@@ -95,29 +126,49 @@ export class EnrollmentsRepository {
       filters.push(sql`e.status = ${input.status}`);
     }
 
+    filters.push(
+      ...buildFilterConditions(input.filters ?? [], ENROLLMENT_LIST_COLUMNS)
+    );
+
+    const plan = applyCursorPagination(input, ENROLLMENT_CURSOR_ORDER);
+
+    if (plan.keyset) {
+      filters.push(plan.keyset);
+    }
+
     const whereClause = sql`where ${sql.join(filters, sql` and `)}`;
+    const orderBy = plan.orderBy ?? this.legacyOrderBy(input);
+    const offsetClause =
+      plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
+
+    const itemsQuery = sql`
+      select
+        e.id,
+        e.institution_id as "institutionId",
+        e.student_id as "studentId",
+        e.academic_period_id as "academicPeriodId",
+        e.classroom_id as "classroomId",
+        e.status,
+        e.promotion_status as "promotionStatus",
+        e.created_at as "createdAt",
+        s.first_name as "studentFirstName",
+        s.last_name as "studentLastName"
+      from enrollments e
+      ${assignmentJoin}
+      inner join students s on s.id = e.student_id
+      ${whereClause}
+      order by ${orderBy}
+      limit ${plan.fetchLimit}
+      ${offsetClause}
+    `;
+
+    if (plan.offset === null) {
+      const items = await this.db.execute<EnrollmentRecord>(itemsQuery);
+      return { items: items.rows };
+    }
 
     const [items, totalRows] = await Promise.all([
-      this.db.execute<EnrollmentRecord>(sql`
-        select
-          e.id,
-          e.institution_id as "institutionId",
-          e.student_id as "studentId",
-          e.academic_period_id as "academicPeriodId",
-          e.classroom_id as "classroomId",
-          e.status,
-          e.promotion_status as "promotionStatus",
-          e.created_at as "createdAt",
-          s.first_name as "studentFirstName",
-          s.last_name as "studentLastName"
-        from enrollments e
-        ${assignmentJoin}
-        inner join students s on s.id = e.student_id
-        ${whereClause}
-        order by ${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}
-        limit ${input.limit}
-        offset ${input.offset}
-      `),
+      this.db.execute<EnrollmentRecord>(itemsQuery),
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
         from enrollments e
@@ -309,6 +360,21 @@ export class EnrollmentsRepository {
       default:
         return sql.raw('e.created_at');
     }
+  }
+
+  // The standard `sort` param wins over the legacy sortBy/sortOrder pair;
+  // cursor mode never reaches here (stable order wins). The two-column
+  // studentName legacy sort is intentionally not part of the standard whitelist.
+  private legacyOrderBy(input: ListEnrollmentsInput): SQL {
+    const standardSort = buildSortSql(
+      input.sort ?? null,
+      ENROLLMENT_LIST_COLUMNS
+    );
+
+    return (
+      standardSort ??
+      sql`${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}`
+    );
   }
 
   private getSortOrder(sortOrder: ListEnrollmentsQuery['sortOrder']) {

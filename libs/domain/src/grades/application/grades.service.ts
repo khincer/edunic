@@ -1,5 +1,10 @@
 import type { EventBus } from '@edunic/source/events';
 import { createGradeSubmittedEvent } from '@edunic/source/domain/events';
+import {
+  buildCursorPage,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   CreateGradeBody,
   ListGradesQuery,
@@ -26,20 +31,35 @@ export class GradesService {
     private readonly eventBus?: EventBus
   ) {}
 
-  async listGrades(input: ListGradesQuery & { institutionId: string }) {
+  async listGrades(
+    input: ListGradesQuery & {
+      institutionId: string;
+      filters?: FilterSpec[];
+      sort?: SortSpec | null;
+    }
+  ) {
     const result = await this.gradesRepository.list({
       ...input,
       search: input.search?.trim() || undefined,
       subject: input.subject?.trim() || undefined,
     });
 
-    return {
-      data: result.items.map((grade) => this.toGradeResponse(grade)),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        // created_at is always set by defaultNow(); the column is typed nullable.
+        sortKey: (grade) => grade.createdAt as Date,
+        id: (grade) => grade.id,
       },
+      result.total
+    );
+
+    return {
+      data: page.data.map((grade) => this.toGradeResponse(grade)),
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 

@@ -29,3 +29,29 @@ export {
   type ErrorEnvelope,
   type EnvelopeLinks,
 } from './http/response-envelope.js';
+
+export {
+  encodeCursor,
+  decodeCursor,
+  toCursorSortKey,
+  applyCursorPagination,
+  buildCursorPage,
+  type PaginationParams,
+  type CursorOrderSpec,
+  type CursorPage,
+  type CursorPageMeta,
+  type CursorPaginationPlan,
+  type CursorSortKey,
+} from './http/pagination.js';
+
+export {
+  parseFilterSort,
+  buildFilterConditions,
+  buildSortSql,
+  type FilterOperator,
+  type FilterSpec,
+  type FilterSortOptions,
+  type FilterValue,
+  type SortSpec,
+  type ParsedFilterSort,
+} from './http/filter-sort.js';

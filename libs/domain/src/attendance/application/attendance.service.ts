@@ -1,5 +1,10 @@
 import type { EventBus } from '@edunic/source/events';
 import { createAttendanceMarkedEvent } from '@edunic/source/domain/events';
+import {
+  buildCursorPage,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   CreateAttendanceBody,
   ListAttendanceQuery,
@@ -26,21 +31,35 @@ export class AttendanceService {
     private readonly eventBus?: EventBus
   ) {}
 
-  async listAttendance(input: ListAttendanceQuery & { institutionId: string }) {
+  async listAttendance(
+    input: ListAttendanceQuery & {
+      institutionId: string;
+      filters?: FilterSpec[];
+      sort?: SortSpec | null;
+    }
+  ) {
     const result = await this.attendanceRepository.list({
       ...input,
       date: input.date?.trim() || undefined,
     });
 
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        sortKey: (attendance) => attendance.date,
+        id: (attendance) => attendance.id,
+      },
+      result.total
+    );
+
     return {
-      data: result.items.map((attendance) =>
+      data: page.data.map((attendance) =>
         this.toAttendanceResponse(attendance)
       ),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
-      },
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 
