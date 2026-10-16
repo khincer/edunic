@@ -19,6 +19,7 @@ export async function ensureTestDatabaseReady() {
 export async function resetTestDatabase() {
   await db.execute(sql.raw(`
     TRUNCATE TABLE
+      outbox_events,
       attendance,
       grades,
       enrollments,
