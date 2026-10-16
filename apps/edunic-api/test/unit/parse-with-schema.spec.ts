@@ -44,6 +44,23 @@ describe('parseWithSchema', () => {
     );
   });
 
+  it('attaches the zod issues as error details', () => {
+    try {
+      parseWithSchema(simpleSchema, { name: 123 });
+      throw new Error('expected parseWithSchema to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ValidationError);
+
+      const details = (error as ValidationError).details as {
+        issues: { path: string; message: string }[];
+      };
+
+      expect(details.issues).toHaveLength(2);
+      expect(details.issues[0]).toMatchObject({ path: 'name' });
+      expect(details.issues[1]).toMatchObject({ path: 'age' });
+    }
+  });
+
   it('re-throws non-Zod errors unchanged', () => {
     const throwingSchema = {
       parse: () => {

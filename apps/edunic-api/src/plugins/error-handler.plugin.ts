@@ -27,7 +27,8 @@ const errorHandlerPluginHandler: FastifyPluginAsync = async (app) => {
       createErrorEnvelope(
         resolveErrorCode(statusCode),
         isExpected ? error.message : 'Internal Server Error',
-        request.correlationId ?? String(request.id)
+        request.correlationId ?? String(request.id),
+        resolveDetails(error, isExpected)
       )
     );
   });
@@ -54,6 +55,21 @@ function resolveErrorCode(statusCode: number) {
   }
 
   return statusCode >= 500 ? ErrorCode.INTERNAL_ERROR : ErrorCode.VALIDATION_ERROR;
+}
+
+// Only expected (domain) errors may expose details; unexpected errors keep the
+// generic 500 body so internals never leak to clients.
+function resolveDetails(
+  error: { statusCode?: number; details?: Record<string, unknown> },
+  isExpected: boolean
+) {
+  if (!isExpected) {
+    return undefined;
+  }
+
+  return typeof error.details === 'object' && error.details !== null
+    ? error.details
+    : undefined;
 }
 
 export const errorHandlerPlugin = fp(errorHandlerPluginHandler, {
