@@ -45,6 +45,18 @@ export {
 } from './http/pagination.js';
 
 export {
+  buildIdempotencyKey,
+  lookupIdempotency,
+  storeIdempotentResponse,
+  releaseIdempotencyKey,
+  IDEMPOTENCY_TTL_SECONDS,
+  IDEMPOTENCY_KEY_HEADER,
+  type IdempotencyStore,
+  type IdempotencyScope,
+  type IdempotencyLookup,
+} from './http/idempotency.js';
+
+export {
   parseFilterSort,
   buildFilterConditions,
   buildSortSql,
