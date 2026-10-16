@@ -7,6 +7,7 @@ import {
   applyCursorPagination,
   buildFilterConditions,
   buildSortSql,
+  type DbExecutor,
   type CursorOrderSpec,
   type FilterSpec,
   type SortSpec,
@@ -78,6 +79,12 @@ export type ListAttendanceResult = {
 export class AttendanceRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
+  // D2: services wrap the domain write, the outbox insert and the event
+  // publish in one transaction so they commit or roll back together.
+  async transaction<T>(fn: (tx: DbExecutor) => Promise<T>): Promise<T> {
+    return this.db.transaction(fn);
+  }
+
   async list(input: ListAttendanceInput): Promise<ListAttendanceResult> {
     const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
 
@@ -143,8 +150,12 @@ export class AttendanceRepository {
     };
   }
 
-  async findById(institutionId: string, attendanceId: string) {
-    const result = await this.db.execute<AttendanceRecord>(sql`
+  async findById(
+    institutionId: string,
+    attendanceId: string,
+    executor: DbExecutor = this.db
+  ) {
+    const result = await executor.execute<AttendanceRecord>(sql`
       select
         id,
         institution_id as "institutionId",
@@ -161,8 +172,8 @@ export class AttendanceRepository {
     return result.rows[0] ?? null;
   }
 
-  async create(input: CreateAttendanceInput) {
-    const result = await this.db.execute<{ id: string }>(sql`
+  async create(input: CreateAttendanceInput, executor: DbExecutor = this.db) {
+    const result = await executor.execute<{ id: string }>(sql`
       insert into attendance (
         institution_id,
         enrollment_id,

@@ -440,3 +440,18 @@ export const customFieldValues = pgTable(
     uniqueFieldEntity: unique().on(t.fieldId, t.entityId),
   })
 );
+
+/* =========================================================
+   📬 TRANSACTIONAL OUTBOX (design D2)
+   ========================================================= */
+
+// One row per domain event, written inside the same transaction as the
+// domain row it describes; `id` is the event envelope id so delivery is
+// identifiable end-to-end. `published_at IS NULL` means the background
+// outbox publisher still owes a delivery.
+export const outboxEvents = pgTable('outbox_events', {
+  id: uuid('id').primaryKey(),
+  event: jsonb('event').notNull(),
+  occurredAt: timestamp('occurred_at').notNull().defaultNow(),
+  publishedAt: timestamp('published_at'),
+});

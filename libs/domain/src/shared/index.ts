@@ -67,3 +67,11 @@ export {
   type SortSpec,
   type ParsedFilterSort,
 } from './http/filter-sort.js';
+
+export {
+  insertOutboxEvent,
+  markOutboxPublished,
+  fetchUnpublishedOutboxEvents,
+  type DbExecutor,
+  type OutboxEventRow,
+} from './outbox.js';

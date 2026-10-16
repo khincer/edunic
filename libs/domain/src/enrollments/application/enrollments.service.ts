@@ -3,6 +3,8 @@ import { createEnrollmentCreatedEvent } from '@edunic/source/domain/events';
 import {
   PROMOTION_THRESHOLD,
   buildCursorPage,
+  insertOutboxEvent,
+  markOutboxPublished,
   type FilterSpec,
   type SortSpec,
 } from '@edunic/source/domain/shared';
@@ -97,34 +99,51 @@ export class EnrollmentsService {
     );
 
     try {
-      const createdEnrollment = await this.enrollmentsRepository.create({
-        institutionId: input.institutionId,
-        studentId: input.studentId,
-        academicPeriodId: input.academicPeriodId,
-        classroomId: input.classroomId ?? null,
-        status: input.status,
-        promotionStatus: input.promotionStatus ?? null,
-      });
+      // P2-R6 / D2: the enrollment row, its outbox event and the publish
+      // outcome commit together — a failed publish rolls the rows back.
+      const enrollment = await this.enrollmentsRepository.transaction(
+        async (tx) => {
+          const createdEnrollment = await this.enrollmentsRepository.create(
+            {
+              institutionId: input.institutionId,
+              studentId: input.studentId,
+              academicPeriodId: input.academicPeriodId,
+              classroomId: input.classroomId ?? null,
+              status: input.status,
+              promotionStatus: input.promotionStatus ?? null,
+            },
+            tx
+          );
 
-      const enrollment = await this.enrollmentsRepository.findById(
-        input.institutionId,
-        createdEnrollment.id
-      );
+          const record = await this.enrollmentsRepository.findById(
+            input.institutionId,
+            createdEnrollment.id,
+            tx
+          );
 
-      if (!enrollment) {
-        throw new EnrollmentsServiceError('Enrollment not found', 404);
-      }
+          if (!record) {
+            throw new EnrollmentsServiceError('Enrollment not found', 404);
+          }
 
-      await this.eventBus?.publish(
-        createEnrollmentCreatedEvent({
-          institutionId: input.institutionId,
-          payload: {
-            enrollmentId: enrollment.id,
-            studentId: enrollment.studentId,
-            academicPeriodId: enrollment.academicPeriodId,
-            classroomId: enrollment.classroomId,
-          },
-        })
+          const event = createEnrollmentCreatedEvent({
+            institutionId: input.institutionId,
+            payload: {
+              enrollmentId: record.id,
+              studentId: record.studentId,
+              academicPeriodId: record.academicPeriodId,
+              classroomId: record.classroomId,
+            },
+          });
+
+          await insertOutboxEvent(tx, event);
+
+          if (this.eventBus) {
+            await this.eventBus.publish(event);
+            await markOutboxPublished(tx, event.id);
+          }
+
+          return record;
+        }
       );
 
       return {
