@@ -22,6 +22,7 @@ declare module 'fastify' {
     featureFlags?: Record<string, boolean>;
     auditPayload?: unknown;
     correlationId?: string;
+    idempotencyKey?: string;
   }
 }
 

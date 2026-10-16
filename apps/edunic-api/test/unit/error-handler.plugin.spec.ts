@@ -17,6 +17,11 @@ async function buildTestApp(): Promise<FastifyInstance> {
   app.get('/validation', async () => {
     throw new ValidationError('Invalid request body');
   });
+  app.get('/validation-with-details', async () => {
+    throw new ValidationError('Invalid request body', 400, {
+      issues: [{ path: 'firstName', message: 'Required' }],
+    });
+  });
   app.get('/unauthorized', async () => {
     throw httpError('Authentication is required', 401);
   });
@@ -55,6 +60,19 @@ describe('error handler plugin', () => {
     expect(response.json()).toMatchObject({
       code: 'VALIDATION_ERROR',
       message: 'Invalid request body',
+    });
+  });
+
+  it('passes validation details through to the error envelope', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/validation-with-details',
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      details: { issues: [{ path: 'firstName', message: 'Required' }] },
     });
   });
 
