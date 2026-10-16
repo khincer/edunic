@@ -2,6 +2,8 @@ import type { EventBus } from '@edunic/source/events';
 import { createGradeSubmittedEvent } from '@edunic/source/domain/events';
 import {
   buildCursorPage,
+  insertOutboxEvent,
+  markOutboxPublished,
   type FilterSpec,
   type SortSpec,
 } from '@edunic/source/domain/shared';
@@ -85,33 +87,48 @@ export class GradesService {
       throw new GradesServiceError('Enrollment not found', 404);
     }
 
-    const createdGrade = await this.gradesRepository.create({
-      institutionId: input.institutionId,
-      enrollmentId: input.enrollmentId,
-      subject: input.subject.trim(),
-      score: input.score,
-    });
+    // P2-R6 / D2: the grade row, its outbox event and the publish outcome
+    // commit together — a failed publish rolls the rows back.
+    const grade = await this.gradesRepository.transaction(async (tx) => {
+      const createdGrade = await this.gradesRepository.create(
+        {
+          institutionId: input.institutionId,
+          enrollmentId: input.enrollmentId,
+          subject: input.subject.trim(),
+          score: input.score,
+        },
+        tx
+      );
 
-    const grade = await this.gradesRepository.findById(
-      input.institutionId,
-      createdGrade.id
-    );
+      const record = await this.gradesRepository.findById(
+        input.institutionId,
+        createdGrade.id,
+        tx
+      );
 
-    if (!grade) {
-      throw new GradesServiceError('Grade not found', 404);
-    }
+      if (!record) {
+        throw new GradesServiceError('Grade not found', 404);
+      }
 
-    await this.eventBus?.publish(
-      createGradeSubmittedEvent({
+      const event = createGradeSubmittedEvent({
         institutionId: input.institutionId,
         payload: {
-          gradeId: grade.id,
-          enrollmentId: grade.enrollmentId,
-          subject: grade.subject,
-          score: grade.score,
+          gradeId: record.id,
+          enrollmentId: record.enrollmentId,
+          subject: record.subject,
+          score: record.score,
         },
-      })
-    );
+      });
+
+      await insertOutboxEvent(tx, event);
+
+      if (this.eventBus) {
+        await this.eventBus.publish(event);
+        await markOutboxPublished(tx, event.id);
+      }
+
+      return record;
+    });
 
     return {
       data: this.toGradeResponse(grade),

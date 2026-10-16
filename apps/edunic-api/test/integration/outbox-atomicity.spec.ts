@@ -12,10 +12,10 @@ import {
 } from '../helpers/fixtures.js';
 
 async function countEnrollments() {
-  const rows = (await db.execute(
+  const result = await db.execute(
     sql.raw('SELECT COUNT(*)::int AS count FROM enrollments')
-  )) as unknown as { count: number }[];
-  return rows[0].count;
+  );
+  return (result.rows[0] as { count: number }).count;
 }
 
 describe('outbox atomicity (P2-R6)', () => {
@@ -49,11 +49,9 @@ describe('outbox atomicity (P2-R6)', () => {
     await app.close();
   });
 
-  // EXPECTED-RED AGREEMENT (slice S1 -> S2): this assertion must stay skipped
-  // until task 2.5 lands the db.transaction() + outbox wrapping for the
-  // enrollments service. Do NOT weaken or delete it to keep the suite green;
-  // flip it.skip to it as part of task 2.5's GREEN step.
-  it.skip('rolls back the enrollment row when event publish fails — TODO(task 2.5/S2): transactional outbox lands there', async () => {
+  // Un-skipped in slice S2 (task 2.5): the db.transaction() + outbox wrapping
+  // for the enrollments service landed, so P2-R6 is asserted for real.
+  it('rolls back the enrollment row when event publish fails', async () => {
     const student = await createStudentFixture({ institutionId });
     const period = await createAcademicPeriodFixture({ institutionId });
     const classroom = await createClassroomFixture({ institutionId });

@@ -2,6 +2,8 @@ import type { EventBus } from '@edunic/source/events';
 import { createAttendanceMarkedEvent } from '@edunic/source/domain/events';
 import {
   buildCursorPage,
+  insertOutboxEvent,
+  markOutboxPublished,
   type FilterSpec,
   type SortSpec,
 } from '@edunic/source/domain/shared';
@@ -90,32 +92,49 @@ export class AttendanceService {
       throw new AttendanceServiceError('Enrollment not found', 404);
     }
 
-    const createdAttendance = await this.attendanceRepository.create({
-      institutionId: input.institutionId,
-      enrollmentId: input.enrollmentId,
-      date: input.date.trim(),
-      status: input.status,
-    });
+    // P2-R6 / D2: the attendance row, its outbox event and the publish
+    // outcome commit together — a failed publish rolls the rows back.
+    const attendance = await this.attendanceRepository.transaction(
+      async (tx) => {
+        const createdAttendance = await this.attendanceRepository.create(
+          {
+            institutionId: input.institutionId,
+            enrollmentId: input.enrollmentId,
+            date: input.date.trim(),
+            status: input.status,
+          },
+          tx
+        );
 
-    const attendance = await this.attendanceRepository.findById(
-      input.institutionId,
-      createdAttendance.id
-    );
+        const record = await this.attendanceRepository.findById(
+          input.institutionId,
+          createdAttendance.id,
+          tx
+        );
 
-    if (!attendance) {
-      throw new AttendanceServiceError('Attendance record not found', 404);
-    }
+        if (!record) {
+          throw new AttendanceServiceError('Attendance record not found', 404);
+        }
 
-    await this.eventBus?.publish(
-      createAttendanceMarkedEvent({
-        institutionId: input.institutionId,
-        payload: {
-          attendanceId: attendance.id,
-          enrollmentId: attendance.enrollmentId,
-          date: attendance.date,
-          status: attendance.status,
-        },
-      })
+        const event = createAttendanceMarkedEvent({
+          institutionId: input.institutionId,
+          payload: {
+            attendanceId: record.id,
+            enrollmentId: record.enrollmentId,
+            date: record.date,
+            status: record.status,
+          },
+        });
+
+        await insertOutboxEvent(tx, event);
+
+        if (this.eventBus) {
+          await this.eventBus.publish(event);
+          await markOutboxPublished(tx, event.id);
+        }
+
+        return record;
+      }
     );
 
     return {

@@ -7,6 +7,7 @@ import {
   applyCursorPagination,
   buildFilterConditions,
   buildSortSql,
+  type DbExecutor,
   type CursorOrderSpec,
   type FilterSpec,
   type SortSpec,
@@ -75,6 +76,12 @@ export type ListGradesResult = {
 export class GradesRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
+  // D2: services wrap the domain write, the outbox insert and the event
+  // publish in one transaction so they commit or roll back together.
+  async transaction<T>(fn: (tx: DbExecutor) => Promise<T>): Promise<T> {
+    return this.db.transaction(fn);
+  }
+
   async list(input: ListGradesInput): Promise<ListGradesResult> {
     const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
 
@@ -140,8 +147,12 @@ export class GradesRepository {
     };
   }
 
-  async findById(institutionId: string, gradeId: string) {
-    const result = await this.db.execute<GradeRecord>(sql`
+  async findById(
+    institutionId: string,
+    gradeId: string,
+    executor: DbExecutor = this.db
+  ) {
+    const result = await executor.execute<GradeRecord>(sql`
       select
         id,
         institution_id as "institutionId",
@@ -158,8 +169,8 @@ export class GradesRepository {
     return result.rows[0] ?? null;
   }
 
-  async create(input: CreateGradeInput) {
-    const result = await this.db.execute<{ id: string }>(sql`
+  async create(input: CreateGradeInput, executor: DbExecutor = this.db) {
+    const result = await executor.execute<{ id: string }>(sql`
       insert into grades (
         institution_id,
         enrollment_id,
