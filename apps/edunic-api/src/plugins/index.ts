@@ -8,6 +8,7 @@ import { errorHandlerPlugin } from './error-handler.plugin.js';
 import { eventBusPlugin } from './event-bus.plugin.js';
 import { idempotencyPlugin } from './idempotency.plugin.js';
 import { notificationsPlugin } from './notifications.plugin.js';
+import { outboxPublisherPlugin } from './outbox-publisher.plugin.js';
 
 export async function registerPlugins(app: FastifyInstance) {
 	await app.register(corsPlugin);
@@ -19,5 +20,7 @@ export async function registerPlugins(app: FastifyInstance) {
 	// After envelope-plugin: onSend must store the post-envelope payload.
 	await app.register(idempotencyPlugin);
 	await app.register(errorHandlerPlugin);
+	// Before notifications-plugin: deliveries must be flowing before subscribers attach.
+	await app.register(outboxPublisherPlugin);
 	await app.register(notificationsPlugin);
 }

@@ -91,31 +91,21 @@ Plugins are registered in `apps/edunic-api/src/plugins/index.ts`, and the order 
 | 4 | `authPlugin` | `auth.plugin.ts` | Depends on `db-plugin`; decorates `authenticate` and `authorizeRoles` used by route `preHandler`s. |
 | 5 | `auditLogsPlugin` | `audit-logs.plugin.ts` | Depends on `db-plugin`; registers the `onSend` (capture) and `onResponse` (persist) hooks. |
 | 6 | `envelopePlugin` | `envelope.plugin.ts` | Registered right after `audit-logs` so the audit `onSend` hook captures the raw payload first. Wraps JSON success bodies in `{ data }`; idempotent (bodies with a top-level `data` key pass through) and skips errors, non-JSON payloads, and `/health`, `/docs`, `/auth/login`. |
-| 7 | `errorHandlerPlugin` | `error-handler.plugin.ts` | Provides the global error handler and the per-request `correlationId` `onRequest` hook. Declares no `fastify-plugin` dependencies (only a plugin `name`), so registration order alone fixes its position after `envelope`. |
-| 8 | `notificationsPlugin` | `notifications.plugin.ts` | Depends on `db-plugin` and `event-bus-plugin`; subscribes to the three domain events. |
+| 7 | `idempotencyPlugin` | `idempotency.plugin.ts` | After `envelope-plugin`: its `onSend` hook must store the post-envelope payload for `Idempotency-Key` replay. |
+| 8 | `errorHandlerPlugin` | `error-handler.plugin.ts` | Provides the global error handler and the per-request `correlationId` `onRequest` hook. Declares no `fastify-plugin` dependencies (only a plugin `name`), so registration order alone fixes its position after `idempotency`. |
+| 9 | `outboxPublisherPlugin` | `outbox-publisher.plugin.ts` | Depends on `db-plugin` and `event-bus-plugin`; polls `outbox_events` every 500 ms and publishes unpublished rows. Registered before `notifications` so deliveries are flowing before subscribers attach. |
+| 10 | `notificationsPlugin` | `notifications.plugin.ts` | Depends on `db-plugin` and `event-bus-plugin`; subscribes to the three domain events. |
 
 Two mechanisms enforce this: the explicit `app.register(...)` order above, and `fastify-plugin`
 `dependencies` (`auth-plugin` → `db-plugin`; `audit-logs-plugin` → `db-plugin`;
-`notifications-plugin` → `db-plugin`, `event-bus-plugin`). A dependent plugin cannot load before the
-plugin it depends on. The convention is that a plugin which *provides* a decorator is registered
-before any plugin that consumes it. `envelope-plugin` and `error-handler-plugin` declare no
-`dependencies` — only a `name` — so their position is fixed by registration order alone.
+`idempotency-plugin` → `db-plugin`, `event-bus-plugin`; `outbox-publisher-plugin` → `db-plugin`,
+`event-bus-plugin`; `notifications-plugin` → `db-plugin`, `event-bus-plugin`). A dependent plugin
+cannot load before the plugin it depends on. The convention is that a plugin which *provides* a
+decorator is registered before any plugin that consumes it. `envelope-plugin` and
+`error-handler-plugin` declare no `dependencies` — only a `name` — so their position is fixed by
+registration order alone.
 
-**Planned (P2) — not in the codebase yet.** The design calls for two more plugins, which change the
-target order to:
-
-```
-cors → db → event-bus → auth → audit-logs → envelope → error-handler → idempotency → outbox-publisher → notifications
-```
-
-| Plugin | Purpose | Status |
-|--------|---------|--------|
-| `idempotency.plugin.ts` | `Idempotency-Key` replay protection on POST/PATCH/DELETE | **Planned (P2c)** |
-| `outbox-publisher.plugin.ts` | Background publisher draining the `outbox_events` table to the bus | **Planned (P2b)** |
-
-`notifications` stays last in both the current and planned orders. Only these two planned plugins
-are missing from `apps/edunic-api/src/plugins/` today — `envelope.plugin.ts` is implemented and
-registered, together with `error-handler.plugin.ts`, which the original design did not enumerate.
+`notifications` stays last in both the current and planned orders.
 
 ## 3. Auth, RBAC and multi-tenancy
 
@@ -242,22 +232,21 @@ the notifications extension enabled.
 - Honest limitation: `RedisStreamsEventBus.subscribe` still delegates to the in-memory bus. The Redis
   backend **writes** to the stream but nothing **reads** from it yet — the consumer/worker is
   **Planned (P5)** (`apps/edunic-worker`).
-- Redis is not used for caching, rate limiting or idempotency storage yet; an idempotency store backed by
-  Redis is **Planned (P2c)**.
+- Redis is not used for caching or rate limiting; it backs the `Idempotency-Key` store (shipped).
 
 ## Current vs planned (summary)
 
 | Component | Status | Where / when |
 |-----------|--------|--------------|
 | Request → route → validation → service → repository → DB | Current | This document, section 1 |
-| Plugins: cors, db, event-bus, auth, audit-logs, envelope, error-handler, notifications | Current | `plugins/index.ts` |
+| Plugins: cors, db, event-bus, auth, audit-logs, envelope, idempotency, error-handler, outbox-publisher, notifications | Current | `plugins/index.ts` |
 | JWT auth + RBAC + `institution_id` scoping | Current | `plugins/auth.plugin.ts`, shared/institution |
 | Drizzle schema + migrations | Current | `libs/db/src` |
 | In-memory event bus, 3 domain events, notifications subscriber | Current | `libs/events`, `libs/domain/src/events.ts` |
 | Response envelope + error codes | Current | `libs/domain/src/shared/http/response-envelope.ts`, `plugins/envelope.plugin.ts`, `plugins/error-handler.plugin.ts` |
 | Cursor pagination / filter-sort | Current | `libs/domain/src/shared/http/{pagination,filter-sort}.ts` (section 4, "List conventions") |
-| Idempotency keys (Redis) | Planned (P2c) | `idempotency.plugin.ts` |
-| Transactional outbox + publisher | Planned (P2b) | `outbox_events`, `outbox-publisher.plugin.ts` |
+| Idempotency keys (Redis) | Current | `libs/domain/src/shared/http/idempotency.ts`, `idempotency.plugin.ts` |
+| Transactional outbox + publisher | Current | `libs/db` `outbox_events` (migration 0006), `libs/domain/src/shared/outbox.ts`, `outbox-publisher.plugin.ts` |
 | Tests (unit / integration / API / DB / E2E) | Planned (P3) | `apps/edunic-api/test` |
 | Docker / Railway / `/health`, `/ready` | Planned (P4) | repo root, `health.routes.ts` |
 | Worker + Redis Streams consumer | Planned (P5) | `apps/edunic-worker` |
