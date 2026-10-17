@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import Redis from 'ioredis';
 
+export * from './consumer.js';
+
 export type EventEnvelope<TName extends string = string, TPayload = unknown> = {
   id: string;
   name: TName;
