@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { createDb } from './create-db';
 import { runMigrations } from './run-migrations';
+import { runMigrationsDown } from './run-migrations-down';
 
 dotenv.config();
 
@@ -10,4 +11,4 @@ export const { pool, db } = createDb({
     'postgres://postgres:postgres@localhost:5432/edu_platform',
 });
 
-export { createDb, runMigrations };
+export { createDb, runMigrations, runMigrationsDown };
