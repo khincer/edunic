@@ -14,7 +14,12 @@ export default [
         'error',
         {
           enforceBuildableLibDependency: true,
-          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
+          allow: [
+            '^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$',
+            // Test-helper seam: cross-project integration specs (worker
+            // workflow E2E) reuse the api helpers through this alias only.
+            '@edunic/source/testing/api-helpers',
+          ],
           depConstraints: [
             {
               sourceTag: '*',

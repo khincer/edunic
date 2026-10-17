@@ -1,4 +1,15 @@
-import { RedisStreamsEventBus } from '@edunic/source/events';
+import dotenv from 'dotenv';
+import {
+  createEnrollmentWelcomedEvent,
+  type EnrollmentCreatedEvent,
+} from '@edunic/source/domain/events';
+import {
+  RedisStreamConsumer,
+  RedisStreamsEventBus,
+} from '@edunic/source/events';
+
+// Same env-loading convention as apps/edunic-api and libs/db.
+dotenv.config();
 
 export type WorkerConfig = {
   redisUrl: string;
@@ -8,6 +19,7 @@ export type WorkerConfig = {
 export type WorkerRuntime = {
   config: WorkerConfig;
   eventBus: RedisStreamsEventBus;
+  consumer: RedisStreamConsumer;
 };
 
 // The worker exists to consume Redis Streams (P5-R1 / design D3), so a
@@ -38,5 +50,29 @@ export function bootstrapWorker(
     streamName: config.streamName,
   });
 
-  return { config, eventBus };
+  // Side effect (D3, P5-R2): every processed enrollment.created publishes
+  // enrollment.welcomed; the consumer's dedupe marker guarantees one welcome
+  // per event id even when the broker delivers the event more than once.
+  const consumer = new RedisStreamConsumer({
+    redisUrl: config.redisUrl,
+    streamName: config.streamName,
+    handleEvent: async (event) => {
+      if (event.name !== 'enrollment.created') {
+        return;
+      }
+
+      const created = event as EnrollmentCreatedEvent;
+      await eventBus.publish(
+        createEnrollmentWelcomedEvent({
+          institutionId: event.institutionId,
+          payload: {
+            enrollmentId: created.payload.enrollmentId,
+            studentId: created.payload.studentId,
+          },
+        })
+      );
+    },
+  });
+
+  return { config, eventBus, consumer };
 }

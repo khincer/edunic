@@ -19,6 +19,7 @@ module.exports = {
     '^@edunic/source/domain/events$': '<rootDir>/libs/domain/src/events.ts',
     '^@edunic/source/domain/([^/]+)$': '<rootDir>/libs/domain/src/$1/index.ts',
     '^@edunic/source/events$': '<rootDir>/libs/events/src/index.ts',
+    '^@edunic/source/testing/api-helpers$': '<rootDir>/apps/edunic-api/test/helpers/index.ts',
   },
   transform: {
     '^.+\\.ts$': [

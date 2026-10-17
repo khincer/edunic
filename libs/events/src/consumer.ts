@@ -39,7 +39,12 @@ export class RedisStreamConsumer {
   >;
 
   constructor(options: StreamConsumerOptions) {
-    this.client = new Redis(options.redisUrl, { maxRetriesPerRequest: 1 });
+    // Lazy: constructing the worker runtime must not open sockets (bootstrap
+    // specs build a full runtime against a dummy URL without connecting).
+    this.client = new Redis(options.redisUrl, {
+      maxRetriesPerRequest: 1,
+      lazyConnect: true,
+    });
     this.streamName = options.streamName ?? DEFAULT_STREAM_NAME;
     this.consumerGroup = options.consumerGroup ?? DEFAULT_CONSUMER_GROUP;
     this.consumerName = options.consumerName ?? `worker-${process.pid}`;

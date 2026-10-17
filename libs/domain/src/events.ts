@@ -76,3 +76,27 @@ export function createAttendanceMarkedEvent(input: {
     payload: input.payload,
   });
 }
+
+// Side effect of the worker consumer group (P5-R2, design D3): published for
+// each processed enrollment.created. Deliberately NOT part of
+// AcademicDomainEvent — that union is the notifications service contract.
+export type EnrollmentWelcomedPayload = {
+  enrollmentId: string;
+  studentId: string;
+};
+
+export type EnrollmentWelcomedEvent = EventEnvelope<
+  'enrollment.welcomed',
+  EnrollmentWelcomedPayload
+>;
+
+export function createEnrollmentWelcomedEvent(input: {
+  institutionId: string;
+  payload: EnrollmentWelcomedPayload;
+}) {
+  return createEventEnvelope({
+    name: 'enrollment.welcomed',
+    institutionId: input.institutionId,
+    payload: input.payload,
+  });
+}
