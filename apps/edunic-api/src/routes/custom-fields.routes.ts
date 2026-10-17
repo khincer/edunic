@@ -1,5 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import {
+  parseWithSchema,
+  getInstitutionId,
+  parseFilterSort,
+} from '@edunic/source/domain/shared';
 import {
   CustomFieldsService,
   CustomFieldsServiceError,
@@ -12,6 +16,11 @@ import {
   upsertCustomFieldValuesBodySchema,
 } from '@edunic/source/domain/custom-fields';
 
+const CUSTOM_FIELD_FILTER_SORT_OPTIONS = {
+  filterFields: ['entity', 'name', 'type'],
+  sortFields: ['entity', 'name', 'type'],
+};
+
 export async function customFieldRoutes(app: FastifyInstance) {
   const customFieldsService = new CustomFieldsService(
     new CustomFieldsRepository(app.db)
@@ -20,13 +29,23 @@ export async function customFieldRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
   };
 
-  app.get('/custom-fields', adminOnly, async (request) => {
+  app.get('/custom-fields', adminOnly, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listCustomFieldsQuerySchema, request.query);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      CUSTOM_FIELD_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return customFieldsService.listCustomFields({
       institutionId,
       ...query,
+      filters,
+      sort,
     });
   });
 

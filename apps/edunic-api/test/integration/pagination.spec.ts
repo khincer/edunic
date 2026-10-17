@@ -286,6 +286,8 @@ describe('cursor pagination for the remaining list modules', () => {
     path: string;
     /** Seeds five rows and returns the ids in the module's stable keyset order. */
     seed: () => Promise<{ count: number; stableOrderIds: string[] }>;
+    /** Uniform filter/sort param the module whitelists, and the rows it selects. */
+    filter: { query: string; expectedCount: number };
   };
 
   const cases: PaginatedListCase[] = [
@@ -304,6 +306,7 @@ describe('cursor pagination for the remaining list modules', () => {
         // Stable order: year desc, id desc.
         return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
       },
+      filter: { query: 'filter=year:eq:2023', expectedCount: 1 },
     },
     {
       label: 'audit-logs',
@@ -311,10 +314,12 @@ describe('cursor pagination for the remaining list modules', () => {
       seed: async () => {
         const created = [];
 
+        // Two entities so the filter assertion below selects a strict subset.
         for (const second of [1, 2, 3, 4, 5]) {
           created.push(
             await createAuditLogFixture({
               institutionId,
+              entity: second % 2 === 1 ? 'students' : 'grades',
               // Distinct createdAt values: the cursor only carries millisecond
               // precision, so same-millisecond rows would fall out of the keyset.
               createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
@@ -325,6 +330,7 @@ describe('cursor pagination for the remaining list modules', () => {
         // Stable order: created_at desc, id desc.
         return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
       },
+      filter: { query: 'filter=entity:eq:grades', expectedCount: 2 },
     },
     {
       label: 'classrooms',
@@ -341,6 +347,28 @@ describe('cursor pagination for the remaining list modules', () => {
         // Stable order: grade_level asc, id asc.
         return { count: 5, stableOrderIds: created.map((row) => row.id) };
       },
+      filter: { query: 'filter=gradeLevel:eq:3', expectedCount: 1 },
+    },
+    {
+      label: 'custom-fields',
+      path: '/custom-fields',
+      seed: async () => {
+        const created: string[] = [];
+
+        // Seeded in alphabetical order: the stable order is entity asc, id asc.
+        for (const entity of ['alpha', 'bravo', 'charlie', 'delta', 'echo']) {
+          const response = await client
+            .post('/custom-fields')
+            .set(headers)
+            .send({ entity, name: `${entity} field`, type: 'text' });
+
+          expect(response.status).toBe(201);
+          created.push(response.body.data.id);
+        }
+
+        return { count: 5, stableOrderIds: created };
+      },
+      filter: { query: 'filter=entity:eq:charlie', expectedCount: 1 },
     },
   ];
 
@@ -394,6 +422,25 @@ describe('cursor pagination for the remaining list modules', () => {
       expect(response.body.hasMore).toBe(true);
       expect(response.body.nextCursor).toBeDefined();
       expect(response.body.meta).toEqual({ total: count, limit: 2, offset: 0 });
+    });
+
+    it(`applies the uniform filter params on ${listCase.label}`, async () => {
+      await listCase.seed();
+
+      const filtered = await client
+        .get(`${listCase.path}?${listCase.filter.query}`)
+        .set(headers);
+
+      expect(filtered.status).toBe(200);
+      expect(filtered.body.data).toHaveLength(listCase.filter.expectedCount);
+
+      // Fields outside the whitelist never reach SQL construction.
+      const unsupported = await client
+        .get(`${listCase.path}?filter=institution_id:eq:whatever`)
+        .set(headers);
+
+      expect(unsupported.status).toBe(400);
+      expect(unsupported.body.code).toBe('VALIDATION_ERROR');
     });
   });
 });

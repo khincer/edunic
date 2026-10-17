@@ -1,3 +1,8 @@
+import {
+  buildCursorPage,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   CreateCustomFieldBody,
   CustomFieldType,
@@ -24,19 +29,33 @@ export class CustomFieldsServiceError extends Error {
 export class CustomFieldsService {
   constructor(private readonly customFieldsRepository: CustomFieldsRepository) {}
 
-  async listCustomFields(input: ListCustomFieldsQuery & { institutionId: string }) {
+  async listCustomFields(
+    input: ListCustomFieldsQuery & {
+      institutionId: string;
+      filters?: FilterSpec[];
+      sort?: SortSpec | null;
+    }
+  ) {
     const result = await this.customFieldsRepository.list({
       ...input,
       entity: input.entity?.trim() || undefined,
     });
 
-    return {
-      data: result.items.map((field) => this.toCustomFieldResponse(field)),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        sortKey: (field) => field.entity,
+        id: (field) => field.id,
       },
+      result.total
+    );
+
+    return {
+      data: page.data.map((field) => this.toCustomFieldResponse(field)),
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 
