@@ -50,9 +50,19 @@ jobs:
       - name: Lint API
         run: npx nx lint api
 
+      - name: Typecheck API
+        run: npx tsc --noEmit -p apps/edunic-api/tsconfig.typecheck.json
+
+      - name: Run database migrations
+        run: npm run db:migrate
+        env:
+          TZ: UTC
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/edu_platform_test
+
       - name: Test API
         run: npx nx test api -- --runInBand
         env:
+          TZ: UTC
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/edu_platform_test
           JWT_SECRET: test-jwt-secret
 
