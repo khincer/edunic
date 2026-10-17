@@ -218,3 +218,143 @@ describe('list pagination conventions', () => {
     expect(response.body.code).toBe('VALIDATION_ERROR');
   });
 });
+
+describe('cursor pagination for the remaining list modules', () => {
+  let app: Awaited<ReturnType<typeof createTestApp>>;
+  let client: ReturnType<typeof createHttpClient>;
+  let institutionId: string;
+  let headers: Record<string, string>;
+
+  beforeAll(async () => {
+    app = await createTestApp();
+    client = createHttpClient(app);
+  });
+
+  beforeEach(async () => {
+    await resetTestDatabase();
+
+    const institution = await createInstitutionFixture();
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
+
+    institutionId = institution.id;
+    headers = await createAuthHeaders({
+      userId: adminUser.id,
+      institutionId: institution.id,
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  // Walks the keyset cursor until hasMore is false. Bounded so a broken cursor
+  // wire (cursor dropped, first page repeated forever) fails on duplicates
+  // instead of hanging the suite.
+  async function walkCursorPages(path: string, limit: number) {
+    const ids: string[] = [];
+    let cursor: string | undefined = 'start';
+    let pages = 0;
+
+    do {
+      const response = await client
+        .get(`${path}?limit=${limit}&cursor=${encodeURIComponent(cursor)}`)
+        .set(headers);
+
+      expect(response.status).toBe(200);
+      // Cursor mode: keyset contract, no legacy metadata or deprecation.
+      expect(response.headers['x-pagination-deprecated']).toBeUndefined();
+      expect(response.body.meta).toBeUndefined();
+      // nextCursor is present if and only if another page exists.
+      expect(response.body.hasMore).toBe(response.body.nextCursor !== undefined);
+
+      ids.push(...response.body.data.map((row: { id: string }) => row.id));
+      cursor = response.body.hasMore ? response.body.nextCursor : undefined;
+      pages += 1;
+    } while (cursor && pages < 10);
+
+    expect(cursor).toBeUndefined();
+    return ids;
+  }
+
+  type PaginatedListCase = {
+    label: string;
+    path: string;
+    /** Seeds five rows and returns the ids in the module's stable keyset order. */
+    seed: () => Promise<{ count: number; stableOrderIds: string[] }>;
+  };
+
+  const cases: PaginatedListCase[] = [
+    {
+      label: 'academic-periods',
+      path: '/academic-periods',
+      seed: async () => {
+        const created = [];
+
+        for (const year of [2021, 2022, 2023, 2024, 2025]) {
+          created.push(
+            await createAcademicPeriodFixture({ institutionId, year, term: 1 })
+          );
+        }
+
+        // Stable order: year desc, id desc.
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+    },
+  ];
+
+  describe.each(cases)('$label', (listCase) => {
+    it(`pages ${listCase.label} without duplicates or gaps`, async () => {
+      const { count, stableOrderIds } = await listCase.seed();
+
+      const ids = await walkCursorPages(listCase.path, 2);
+
+      expect(ids).toEqual(stableOrderIds);
+      expect(ids).toHaveLength(count);
+      expect(new Set(ids).size).toBe(count);
+    });
+
+    it(`serves the first page of ${listCase.label} for cursor=start`, async () => {
+      const { stableOrderIds } = await listCase.seed();
+
+      const firstPage = await client
+        .get(`${listCase.path}?limit=2&cursor=start`)
+        .set(headers);
+
+      expect(firstPage.status).toBe(200);
+      expect(firstPage.headers['x-pagination-deprecated']).toBeUndefined();
+      expect(firstPage.body.data.map((row: { id: string }) => row.id)).toEqual(
+        stableOrderIds.slice(0, 2)
+      );
+
+      const walked = await walkCursorPages(listCase.path, 2);
+      expect(walked).toEqual(stableOrderIds);
+    });
+
+    it(`rejects a malformed cursor on ${listCase.label}`, async () => {
+      const response = await client
+        .get(`${listCase.path}?cursor=not-a-cursor`)
+        .set(headers);
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('VALIDATION_ERROR');
+    });
+
+    it(`marks legacy offset mode as deprecated on ${listCase.label}`, async () => {
+      const { count } = await listCase.seed();
+
+      const response = await client
+        .get(`${listCase.path}?limit=2&offset=0`)
+        .set(headers);
+
+      expect(response.status).toBe(200);
+      expect(response.headers['x-pagination-deprecated']).toBe('offset');
+      expect(response.body.data).toHaveLength(2);
+      expect(response.body.hasMore).toBe(true);
+      expect(response.body.nextCursor).toBeDefined();
+      expect(response.body.meta).toEqual({ total: count, limit: 2, offset: 0 });
+    });
+  });
+});

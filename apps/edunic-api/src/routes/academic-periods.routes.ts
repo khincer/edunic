@@ -1,5 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import {
+  parseWithSchema,
+  getInstitutionId,
+  parseFilterSort,
+} from '@edunic/source/domain/shared';
 import {
   AcademicPeriodsService,
   AcademicPeriodsServiceError,
@@ -9,6 +13,11 @@ import {
   createAcademicPeriodBodySchema,
   updateAcademicPeriodBodySchema,
 } from '@edunic/source/domain/academic-periods';
+
+const ACADEMIC_PERIOD_FILTER_SORT_OPTIONS = {
+  filterFields: ['year', 'term', 'startDate', 'endDate', 'createdAt'],
+  sortFields: ['year', 'term', 'startDate', 'endDate', 'createdAt'],
+};
 
 export async function academicPeriodRoutes(app: FastifyInstance) {
   const academicPeriodsService = new AcademicPeriodsService(
@@ -21,13 +30,23 @@ export async function academicPeriodRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
   };
 
-  app.get('/', readAccess, async (request) => {
+  app.get('/', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listAcademicPeriodsQuerySchema, request.query);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      ACADEMIC_PERIOD_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return academicPeriodsService.listAcademicPeriods({
       institutionId,
       ...query,
+      filters,
+      sort,
     });
   });
 
