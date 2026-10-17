@@ -1,5 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import { parseWithSchema } from '@edunic/source/domain/shared';
+import {
+  parseWithSchema,
+  parseFilterSort,
+} from '@edunic/source/domain/shared';
 import {
   InstitutionsService,
   InstitutionsServiceError,
@@ -10,6 +13,11 @@ import {
   updateInstitutionBodySchema,
 } from '@edunic/source/domain/institutions';
 
+const INSTITUTION_FILTER_SORT_OPTIONS = {
+  filterFields: ['name', 'createdAt'],
+  sortFields: ['name', 'createdAt'],
+};
+
 export async function institutionRoutes(app: FastifyInstance) {
   const institutionsService = new InstitutionsService(
     new InstitutionsRepository(app.db)
@@ -18,10 +26,22 @@ export async function institutionRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
   };
 
-  app.get('/', adminOnly, async (request) => {
+  app.get('/', adminOnly, async (request, reply) => {
     const query = parseWithSchema(listInstitutionsQuerySchema, request.query);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      INSTITUTION_FILTER_SORT_OPTIONS
+    );
 
-    return institutionsService.listInstitutions(query);
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
+
+    return institutionsService.listInstitutions({
+      ...query,
+      filters,
+      sort,
+    });
   });
 
   app.get('/:institutionId', adminOnly, async (request) => {
