@@ -1,0 +1,44 @@
+{
+  "name": "worker",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/edunic-worker/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/apps/worker",
+        "main": "apps/edunic-worker/src/main.ts",
+        "tsConfig": "apps/edunic-worker/tsconfig.json",
+        "platform": "node",
+        "target": "esnext",
+        "format": ["cjs"],
+        "skipTypeCheck": true,
+        "bundle": true,
+        "esbuildOptions": {},
+        "assets": []
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "worker:build"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["apps/edunic-worker/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/apps/worker"],
+      "options": {
+        "jestConfig": "apps/edunic-worker/jest.config.cjs"
+      }
+    }
+  },
+  "tags": ["scope:app", "type:worker"]
+}
