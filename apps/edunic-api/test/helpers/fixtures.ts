@@ -9,6 +9,7 @@ import {
   guardians,
   grades,
   institutions,
+  notifications,
   students,
   teacherClassroomAssignments,
   userInstitutionRoles,
@@ -239,6 +240,28 @@ export async function createAuditLogFixture(input: {
       institutionId: input.institutionId,
       action: input.action ?? 'create',
       entity: input.entity ?? 'students',
+      createdAt: input.createdAt ?? new Date('2026-01-01T00:00:00.000Z'),
+    })
+    .returning();
+
+  return result[0];
+}
+
+export async function createNotificationFixture(input: {
+  institutionId: string;
+  eventName?: string;
+  title?: string;
+  createdAt?: Date;
+}) {
+  const result = await db
+    .insert(notifications)
+    .values({
+      id: nextId('95000000'),
+      institutionId: input.institutionId,
+      eventName: input.eventName ?? 'enrollment.created',
+      title: input.title ?? 'Enrollment created',
+      message: 'Fixture notification',
+      metadata: null,
       createdAt: input.createdAt ?? new Date('2026-01-01T00:00:00.000Z'),
     })
     .returning();

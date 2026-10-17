@@ -9,6 +9,7 @@ import {
   createEnrollmentFixture,
   createGuardianFixture,
   createInstitutionFixture,
+  createNotificationFixture,
   createStudentFixture,
   createUserFixture,
 } from '../helpers/fixtures.js';
@@ -434,6 +435,31 @@ describe('cursor pagination for the remaining list modules', () => {
         };
       },
       filter: { query: 'filter=name:eq:Charlie', expectedCount: 1 },
+    },
+    {
+      label: 'notifications',
+      path: '/notifications',
+      seed: async () => {
+        const created = [];
+
+        // Two event names so the filter assertion below selects a strict
+        // subset, and distinct seconds because the cursor only carries
+        // millisecond precision.
+        for (const second of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createNotificationFixture({
+              institutionId,
+              eventName:
+                second % 2 === 1 ? 'enrollment.created' : 'grade.submitted',
+              createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
+            })
+          );
+        }
+
+        // Stable order: created_at desc, id desc.
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+      filter: { query: 'filter=eventName:eq:grade.submitted', expectedCount: 2 },
     },
   ];
 
