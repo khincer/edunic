@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import { parseWithSchema, getInstitutionId, parseFilterSort } from '@edunic/source/domain/shared';
 import {
   GuardiansService,
   GuardiansServiceError,
@@ -12,6 +12,11 @@ import {
   updateGuardianBodySchema,
 } from '@edunic/source/domain/guardians';
 
+const GUARDIAN_FILTER_SORT_OPTIONS = {
+  filterFields: ['name', 'phone'],
+  sortFields: ['name', 'phone'],
+};
+
 export async function guardianRoutes(app: FastifyInstance) {
   const guardiansService = new GuardiansService(new GuardiansRepository(app.db));
   const readAccess = {
@@ -21,13 +26,23 @@ export async function guardianRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
   };
 
-  app.get('/guardians', readAccess, async (request) => {
+  app.get('/guardians', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listGuardiansQuerySchema, request.query);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      GUARDIAN_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return guardiansService.listGuardians({
       institutionId,
       ...query,
+      filters,
+      sort,
     });
   });
 

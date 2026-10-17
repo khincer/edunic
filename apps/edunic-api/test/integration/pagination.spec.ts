@@ -7,6 +7,7 @@ import {
   createAuditLogFixture,
   createClassroomFixture,
   createEnrollmentFixture,
+  createGuardianFixture,
   createInstitutionFixture,
   createStudentFixture,
   createUserFixture,
@@ -398,6 +399,21 @@ describe('cursor pagination for the remaining list modules', () => {
         return { count: 5, stableOrderIds: created };
       },
       filter: { query: 'filter=key:eq:charlie', expectedCount: 1 },
+    },
+    {
+      label: 'guardians',
+      path: '/guardians',
+      seed: async () => {
+        const created = [];
+
+        // Seeded in name order: the stable order is name asc, id asc.
+        for (const name of ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Echo']) {
+          created.push(await createGuardianFixture({ institutionId, name }));
+        }
+
+        return { count: 5, stableOrderIds: created.map((row) => row.id) };
+      },
+      filter: { query: 'filter=name:eq:Charlie', expectedCount: 1 },
     },
   ];
 
