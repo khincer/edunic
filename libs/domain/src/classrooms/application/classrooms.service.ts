@@ -1,3 +1,8 @@
+import {
+  buildCursorPage,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   CreateClassroomBody,
   ListClassroomsQuery,
@@ -25,6 +30,8 @@ export class ClassroomsService {
     input: ListClassroomsQuery & {
       institutionId: string;
       teacherUserId?: string;
+      filters?: FilterSpec[];
+      sort?: SortSpec | null;
     }
   ) {
     const result = await this.classroomsRepository.list({
@@ -32,13 +39,21 @@ export class ClassroomsService {
       section: input.section?.trim() || undefined,
     });
 
-    return {
-      data: result.items.map((classroom) => this.toClassroomResponse(classroom)),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        sortKey: (classroom) => classroom.gradeLevel,
+        id: (classroom) => classroom.id,
       },
+      result.total
+    );
+
+    return {
+      data: page.data.map((classroom) => this.toClassroomResponse(classroom)),
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 

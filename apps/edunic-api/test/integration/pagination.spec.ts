@@ -5,6 +5,7 @@ import {
   createAcademicPeriodFixture,
   createAttendanceFixture,
   createAuditLogFixture,
+  createClassroomFixture,
   createEnrollmentFixture,
   createInstitutionFixture,
   createStudentFixture,
@@ -323,6 +324,22 @@ describe('cursor pagination for the remaining list modules', () => {
 
         // Stable order: created_at desc, id desc.
         return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+    },
+    {
+      label: 'classrooms',
+      path: '/classrooms',
+      seed: async () => {
+        const created = [];
+
+        for (const gradeLevel of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createClassroomFixture({ institutionId, gradeLevel })
+          );
+        }
+
+        // Stable order: grade_level asc, id asc.
+        return { count: 5, stableOrderIds: created.map((row) => row.id) };
       },
     },
   ];
