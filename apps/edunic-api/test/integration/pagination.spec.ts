@@ -4,6 +4,7 @@ import { resetTestDatabase } from '../helpers/db.js';
 import {
   createAcademicPeriodFixture,
   createAttendanceFixture,
+  createAuditLogFixture,
   createEnrollmentFixture,
   createInstitutionFixture,
   createStudentFixture,
@@ -300,6 +301,27 @@ describe('cursor pagination for the remaining list modules', () => {
         }
 
         // Stable order: year desc, id desc.
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+    },
+    {
+      label: 'audit-logs',
+      path: '/audit-logs',
+      seed: async () => {
+        const created = [];
+
+        for (const second of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createAuditLogFixture({
+              institutionId,
+              // Distinct createdAt values: the cursor only carries millisecond
+              // precision, so same-millisecond rows would fall out of the keyset.
+              createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
+            })
+          );
+        }
+
+        // Stable order: created_at desc, id desc.
         return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
       },
     },

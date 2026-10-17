@@ -3,6 +3,7 @@ import { hashPassword } from '@edunic/source/domain/auth';
 import {
   academicPeriods,
   attendance,
+  auditLogs,
   classrooms,
   enrollments,
   guardians,
@@ -219,6 +220,26 @@ export async function createAttendanceFixture(input: {
       enrollmentId: input.enrollmentId,
       date: input.date ?? new Date('2026-02-01T08:00:00.000Z'),
       status: input.status ?? 'present',
+    })
+    .returning();
+
+  return result[0];
+}
+
+export async function createAuditLogFixture(input: {
+  institutionId: string;
+  entity?: string;
+  action?: string;
+  createdAt?: Date;
+}) {
+  const result = await db
+    .insert(auditLogs)
+    .values({
+      id: nextId('90000000'),
+      institutionId: input.institutionId,
+      action: input.action ?? 'create',
+      entity: input.entity ?? 'students',
+      createdAt: input.createdAt ?? new Date('2026-01-01T00:00:00.000Z'),
     })
     .returning();
 
