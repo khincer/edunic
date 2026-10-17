@@ -3,7 +3,30 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import {
+  applyCursorPagination,
+  buildFilterConditions,
+  buildSortSql,
+  type CursorOrderSpec,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type { ListExtensionsQuery } from '../schemas/extension.schemas.js';
+
+// Stable keyset order for cursor pagination (P2-R4): key asc. `key` is the
+// table's text primary key, so it is both the sort column and the tiebreaker —
+// there is no second column to append.
+export const EXTENSION_CURSOR_ORDER: CursorOrderSpec = {
+  columns: ['key'],
+  direction: 'asc',
+};
+
+// Whitelisted columns for the uniform filter/sort convention. Constant
+// literals — never derived from user input.
+export const EXTENSION_LIST_COLUMNS = {
+  key: 'key',
+  name: 'name',
+} as const;
 
 type CountRow = {
   count: string | number;
@@ -35,10 +58,20 @@ export type UpdateExtensionInput = {
   enabled?: boolean;
 };
 
+export type ListExtensionsInput = ListExtensionsQuery & {
+  filters?: FilterSpec[];
+  sort?: SortSpec | null;
+};
+
+export type ListExtensionsResult = {
+  items: ExtensionRecord[];
+  total?: number;
+};
+
 export class ExtensionsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
-  async list(input: ListExtensionsQuery) {
+  async list(input: ListExtensionsInput): Promise<ListExtensionsResult> {
     const filters: SQL[] = [];
 
     if (input.search) {
@@ -49,21 +82,41 @@ export class ExtensionsRepository {
       filters.push(sql`enabled = ${input.enabled}`);
     }
 
+    filters.push(
+      ...buildFilterConditions(input.filters ?? [], EXTENSION_LIST_COLUMNS)
+    );
+
+    const plan = applyCursorPagination(input, EXTENSION_CURSOR_ORDER);
+
+    if (plan.keyset) {
+      filters.push(plan.keyset);
+    }
+
     const whereClause =
       filters.length > 0 ? sql`where ${sql.join(filters, sql` and `)}` : sql``;
+    const orderBy = plan.orderBy ?? this.legacyOrderBy(input);
+    const offsetClause =
+      plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
+
+    const itemsQuery = sql`
+      select
+        key,
+        name,
+        enabled
+      from extensions
+      ${whereClause}
+      order by ${orderBy}
+      limit ${plan.fetchLimit}
+      ${offsetClause}
+    `;
+
+    if (plan.offset === null) {
+      const items = await this.db.execute<ExtensionRecord>(itemsQuery);
+      return { items: items.rows };
+    }
 
     const [items, totalRows] = await Promise.all([
-      this.db.execute<ExtensionRecord>(sql`
-        select
-          key,
-          name,
-          enabled
-        from extensions
-        ${whereClause}
-        order by key ${this.getSortOrder(input.sortOrder)}
-        limit ${input.limit}
-        offset ${input.offset}
-      `),
+      this.db.execute<ExtensionRecord>(itemsQuery),
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
         from extensions
@@ -214,6 +267,15 @@ export class ExtensionsRepository {
     `);
 
     return result.rows[0] ?? null;
+  }
+
+  // The standard `sort` param wins over the legacy sortOrder; cursor mode
+  // never reaches here (stable order wins).
+  private legacyOrderBy(input: ListExtensionsInput): SQL {
+    return (
+      buildSortSql(input.sort ?? null, EXTENSION_LIST_COLUMNS) ??
+      sql`key ${this.getSortOrder(input.sortOrder)}`
+    );
   }
 
   private getSortOrder(sortOrder: ListExtensionsQuery['sortOrder']) {

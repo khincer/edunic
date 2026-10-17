@@ -1,3 +1,8 @@
+import {
+  buildCursorPage,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   CreateExtensionBody,
   ListExtensionsQuery,
@@ -23,19 +28,34 @@ export class ExtensionsServiceError extends Error {
 export class ExtensionsService {
   constructor(private readonly extensionsRepository: ExtensionsRepository) {}
 
-  async listExtensions(input: ListExtensionsQuery) {
+  async listExtensions(
+    input: ListExtensionsQuery & {
+      filters?: FilterSpec[];
+      sort?: SortSpec | null;
+    }
+  ) {
     const result = await this.extensionsRepository.list({
       ...input,
       search: input.search?.trim() || undefined,
     });
 
-    return {
-      data: result.items.map((extension) => this.toExtensionResponse(extension)),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        // `key` is the whole stable order: it is the only sort column and the
+        // unique tiebreaker, so the cursor carries no separate sort-key value.
+        sortKey: () => [],
+        id: (extension) => extension.key,
       },
+      result.total
+    );
+
+    return {
+      data: page.data.map((extension) => this.toExtensionResponse(extension)),
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 

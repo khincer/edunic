@@ -255,7 +255,11 @@ describe('cursor pagination for the remaining list modules', () => {
   // Walks the keyset cursor until hasMore is false. Bounded so a broken cursor
   // wire (cursor dropped, first page repeated forever) fails on duplicates
   // instead of hanging the suite.
-  async function walkCursorPages(path: string, limit: number) {
+  async function walkCursorPages(
+    path: string,
+    limit: number,
+    idOf: (row: Record<string, string>) => string
+  ) {
     const ids: string[] = [];
     let cursor: string | undefined = 'start';
     let pages = 0;
@@ -272,7 +276,7 @@ describe('cursor pagination for the remaining list modules', () => {
       // nextCursor is present if and only if another page exists.
       expect(response.body.hasMore).toBe(response.body.nextCursor !== undefined);
 
-      ids.push(...response.body.data.map((row: { id: string }) => row.id));
+      ids.push(...response.body.data.map(idOf));
       cursor = response.body.hasMore ? response.body.nextCursor : undefined;
       pages += 1;
     } while (cursor && pages < 10);
@@ -284,6 +288,8 @@ describe('cursor pagination for the remaining list modules', () => {
   type PaginatedListCase = {
     label: string;
     path: string;
+    /** Field carrying the row's stable identity in the response (default: `id`). */
+    idOf?: (row: Record<string, string>) => string;
     /** Seeds five rows and returns the ids in the module's stable keyset order. */
     seed: () => Promise<{ count: number; stableOrderIds: string[] }>;
     /** Uniform filter/sort param the module whitelists, and the rows it selects. */
@@ -370,13 +376,39 @@ describe('cursor pagination for the remaining list modules', () => {
       },
       filter: { query: 'filter=entity:eq:charlie', expectedCount: 1 },
     },
+    {
+      label: 'extensions',
+      path: '/extensions',
+      // Extensions are keyed by text (`key`), not by a uuid `id`.
+      idOf: (row) => row.key,
+      seed: async () => {
+        const created: string[] = [];
+
+        // Seeded in key order: the stable order is key asc.
+        for (const key of ['alpha', 'bravo', 'charlie', 'delta', 'echo']) {
+          const response = await client
+            .post('/extensions')
+            .set(headers)
+            .send({ key, name: `${key} extension` });
+
+          expect(response.status).toBe(201);
+          created.push(response.body.data.key);
+        }
+
+        return { count: 5, stableOrderIds: created };
+      },
+      filter: { query: 'filter=key:eq:charlie', expectedCount: 1 },
+    },
   ];
 
   describe.each(cases)('$label', (listCase) => {
+    const idOf =
+      listCase.idOf ?? ((row: Record<string, string>) => row.id);
+
     it(`pages ${listCase.label} without duplicates or gaps`, async () => {
       const { count, stableOrderIds } = await listCase.seed();
 
-      const ids = await walkCursorPages(listCase.path, 2);
+      const ids = await walkCursorPages(listCase.path, 2, idOf);
 
       expect(ids).toEqual(stableOrderIds);
       expect(ids).toHaveLength(count);
@@ -392,11 +424,11 @@ describe('cursor pagination for the remaining list modules', () => {
 
       expect(firstPage.status).toBe(200);
       expect(firstPage.headers['x-pagination-deprecated']).toBeUndefined();
-      expect(firstPage.body.data.map((row: { id: string }) => row.id)).toEqual(
+      expect(firstPage.body.data.map(idOf)).toEqual(
         stableOrderIds.slice(0, 2)
       );
 
-      const walked = await walkCursorPages(listCase.path, 2);
+      const walked = await walkCursorPages(listCase.path, 2, idOf);
       expect(walked).toEqual(stableOrderIds);
     });
 
