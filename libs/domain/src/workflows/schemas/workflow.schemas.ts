@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { uuidSchema } from '@edunic/source/domain/shared';
 
 export const listWorkflowQuerySchema = z.object({
+  // Shared by GET /assignments, /messages and /school-events.
+  cursor: z.string().trim().min(1).max(512).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
   offset: z.coerce.number().int().min(0).default(0),
 });

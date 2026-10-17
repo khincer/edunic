@@ -3,6 +3,14 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import {
+  applyCursorPagination,
+  buildFilterConditions,
+  buildSortSql,
+  type CursorOrderSpec,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   CreateAssignmentBody,
   CreateEventBody,
@@ -14,6 +22,27 @@ import type {
 type CountRow = {
   count: string | number;
 };
+
+// The three workflow list endpoints (assignments, messages, school-events)
+// share this repository, so their keyset order must be ONE constant. Each query
+// aliases its base table (assignments | school_events | messages) to `w` so a
+// single qualified column list is valid in all three -- `id` and `created_at`
+// are ambiguous unqualified (classrooms.id, message_threads.id/created_at).
+// created_at desc mirrors the messages feed and the assignments tiebreak; the
+// uuid id closes the order. NOTE: created_at is a timestamp and the shared
+// cursor keeps only milliseconds, so a page boundary can drop same-millisecond
+// rows (inherited flaw, reported, not fixed here).
+export const WORKFLOW_CURSOR_ORDER: CursorOrderSpec = {
+  columns: ['w.created_at', 'w.id'],
+  direction: 'desc',
+};
+
+// Whitelisted filter/sort columns, common to all three base tables (created_at
+// is the only meaningful column present on assignments, school_events AND
+// messages). Constant literals -- never derived from user input.
+export const WORKFLOW_LIST_COLUMNS = {
+  createdAt: 'w.created_at',
+} as const;
 
 export type WorkflowRole = 'admin' | 'teacher' | 'parent';
 
@@ -68,38 +97,53 @@ export class WorkflowsRepository {
     institutionId: string;
     role: WorkflowRole;
     userId: string;
+    filters?: FilterSpec[];
+    sort?: SortSpec | null;
   }) {
     const roleFilter = this.assignmentRoleFilter(input);
+    const plan = applyCursorPagination(input, WORKFLOW_CURSOR_ORDER);
+    const extraFilters = this.andConditions(input, plan.keyset);
     const whereClause = sql`
-      assignments.institution_id = ${input.institutionId}
+      w.institution_id = ${input.institutionId}
       ${roleFilter}
+      ${extraFilters}
+    `;
+    const orderBy = plan.orderBy ?? this.assignmentLegacyOrderBy(input);
+    const offsetClause =
+      plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
+    const itemsQuery = sql`
+      select
+        w.id,
+        w.institution_id as "institutionId",
+        w.classroom_id as "classroomId",
+        concat('Grade ', classrooms.grade_level, coalesce(' ' || classrooms.section, '')) as "classroomName",
+        w.created_by_user_id as "createdByUserId",
+        w.title,
+        w.type,
+        w.status,
+        w.due_date as "dueDate",
+        w.created_at as "createdAt"
+      from assignments w
+      left join classrooms
+        on classrooms.id = w.classroom_id
+       and classrooms.institution_id = w.institution_id
+      where ${whereClause}
+      order by ${orderBy}
+      limit ${plan.fetchLimit}
+      ${offsetClause}
     `;
 
+    if (plan.offset === null) {
+      const items = await this.db.execute<AssignmentRecord>(itemsQuery);
+
+      return { items: items.rows };
+    }
+
     const [items, totalRows] = await Promise.all([
-      this.db.execute<AssignmentRecord>(sql`
-        select
-          assignments.id,
-          assignments.institution_id as "institutionId",
-          assignments.classroom_id as "classroomId",
-          concat('Grade ', classrooms.grade_level, coalesce(' ' || classrooms.section, '')) as "classroomName",
-          assignments.created_by_user_id as "createdByUserId",
-          assignments.title,
-          assignments.type,
-          assignments.status,
-          assignments.due_date as "dueDate",
-          assignments.created_at as "createdAt"
-        from assignments
-        left join classrooms
-          on classrooms.id = assignments.classroom_id
-         and classrooms.institution_id = assignments.institution_id
-        where ${whereClause}
-        order by assignments.due_date asc nulls last, assignments.created_at desc
-        limit ${input.limit}
-        offset ${input.offset}
-      `),
+      this.db.execute<AssignmentRecord>(itemsQuery),
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
-        from assignments
+        from assignments w
         where ${whereClause}
       `),
     ]);
@@ -205,38 +249,53 @@ export class WorkflowsRepository {
     institutionId: string;
     role: WorkflowRole;
     userId: string;
+    filters?: FilterSpec[];
+    sort?: SortSpec | null;
   }) {
     const roleFilter = this.eventRoleFilter(input);
+    const plan = applyCursorPagination(input, WORKFLOW_CURSOR_ORDER);
+    const extraFilters = this.andConditions(input, plan.keyset);
     const whereClause = sql`
-      school_events.institution_id = ${input.institutionId}
+      w.institution_id = ${input.institutionId}
       ${roleFilter}
+      ${extraFilters}
+    `;
+    const orderBy = plan.orderBy ?? this.eventLegacyOrderBy(input);
+    const offsetClause =
+      plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
+    const itemsQuery = sql`
+      select
+        w.id,
+        w.institution_id as "institutionId",
+        w.classroom_id as "classroomId",
+        concat('Grade ', classrooms.grade_level, coalesce(' ' || classrooms.section, '')) as "classroomName",
+        w.created_by_user_id as "createdByUserId",
+        w.title,
+        w.event_type as "eventType",
+        w.starts_at as "startsAt",
+        w.ends_at as "endsAt",
+        w.created_at as "createdAt"
+      from school_events w
+      left join classrooms
+        on classrooms.id = w.classroom_id
+       and classrooms.institution_id = w.institution_id
+      where ${whereClause}
+      order by ${orderBy}
+      limit ${plan.fetchLimit}
+      ${offsetClause}
     `;
 
+    if (plan.offset === null) {
+      const items = await this.db.execute<SchoolEventRecord>(itemsQuery);
+
+      return { items: items.rows };
+    }
+
     const [items, totalRows] = await Promise.all([
-      this.db.execute<SchoolEventRecord>(sql`
-        select
-          school_events.id,
-          school_events.institution_id as "institutionId",
-          school_events.classroom_id as "classroomId",
-          concat('Grade ', classrooms.grade_level, coalesce(' ' || classrooms.section, '')) as "classroomName",
-          school_events.created_by_user_id as "createdByUserId",
-          school_events.title,
-          school_events.event_type as "eventType",
-          school_events.starts_at as "startsAt",
-          school_events.ends_at as "endsAt",
-          school_events.created_at as "createdAt"
-        from school_events
-        left join classrooms
-          on classrooms.id = school_events.classroom_id
-         and classrooms.institution_id = school_events.institution_id
-        where ${whereClause}
-        order by school_events.starts_at asc
-        limit ${input.limit}
-        offset ${input.offset}
-      `),
+      this.db.execute<SchoolEventRecord>(itemsQuery),
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
-        from school_events
+        from school_events w
         where ${whereClause}
       `),
     ]);
@@ -304,39 +363,54 @@ export class WorkflowsRepository {
   async listMessages(input: ListWorkflowQuery & {
     institutionId: string;
     userId: string;
+    filters?: FilterSpec[];
+    sort?: SortSpec | null;
   }) {
+    const plan = applyCursorPagination(input, WORKFLOW_CURSOR_ORDER);
+    const extraFilters = this.andConditions(input, plan.keyset);
     const whereClause = sql`
-      messages.institution_id = ${input.institutionId}
+      w.institution_id = ${input.institutionId}
       and (
-        messages.sender_user_id = ${input.userId}
-        or messages.recipient_user_id = ${input.userId}
+        w.sender_user_id = ${input.userId}
+        or w.recipient_user_id = ${input.userId}
       )
+      ${extraFilters}
+    `;
+    const orderBy = plan.orderBy ?? this.messageLegacyOrderBy(input);
+    const offsetClause =
+      plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
+    const itemsQuery = sql`
+      select
+        w.id,
+        w.institution_id as "institutionId",
+        w.thread_id as "threadId",
+        message_threads.subject,
+        w.sender_user_id as "senderUserId",
+        w.recipient_user_id as "recipientUserId",
+        w.body,
+        w.read_at as "readAt",
+        w.created_at as "createdAt"
+      from messages w
+      inner join message_threads
+        on message_threads.id = w.thread_id
+       and message_threads.institution_id = w.institution_id
+      where ${whereClause}
+      order by ${orderBy}
+      limit ${plan.fetchLimit}
+      ${offsetClause}
     `;
 
+    if (plan.offset === null) {
+      const items = await this.db.execute<MessageRecord>(itemsQuery);
+
+      return { items: items.rows };
+    }
+
     const [items, totalRows] = await Promise.all([
-      this.db.execute<MessageRecord>(sql`
-        select
-          messages.id,
-          messages.institution_id as "institutionId",
-          messages.thread_id as "threadId",
-          message_threads.subject,
-          messages.sender_user_id as "senderUserId",
-          messages.recipient_user_id as "recipientUserId",
-          messages.body,
-          messages.read_at as "readAt",
-          messages.created_at as "createdAt"
-        from messages
-        inner join message_threads
-          on message_threads.id = messages.thread_id
-         and message_threads.institution_id = messages.institution_id
-        where ${whereClause}
-        order by messages.created_at desc
-        limit ${input.limit}
-        offset ${input.offset}
-      `),
+      this.db.execute<MessageRecord>(itemsQuery),
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
-        from messages
+        from messages w
         where ${whereClause}
       `),
     ]);
@@ -506,12 +580,12 @@ export class WorkflowsRepository {
   }) {
     if (input.role === 'teacher') {
       return sql`
-        and assignments.classroom_id is not null
+        and w.classroom_id is not null
         and exists (
           select 1
           from teacher_classroom_assignments tca
-          where tca.classroom_id = assignments.classroom_id
-            and tca.institution_id = assignments.institution_id
+          where tca.classroom_id = w.classroom_id
+            and tca.institution_id = w.institution_id
             and tca.teacher_user_id = ${input.userId}
         )
       `;
@@ -527,9 +601,9 @@ export class WorkflowsRepository {
           inner join enrollments e
             on e.student_id = sg.student_id
            and e.institution_id = gul.institution_id
-           and e.classroom_id = assignments.classroom_id
+           and e.classroom_id = w.classroom_id
            and e.status = 'active'
-          where gul.institution_id = assignments.institution_id
+          where gul.institution_id = w.institution_id
             and gul.user_id = ${input.userId}
         )
       `;
@@ -545,12 +619,12 @@ export class WorkflowsRepository {
     if (input.role === 'teacher') {
       return sql`
         and (
-          school_events.classroom_id is null
+          w.classroom_id is null
           or exists (
             select 1
             from teacher_classroom_assignments tca
-            where tca.classroom_id = school_events.classroom_id
-              and tca.institution_id = school_events.institution_id
+            where tca.classroom_id = w.classroom_id
+              and tca.institution_id = w.institution_id
               and tca.teacher_user_id = ${input.userId}
           )
         )
@@ -560,7 +634,7 @@ export class WorkflowsRepository {
     if (input.role === 'parent') {
       return sql`
         and (
-          school_events.classroom_id is null
+          w.classroom_id is null
           or exists (
             select 1
             from guardian_user_links gul
@@ -569,9 +643,9 @@ export class WorkflowsRepository {
             inner join enrollments e
               on e.student_id = sg.student_id
              and e.institution_id = gul.institution_id
-             and e.classroom_id = school_events.classroom_id
+             and e.classroom_id = w.classroom_id
              and e.status = 'active'
-            where gul.institution_id = school_events.institution_id
+            where gul.institution_id = w.institution_id
               and gul.user_id = ${input.userId}
           )
         )
@@ -579,6 +653,53 @@ export class WorkflowsRepository {
     }
 
     return sql``;
+  }
+
+  // Uniform filter conditions plus the cursor keyset, appended to the base
+  // WHERE fragment with a leading `and` (empty in cursor-less, filter-less mode).
+  private andConditions(
+    input: { filters?: FilterSpec[]; sort?: SortSpec | null },
+    keyset: SQL | null
+  ): SQL {
+    const conditions = buildFilterConditions(
+      input.filters ?? [],
+      WORKFLOW_LIST_COLUMNS
+    );
+
+    if (keyset) {
+      conditions.push(keyset);
+    }
+
+    if (conditions.length === 0) {
+      return sql``;
+    }
+
+    return sql`and ${sql.join(conditions, sql` and `)}`;
+  }
+
+  // The standard `sort` param wins over the legacy order; cursor mode never
+  // reaches here (the stable keyset order wins).
+  private assignmentLegacyOrderBy(input: {
+    sort?: SortSpec | null;
+  }): SQL {
+    return (
+      buildSortSql(input.sort ?? null, WORKFLOW_LIST_COLUMNS) ??
+      sql`w.due_date asc nulls last, w.created_at desc`
+    );
+  }
+
+  private eventLegacyOrderBy(input: { sort?: SortSpec | null }): SQL {
+    return (
+      buildSortSql(input.sort ?? null, WORKFLOW_LIST_COLUMNS) ??
+      sql`w.starts_at asc`
+    );
+  }
+
+  private messageLegacyOrderBy(input: { sort?: SortSpec | null }): SQL {
+    return (
+      buildSortSql(input.sort ?? null, WORKFLOW_LIST_COLUMNS) ??
+      sql`w.created_at desc`
+    );
   }
 
   private toCount(value: string | number | undefined) {

@@ -3,13 +3,16 @@ import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
   createAcademicPeriodFixture,
+  createAssignmentFixture,
   createAttendanceFixture,
   createAuditLogFixture,
   createClassroomFixture,
   createEnrollmentFixture,
   createGuardianFixture,
   createInstitutionFixture,
+  createMessageFixture,
   createNotificationFixture,
+  createSchoolEventFixture,
   createStudentFixture,
   createUserFixture,
 } from '../helpers/fixtures.js';
@@ -227,6 +230,7 @@ describe('cursor pagination for the remaining list modules', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let client: ReturnType<typeof createHttpClient>;
   let institutionId: string;
+  let adminUserId: string;
   let headers: Record<string, string>;
 
   beforeAll(async () => {
@@ -244,6 +248,7 @@ describe('cursor pagination for the remaining list modules', () => {
     });
 
     institutionId = institution.id;
+    adminUserId = adminUser.id;
     headers = await createAuthHeaders({
       userId: adminUser.id,
       institutionId: institution.id,
@@ -460,6 +465,71 @@ describe('cursor pagination for the remaining list modules', () => {
         return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
       },
       filter: { query: 'filter=eventName:eq:grade.submitted', expectedCount: 2 },
+    },
+    {
+      label: 'workflows assignments',
+      path: '/assignments',
+      seed: async () => {
+        const created = [];
+
+        // Distinct seconds: the shared cursor only carries millisecond
+        // precision and the stable order is created_at desc, id desc.
+        for (const second of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createAssignmentFixture({
+              institutionId,
+              title: `Assignment ${second}`,
+              createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
+            })
+          );
+        }
+
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+      filter: { query: 'filter=createdAt:gte:2026-01-01T00:00:04', expectedCount: 2 },
+    },
+    {
+      label: 'workflows school-events',
+      path: '/school-events',
+      seed: async () => {
+        const created = [];
+
+        for (const second of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createSchoolEventFixture({
+              institutionId,
+              title: `Event ${second}`,
+              createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
+            })
+          );
+        }
+
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+      filter: { query: 'filter=createdAt:gte:2026-01-01T00:00:04', expectedCount: 2 },
+    },
+    {
+      label: 'workflows messages',
+      path: '/messages',
+      seed: async () => {
+        const created = [];
+
+        // The admin is the sender, so the message list (sender or recipient =
+        // current user) returns all five.
+        for (const second of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createMessageFixture({
+              institutionId,
+              senderUserId: adminUserId,
+              subject: `Thread ${second}`,
+              createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
+            })
+          );
+        }
+
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+      filter: { query: 'filter=createdAt:gte:2026-01-01T00:00:04', expectedCount: 2 },
     },
   ];
 
