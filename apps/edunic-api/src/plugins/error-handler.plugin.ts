@@ -15,13 +15,19 @@ const CODE_BY_STATUS: Record<number, ErrorCode> = {
 const errorHandlerPluginHandler: FastifyPluginAsync = async (app) => {
   app.addHook('onRequest', async (request) => {
     request.correlationId = randomUUID();
+    // P4-R5/D6: every request-scoped log line carries the correlation id that
+    // also lands in the error envelope.
+    request.log = request.log.child({ correlationId: request.correlationId });
   });
 
   app.setErrorHandler((error, request, reply) => {
     const statusCode = resolveStatusCode(error);
     const isExpected = typeof error.statusCode === 'number';
 
-    request.log.error(error);
+    request.log.error({
+      err: error,
+      correlationId: request.correlationId ?? String(request.id),
+    });
 
     reply.status(statusCode).send(
       createErrorEnvelope(
