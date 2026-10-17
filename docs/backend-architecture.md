@@ -5,9 +5,9 @@ How a request travels through the `edunic-api`, and why each layer exists.
 This document describes the **current** backend as it is checked into the repository: a modular
 monolith built on Fastify, Drizzle ORM and PostgreSQL, with an in-process domain event bus that can
 be switched to Redis Streams. Everything below is verified against the code — file paths and symbols
-are real. Where the broader architecture plan calls for a component that **is not built yet**, it is
-marked **Planned (P2)** or **Planned (P4/P5)** and kept out of the "current" sections, so the reader
-never mistakes intent for reality.
+are real. Where the broader architecture plan called for a component that **was not built yet**, it
+carried a **Planned (P<phase>)** label and stayed out of the "current" sections, so the reader never
+mistook intent for reality; no such label remains, every row in the summary below is shipped.
 
 - API app: `apps/edunic-api`
 - Domain logic: `libs/domain` (19 modules)
@@ -18,7 +18,7 @@ never mistakes intent for reality.
 
 | Layer | Lives in | Owns |
 |-------|----------|------|
-| HTTP / plugins | `apps/edunic-api/src/plugins` | Cross-cutting concerns: CORS, DB pool, event bus, auth, audit, response envelope, error handling, notifications |
+| HTTP / plugins | `apps/edunic-api/src/plugins` | Cross-cutting concerns: CORS, DB pool, event bus, auth, audit, response envelope, idempotency, error handling, outbox publishing, notifications |
 | Routes | `apps/edunic-api/src/routes` | HTTP shape: paths, methods, status codes, input parsing |
 | Application services | `libs/domain/src/<module>/application` | Use-case orchestration, business rules, error mapping |
 | Repositories | `libs/domain/src/<module>/infrastructure` | All database access (Drizzle) |
@@ -54,7 +54,7 @@ flowchart LR
 | Auth | `plugins/auth.plugin.ts` (`preHandler`) | Verifies the JWT and resolves the caller's role before the handler runs. |
 | Validation | `libs/domain/src/shared/parse-with-schema.ts` | Rejects malformed input at the boundary. Called **inside each route handler**, not as a Fastify `preValidation` hook. |
 | Service | `libs/domain/src/<module>/application/*.service.ts` | Orchestrates the use case, enforces rules, maps DB errors to HTTP status codes. |
-| Repository | `libs/domain/src/<module>/infrastructure/*.repository.ts` | The only place that talks to the database. Every query filters by `institutionId`. |
+| Repository | `libs/domain/src/<module>/infrastructure/*.repository.ts` | The only place that talks to the database. Every tenant-scoped query filters by `institutionId` (global catalogs: see section 4). |
 | Events | `libs/events`, service constructor | Publishes domain events after a state change so other parts of the system can react. |
 
 **Worked example (`POST /enrollments`):** `apps/edunic-api/src/routes/enrollments.routes.ts` builds
@@ -98,14 +98,18 @@ Plugins are registered in `apps/edunic-api/src/plugins/index.ts`, and the order 
 
 Two mechanisms enforce this: the explicit `app.register(...)` order above, and `fastify-plugin`
 `dependencies` (`auth-plugin` → `db-plugin`; `audit-logs-plugin` → `db-plugin`;
-`idempotency-plugin` → `db-plugin`, `event-bus-plugin`; `outbox-publisher-plugin` → `db-plugin`,
-`event-bus-plugin`; `notifications-plugin` → `db-plugin`, `event-bus-plugin`). A dependent plugin
-cannot load before the plugin it depends on. The convention is that a plugin which *provides* a
-decorator is registered before any plugin that consumes it. `envelope-plugin` and
-`error-handler-plugin` declare no `dependencies` — only a `name` — so their position is fixed by
-registration order alone.
+`outbox-publisher-plugin` → `db-plugin`, `event-bus-plugin`; `notifications-plugin` → `db-plugin`,
+`event-bus-plugin`). A dependent plugin cannot load before the plugin it depends on. The convention is
+that a plugin which *provides* a decorator is registered before any plugin that consumes it.
+`envelope-plugin`, `idempotency-plugin` and `error-handler-plugin` declare no `dependencies` — only a
+`name` — so their position is fixed by registration order alone; that is why the ordering comments sit
+next to the `envelope` → `idempotency` pair in `plugins/index.ts`.
 
-`notifications` stays last in both the current and planned orders.
+`/health` and `/ready` are both registered from `health.routes.ts`: `/health` via `healthRoutes` under
+the `/health` prefix, `/ready` via `readyRoutes` at the root. Both paths are listed in
+`envelope.plugin.ts`'s `isExcludedPath`, so their bodies are never wrapped in the response envelope.
+
+`notifications` stays last.
 
 ## 3. Auth, RBAC and multi-tenancy
 
@@ -137,8 +141,10 @@ registration order alone.
   `getInstitutionId(request)` (`libs/domain/src/shared/institution.ts`), which validates it as a UUID.
 - To close the cross-tenant hole, `authenticate` (in `plugins/auth.plugin.ts`) rejects the request with
   `403` when the `x-institution-id` header does not match the institution embedded in the token.
-- Repositories receive `institutionId` and include it in the `where` clause of every query, so tenant
-  isolation is enforced at the data-access layer as well as at the edge.
+- Repositories receive `institutionId` and include it in the `where` clause of every tenant-scoped
+  query (the two global catalogs, `institutions` and the `extensions` catalog, are the documented
+  exceptions — see section 4), so tenant isolation is enforced at the data-access layer as well as at
+  the edge.
 
 ## 4. Database patterns
 
@@ -153,16 +159,20 @@ registration order alone.
   - `check` — e.g. grade `score` between 0 and 100, attendance `status` in `('present','absent','late')`,
     academic period `term` between 1 and 4, `startDate <= endDate`.
   - foreign keys on `institution_id` and relationships (`student_id`, `enrollment_id`, …).
-- **Migrations:** SQL files under `libs/db/src/migrations` (`0000`–`0005`), with Drizzle's
-  `meta/_journal.json`. `drizzle-kit` config lives in `libs/db/src/drizzle.config.ts` (schema
-  `./libs/db/src/schema`, out `./libs/db/src/migrations`). `runMigrations()`
-  (`libs/db/src/run-migrations.ts`) applies them with `migrate()` against `DATABASE_URL`. There is
-  currently **no down migration** and no rollback runbook — **Planned (P4)**.
+- **Migrations:** SQL files under `libs/db/src/migrations` (`0000`–`0006`), each with a sibling
+  `.down.sql`, plus Drizzle's `meta/_journal.json`. `drizzle-kit` config lives in
+  `libs/db/src/drizzle.config.ts` (schema `./libs/db/src/schema`, out `./libs/db/src/migrations`).
+  `runMigrations()` (`libs/db/src/run-migrations.ts`) applies them with `migrate()` against
+  `DATABASE_URL`; `npm run db:migrate:down` (`tools/migrate-down.ts`) rolls back one step per run.
+  Every migration is structurally reversible, but the downs of `0000`, `0002`, `0004`, `0005` (and
+  `0006` while unpublished events remain) are data-destructive — follow `docs/migrations-runbook.md`.
+- **Transactions and the transactional outbox:** `outbox_events` (migration `0006`) is inserted
+  **inside the same `db.transaction()`** as the domain row for the enrollment, grade and attendance
+  creates, so neither can commit without the other. The `outbox-publisher` plugin polls unpublished
+  rows every 500 ms and publishes them through `app.eventBus`, marking each row published only after
+  `publish` resolved; a failure leaves the row unpublished for the next poll to retry.
 - **Errors:** services map known Postgres codes to HTTP status codes, e.g. unique-violation `23505`
   becomes `409` in `EnrollmentsService.handlePersistenceError`.
-
-**Not yet present:** database transactions. Multi-write operations (for example "create enrollment +
-publish event") are not atomic today — transactional outbox is **Planned (P2)**.
 
 **Caveat:** importing `libs/db/src/index.ts` (`@edunic/source/db`) executes a module-level
 `createDb()` that exports a singleton `{ pool, db }`. Because `plugins/db.plugin.ts` imports from the
@@ -172,8 +182,12 @@ be aware of the eager singleton.
 ### List conventions (cursor pagination, filter and sort)
 
 List endpoints follow two shared conventions implemented in
-`libs/domain/src/shared/http/{pagination,filter-sort}.ts` and wired on the enrollments, grades,
-attendance and students routes:
+`libs/domain/src/shared/http/{pagination,filter-sort}.ts`. They are wired on **13 of the 21** route
+modules: the four migrated first (`students`, `enrollments`, `grades`, `attendance`) and the nine that
+followed (`academic-periods`, `audit-logs`, `classrooms`, `custom-fields`, `extensions`, `guardians`,
+`institutions`, `notifications`, `workflows` — 15 endpoints, since `workflows` shares one wire across
+its three list routes). The other nine modules deliberately do not paginate; the disposition table
+below says which and why.
 
 - **Dual-parameter pagination.** `?cursor=<value>&limit=<n>` selects keyset (cursor) pagination;
   omitting `cursor` keeps the legacy `offset`/`limit` mode, which the route flags with an
@@ -184,16 +198,65 @@ attendance and students routes:
   `VALIDATION_ERROR`.
 - **Keyset mechanics.** Repositories call `applyCursorPagination()` to get a constant per-resource
   stable `ORDER BY`, a bound-parameter keyset predicate, and a `limit + 1` sentinel row that detects
-  `hasMore` without running `count(*)`. Cursor mode omits `meta.total`; legacy mode keeps the
-  existing `{ data, meta: { total, limit, offset } }` contract.
+  `hasMore` without running `count(*)`. Cursor mode omits `meta.total` entirely; legacy mode keeps
+  `meta: { total, limit, offset }`.
 - **Response shape.** Services return `CursorPage<T>` — `{ data, hasMore, nextCursor?, meta? }` —
-  assembled by `buildCursorPage()`. Because it carries a top-level `data` key, the envelope plugin
-  passes it through unchanged.
+  assembled by `buildCursorPage()`. Cursor mode returns `{ data, hasMore, nextCursor? }`, offset mode
+  returns the same fields **plus** the nested `meta: { total?, limit, offset }`; `nextCursor` is
+  present if and only if `hasMore` is true. The page is always at the top level (never wrapped in a
+  `page` key) and `meta` is never hoisted next to `data`. Because the page carries a top-level `data`
+  key, the envelope plugin passes it through unchanged.
 - **Uniform filter and sort.** List queries accept repeatable `filter=field:operator:value`
   (`eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `in`) and `sort=field:direction`, parsed by
   `parseFilterSort()`. Field names are validated against a per-resource whitelist and mapped to
   constant column literals; values always travel as bound parameters, so identifiers from user input
   never reach SQL construction. In cursor mode the stable keyset order takes precedence over `sort`.
+
+#### Disposition of the 18 remaining route modules
+
+After the first four migrations, every module registered in `routes/index.ts` carries exactly one
+recorded disposition — none may be silently skipped. A module with a list endpoint ships the full
+five-part wire; a module without one is recorded `N/A` with a reason class. Nine paginate, nine do not.
+
+| # | Module | Disposition | Reason class / endpoint |
+|---|--------|-------------|-------------------------|
+| 1 | `academic-averages` | N/A | Singleton year-scoped aggregate; no `limit`/`offset` |
+| 2 | `admin` | N/A | POST-only (`POST /bootstrap`) |
+| 3 | `audit-logs` | paginate | `GET /audit-logs` |
+| 4 | `academic-periods` | paginate | `GET /academic-periods` |
+| 5 | `auth` | N/A | POST-only (`POST /login`) |
+| 6 | `classrooms` | paginate | `GET /classrooms` |
+| 7 | `custom-fields` | paginate | `GET /custom-fields`; its nested values GET is bounded by the parent entity → N/A within this row |
+| 8 | `dashboards` | N/A | Three aggregate GETs; no query schema |
+| 9 | `docs` | N/A | Static OpenAPI-document GETs (`/docs`, `/docs/json`) |
+| 10 | `extensions` | paginate | `GET /extensions`; nested by-institution GET bounded → N/A within this row |
+| 11 | `feature-flags` | N/A | Result bounded by the flag-key set; no `limit`/`offset` |
+| 12 | `guardians` | paginate | `GET /guardians`; nested by-student GET bounded → N/A within this row |
+| 13 | `health` | N/A | Dependency-free liveness probe; no query schema |
+| 14 | `ready` | N/A | Readiness probe, envelope-excluded; no query schema |
+| 15 | `institutions` | paginate | `GET /institutions` |
+| 16 | `notifications` | paginate | `GET /notifications` |
+| 17 | `reports` | N/A | Per-student report documents; no `limit`/`offset` |
+| 18 | `workflows` | paginate | `GET /assignments`, `GET /messages`, `GET /school-events` (one shared schema, repository and service) |
+
+Reason classes behind the nine `N/A` rows: **POST-only**, **no list surface** (singleton, aggregate or
+document response), **static/framework** (serves the OpenAPI document or is a probe), **bounded
+non-list GET** (`feature-flags`), and **nested GET inside a paginating module** (recorded in that
+module's row, whose disposition stays `paginate`).
+
+Every paginated module declares one constant keyset order (`<M>_CURSOR_ORDER`) beside its repository,
+always ending on the unique `id` so the order is total. A module whose leading order column is a
+high-precision `timestamp` inherits the `toCursorSortKey(Date)` millisecond-truncation caveat
+(`notifications`, `workflows`); `institutions` deliberately leads on `name` instead of its legacy
+`created_at desc` so that caveat stays unreachable there. `workflows` aliases its three base tables to
+`w` so a single constant order serves all three endpoints — which is why its uniform whitelist is only
+`createdAt`.
+
+Two of the paginated lists are global catalogs rather than tenant-scoped collections, so their `WHERE`
+clause is assembled from optional filters and is empty when none are supplied: `institutions` and the
+`extensions` catalog (`GET /extensions`). Everything else keeps the tenant filter described in
+section 1; the tenant-scoped nested GETs (`/guardians` by student, `/custom-fields/values/...`,
+`/institutions/:institutionId/extensions`) still filter by their parent entity.
 
 ## 5. Events and Redis
 
@@ -222,39 +285,49 @@ attendance and students routes:
 
 `plugins/notifications.plugin.ts` subscribes to all three and forwards each to
 `NotificationsService.handleDomainEvent`, which writes a `notifications` row when the institution has
-the notifications extension enabled.
+the notifications extension enabled. A fourth event, `enrollment.welcomed`
+(`createEnrollmentWelcomedEvent`), exists only as the worker's side effect and is deliberately **not**
+part of `AcademicDomainEvent` — that union is the notifications subscriber's contract.
 
 ### Redis
 
-- Redis is used **only** by the event bus today. In Redis mode, `RedisStreamsEventBus.publish` calls
-  Redis `XADD` on the stream `edunic:domain-events` (override with `EVENT_STREAM_NAME`) using
-  `ioredis`, then also dispatches to its in-memory subscribers.
-- Honest limitation: `RedisStreamsEventBus.subscribe` still delegates to the in-memory bus. The Redis
-  backend **writes** to the stream but nothing **reads** from it yet — the consumer/worker is
-  **Planned (P5)** (`apps/edunic-worker`).
-- Redis is not used for caching or rate limiting; it backs the `Idempotency-Key` store (shipped).
+- Redis carries three things: the event-bus transport, the `Idempotency-Key` store, and the worker's
+  per-event dedupe markers. It is not used for caching or rate limiting.
+- In Redis mode, `RedisStreamsEventBus.publish` calls Redis `XADD` on the stream
+  `edunic:domain-events` (override with `EVENT_STREAM_NAME`) using `ioredis`, then also dispatches to
+  its in-memory subscribers. `subscribe` still delegates to the in-memory bus: the Redis transport is
+  read by the worker process, not by process-local subscribers.
+- **Worker.** `apps/edunic-worker` (Nx project `worker`) requires `EVENT_BUS_BACKEND=redis` and runs
+  `RedisStreamConsumer` (`libs/events/src/consumer.ts`) against the consumer group `edunic-worker`,
+  which it creates at the stream tip (`$`) and then polls with `XREADGROUP`. Each delivery runs the
+  handler first, then writes `processed:{event.id}` and `XACK`s the entry — so a failed or crashed
+  delivery stays pending and is retried (at-least-once), while a repeated delivery is acked without
+  re-running the side effect. For `enrollment.created` the side effect is publishing
+  `enrollment.welcomed`, which closes the `POST /enrollments` → outbox → stream → worker loop.
 
-## Current vs planned (summary)
+## Current status (summary)
 
 | Component | Status | Where / when |
 |-----------|--------|--------------|
 | Request → route → validation → service → repository → DB | Current | This document, section 1 |
 | Plugins: cors, db, event-bus, auth, audit-logs, envelope, idempotency, error-handler, outbox-publisher, notifications | Current | `plugins/index.ts` |
 | JWT auth + RBAC + `institution_id` scoping | Current | `plugins/auth.plugin.ts`, shared/institution |
-| Drizzle schema + migrations | Current | `libs/db/src` |
+| Drizzle schema + migrations (with `.down.sql` + runbook) | Current | `libs/db/src`, `docs/migrations-runbook.md` |
 | In-memory event bus, 3 domain events, notifications subscriber | Current | `libs/events`, `libs/domain/src/events.ts` |
 | Response envelope + error codes | Current | `libs/domain/src/shared/http/response-envelope.ts`, `plugins/envelope.plugin.ts`, `plugins/error-handler.plugin.ts` |
-| Cursor pagination / filter-sort | Current | `libs/domain/src/shared/http/{pagination,filter-sort}.ts` (section 4, "List conventions") |
+| Cursor pagination / filter-sort (13 modules, 15 endpoints) | Current | `libs/domain/src/shared/http/{pagination,filter-sort}.ts` (section 4, "List conventions") |
 | Idempotency keys (Redis) | Current | `libs/domain/src/shared/http/idempotency.ts`, `idempotency.plugin.ts` |
 | Transactional outbox + publisher | Current | `libs/db` `outbox_events` (migration 0006), `libs/domain/src/shared/outbox.ts`, `outbox-publisher.plugin.ts` |
-| Tests (unit / integration / API / DB / E2E) | Planned (P3) | `apps/edunic-api/test` |
-| Docker / Railway / `/health`, `/ready` | Planned (P4) | repo root, `health.routes.ts` |
-| Worker + Redis Streams consumer | Planned (P5) | `apps/edunic-worker` |
+| Tests (unit / integration / API / DB / E2E) | Current | `apps/edunic-api/test` (56 suites), `apps/edunic-worker/test` |
+| Docker / Railway / `/health`, `/ready` | Current | `docker/{api.dockerfile,worker.Dockerfile}`, `railway*.json`, `health.routes.ts` |
+| Worker + Redis Streams consumer | Current | `apps/edunic-worker`, `libs/events/src/consumer.ts` |
 
 ## Reference
 
 - Plugins: `apps/edunic-api/src/plugins/`
-- Routes: `apps/edunic-api/src/routes/` (21 route modules registered in `index.ts`)
+- Routes: `apps/edunic-api/src/routes/` (21 route modules, 22 registrations in `index.ts` —
+  `health.routes.ts` exports both `healthRoutes` and `readyRoutes`)
+- Worker: `apps/edunic-worker`, `libs/events/src/consumer.ts`
 - App bootstrap: `apps/edunic-api/src/app.ts`, `apps/edunic-api/src/main.ts`
 - Domain modules: `libs/domain/src/`
 - DB: `libs/db/src/`
