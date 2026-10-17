@@ -1,9 +1,34 @@
 import dotenv from 'dotenv';
+import { z } from 'zod';
 
 dotenv.config();
 
-if (!process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is not defined');
+// Documented API environment variables (P4-R2). This list mirrors every
+// process.env call site in apps/edunic-api and libs at the time of writing:
+// PORT/JWT_SECRET/CORS_* via config/env.ts, LOG_LEVEL/NODE_ENV in app.ts,
+// DATABASE_URL in libs/db, REDIS_URL/IDEMPOTENCY_REDIS_URL in the idempotency
+// plugin, and EVENT_BUS_BACKEND/EVENT_STREAM_NAME in libs/events. Modules that
+// read process.env directly still validate at their own boundary; routing
+// them all through this schema is follow-up work.
+export const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).optional(),
+  PORT: z.coerce.number().int().positive().default(3000),
+  JWT_SECRET: z.string().min(1, 'JWT_SECRET must not be empty'),
+  LOG_LEVEL: z.string().optional(),
+  DATABASE_URL: z.string().min(1).optional(),
+  REDIS_URL: z.string().min(1).optional(),
+  IDEMPOTENCY_REDIS_URL: z.string().min(1).optional(),
+  // 'redis' selects the Redis Streams backend; anything else = in-memory.
+  EVENT_BUS_BACKEND: z.string().optional(),
+  EVENT_STREAM_NAME: z.string().min(1).optional(),
+  CORS_ORIGINS: z.string().optional(),
+  CORS_ALLOW_CREDENTIALS: z.enum(['true', 'false']).optional(),
+});
+
+export type Env = z.infer<typeof envSchema>;
+
+export function parseEnv(source: NodeJS.ProcessEnv): Env {
+  return envSchema.parse(source);
 }
 
 function parseCsv(value: string | undefined) {
@@ -17,11 +42,20 @@ function parseCsv(value: string | undefined) {
     .filter(Boolean);
 }
 
+const parsed = parseEnv(process.env);
+
 export const env = {
-  PORT: process.env.PORT || 3000,
-  JWT_SECRET: process.env.JWT_SECRET,
+  NODE_ENV: parsed.NODE_ENV,
+  PORT: parsed.PORT,
+  JWT_SECRET: parsed.JWT_SECRET,
+  LOG_LEVEL: parsed.LOG_LEVEL,
+  DATABASE_URL: parsed.DATABASE_URL,
+  REDIS_URL: parsed.REDIS_URL,
+  IDEMPOTENCY_REDIS_URL: parsed.IDEMPOTENCY_REDIS_URL,
+  EVENT_BUS_BACKEND: parsed.EVENT_BUS_BACKEND,
+  EVENT_STREAM_NAME: parsed.EVENT_STREAM_NAME,
   CORS_ORIGINS:
-    parseCsv(process.env.CORS_ORIGINS) ?? [
+    parseCsv(parsed.CORS_ORIGINS) ?? [
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:3002',
@@ -39,5 +73,5 @@ export const env = {
       'http://app.central-school.test:3001',
       'http://app.north-school.test:3001',
     ],
-  CORS_ALLOW_CREDENTIALS: process.env.CORS_ALLOW_CREDENTIALS === 'true',
-}
+  CORS_ALLOW_CREDENTIALS: parsed.CORS_ALLOW_CREDENTIALS === 'true',
+};

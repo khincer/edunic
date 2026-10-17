@@ -1,0 +1,10 @@
+﻿{
+  "extends": "./tsconfig.spec.json",
+  "compilerOptions": {
+    "customConditions": null,
+    "composite": false,
+    "noEmit": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  }
+}
