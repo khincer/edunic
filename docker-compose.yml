@@ -54,7 +54,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: docker/worker.Dockerfile
+      dockerfile: docker/worker.dockerfile
     container_name: edu_worker
     depends_on:
       postgres:

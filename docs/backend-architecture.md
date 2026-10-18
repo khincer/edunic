@@ -319,7 +319,7 @@ part of `AcademicDomainEvent` — that union is the notifications subscriber's c
 | Idempotency keys (Redis) | Current | `libs/domain/src/shared/http/idempotency.ts`, `idempotency.plugin.ts` |
 | Transactional outbox + publisher | Current | `libs/db` `outbox_events` (migration 0006), `libs/domain/src/shared/outbox.ts`, `outbox-publisher.plugin.ts` |
 | Tests (unit / integration / API / DB / E2E) | Current | `apps/edunic-api/test` (56 suites), `apps/edunic-worker/test` |
-| Docker / Railway / `/health`, `/ready` | Current | `docker/{api.dockerfile,worker.Dockerfile}`, `railway*.json`, `health.routes.ts` |
+| Docker / Railway / `/health`, `/ready` | Current | `docker/{api.dockerfile,worker.dockerfile}`, `railway*.json`, `health.routes.ts` |
 | Worker + Redis Streams consumer | Current | `apps/edunic-worker`, `libs/events/src/consumer.ts` |
 
 ## Reference
