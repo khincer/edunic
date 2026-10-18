@@ -95,6 +95,8 @@ export class InstitutionsService {
     const updatedInstitution = await this.institutionsRepository.update({
       institutionId: input.institutionId,
       name: input.name?.trim(),
+      senderName: input.senderName,
+      replyToEmail: input.replyToEmail,
     });
 
     if (!updatedInstitution) {
@@ -141,6 +143,8 @@ export class InstitutionsService {
     return {
       id: institution.id,
       name: institution.name,
+      senderName: institution.senderName,
+      replyToEmail: institution.replyToEmail,
       createdAt: institution.createdAt,
     };
   }
