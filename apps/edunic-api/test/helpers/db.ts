@@ -20,6 +20,7 @@ export async function resetTestDatabase() {
   await db.execute(sql.raw(`
     TRUNCATE TABLE
       outbox_events,
+      email_deliveries,
       attendance,
       grades,
       enrollments,
@@ -47,6 +48,15 @@ export async function resetTestDatabase() {
       users,
       institutions
     RESTART IDENTITY CASCADE;
+  `));
+
+  // A TRUNCATE also removes the rows migrations seed (0007's
+  // `email_notifications` default), so restore them here: a reset database must
+  // look like a freshly migrated one.
+  await db.execute(sql.raw(`
+    INSERT INTO feature_flags (key, default_value)
+    VALUES ('email_notifications', false)
+    ON CONFLICT (key) DO NOTHING;
   `));
 }
 
