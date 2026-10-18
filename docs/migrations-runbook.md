@@ -12,7 +12,7 @@ pre-existing ones (owner decision, P4-R6).
 - `npm run db:migrate:down` runs `libs/db/src/run-migrations-down.ts`: it rolls
   back **one step** — the last applied journal entry — by executing its sibling
   `NNNN_*.down.sql` and deleting its row from `drizzle.__drizzle_migrations`.
-  Run it repeatedly to walk further back (0006 → 0005 → … → 0000).
+  Run it repeatedly to walk further back (0008 → 0007 → … → 0000).
 - Both commands require `DATABASE_URL`.
 
 Rules:
@@ -34,8 +34,11 @@ Rules:
    fully rolled-back chain is a clean no-op rebuild.
 
 Automated proof: `apps/edunic-api/test/integration/migration-rollback.spec.ts`
-runs **up → down → up** for the whole chain (0000–0006) against a real
-Postgres scratch database, plus single-step rollback and the empty-state error.
+runs **up → down → up** for the whole chain (0000–0008) against a real
+Postgres scratch database, plus per-step rollback and the empty-state error;
+`apps/edunic-api/test/integration/migration-email-deliveries.spec.ts` adds the
+constraint (blank-string and status CHECKs, unique ledger key) and
+down-then-up reversal proof for 0007 and 0008.
 
 ## Migration reference
 
@@ -48,13 +51,27 @@ Postgres scratch database, plus single-step rollback and the empty-state error.
 | 0004 | `0004_academic_period_created_at.sql` | `created_at` on academic periods | `academic_periods.created_at` (nullable, default now()) | `DROP COLUMN IF EXISTS created_at` | **Destructive** for that column's stored values; rows themselves survive. |
 | 0005 | `0005_non_billing_dashboards.sql` | Dashboards/messaging feature | 7 tables: guardian_user_links, teacher_classroom_assignments, assignments, school_events, message_threads, messages, report_history + 6 indexes | `DROP TABLE IF EXISTS` all 7 (indexes drop with their tables; `messages` before `message_threads`) | **Destructive**: all row data in these tables is destroyed. |
 | 0006 | `0006_outbox_events.sql` | Transactional outbox (P2-R6) | `outbox_events` table + `outbox_events_unpublished_idx` | Drops the index and table | **Destructive** for unpublished/pending outbox events; committed domain rows are untouched. |
+| 0007 | `0007_email_notifications.sql` | Email delivery for families — sender identity, guardian contact, feature flag (D4, D7) | `guardians.email` (+ not-blank CHECK), `institutions.sender_name` / `institutions.reply_to_email` (+ not-blank CHECKs), `feature_flags` row `('email_notifications', false)` | Deletes the flag row and its `institution_feature_flags` overrides, drops the three CHECKs and the three columns | **Destructive** for the email columns' stored values, the flag row and any per-institution `email_notifications` overrides; all other rows survive. Columns are nullable, so a re-up needs no backfill. |
+| 0008 | `0008_email_deliveries.sql` | Delivery ledger with the once-only unique key (D2, D4) | `email_deliveries` table + unique `(institution_id, event_id, recipient_address)`, status/recipient-source CHECKs, `email_deliveries_institution_created_idx` (keyset), `email_deliveries_inflight_idx` (partial, in-flight) | Drops the two indexes, then the table (the unique index goes with it) | **Destructive** for the whole delivery history; the origin domain rows are untouched. |
+
+### How 0007 and 0008 were authored
+
+`meta/` holds snapshots only up to `0003_snapshot.json`: 0004–0006 were
+hand-authored (their journal entries were added without snapshots). A plain
+`npm run db:generate` therefore diffs the current schema against the 0003
+snapshot and emits a polluted migration that re-creates 0004–0006's objects.
+Both entries here were created with `npx drizzle-kit generate --custom
+--name=<tag>` (clean journal entry, no schema diff) and the SQL was written by
+hand; the stale snapshot copies drizzle-kit emitted alongside them were
+discarded, matching the 0004–0006 precedent.
 
 ## Honest reversibility notes
 
-- Every migration 0000–0006 is **structurally reversible**: the chain proves
+- Every migration 0000–0008 is **structurally reversible**: the chain proves
   up → down → up restores an identical schema on a fresh database.
-- Structurally reversible ≠ data-safe. Downs of 0000, 0002, 0004, 0005 (and
-  0006's pending events) **destroy data by design** — `DROP TABLE`/`DROP
-  COLUMN` cannot preserve it. Before running any down against a database with
-  real data, take a backup (`pg_dump`).
+- Structurally reversible ≠ data-safe. Downs of 0000, 0002, 0004, 0005, 0007
+  (the email columns and the flag row) and 0006/0008 (pending outbox events,
+  delivery history) **destroy data by design** — `DROP TABLE`/`DROP
+  COLUMN`/`DELETE` cannot preserve it. Before running any down against a
+  database with real data, take a backup (`pg_dump`).
 - 0001's down is the only fully non-destructive rollback; 0003 is a no-op.
