@@ -1,5 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import {
+  parseWithSchema,
+  getInstitutionId,
+  parseFilterSort,
+} from '@edunic/source/domain/shared';
 import {
   WorkflowsService,
   WorkflowsServiceError,
@@ -14,6 +18,13 @@ import {
   messageParamsSchema,
   createMessageBodySchema,
 } from '@edunic/source/domain/workflows';
+
+// created_at is the only filterable/sortable column shared by assignments,
+// school-events and messages (they share listWorkflowQuerySchema).
+const WORKFLOW_FILTER_SORT_OPTIONS = {
+  filterFields: ['createdAt'],
+  sortFields: ['createdAt'],
+};
 
 function getAuthenticatedUser(request: FastifyRequest) {
   if (!request.user) {
@@ -34,16 +45,26 @@ export async function workflowRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher'])],
   };
 
-  app.get('/assignments', readAccess, async (request) => {
+  app.get('/assignments', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listWorkflowQuerySchema, request.query);
     const user = getAuthenticatedUser(request);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      WORKFLOW_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return workflowsService.listAssignments({
       institutionId,
       role: user.role as WorkflowRole,
       userId: user.id,
       ...query,
+      filters,
+      sort,
     });
   });
 
@@ -76,16 +97,26 @@ export async function workflowRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get('/school-events', readAccess, async (request) => {
+  app.get('/school-events', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listWorkflowQuerySchema, request.query);
     const user = getAuthenticatedUser(request);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      WORKFLOW_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return workflowsService.listEvents({
       institutionId,
       role: user.role as WorkflowRole,
       userId: user.id,
       ...query,
+      filters,
+      sort,
     });
   });
 
@@ -103,15 +134,25 @@ export async function workflowRoutes(app: FastifyInstance) {
     return reply.status(201).send(result);
   });
 
-  app.get('/messages', readAccess, async (request) => {
+  app.get('/messages', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listWorkflowQuerySchema, request.query);
     const user = getAuthenticatedUser(request);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      WORKFLOW_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return workflowsService.listMessages({
       institutionId,
       userId: user.id,
       ...query,
+      filters,
+      sort,
     });
   });
 

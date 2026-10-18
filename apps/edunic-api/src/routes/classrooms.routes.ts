@@ -1,5 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import {
+  parseWithSchema,
+  getInstitutionId,
+  parseFilterSort,
+} from '@edunic/source/domain/shared';
 import {
   ClassroomsService,
   ClassroomsServiceError,
@@ -9,6 +13,11 @@ import {
   listClassroomsQuerySchema,
   updateClassroomBodySchema,
 } from '@edunic/source/domain/classrooms';
+
+const CLASSROOM_FILTER_SORT_OPTIONS = {
+  filterFields: ['gradeLevel', 'section'],
+  sortFields: ['gradeLevel', 'section'],
+};
 
 export async function classroomRoutes(app: FastifyInstance) {
   const classroomsService = new ClassroomsService(
@@ -21,14 +30,24 @@ export async function classroomRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
   };
 
-  app.get('/', readAccess, async (request) => {
+  app.get('/', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listClassroomsQuerySchema, request.query);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      CLASSROOM_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return classroomsService.listClassrooms({
       institutionId,
       teacherUserId: request.user?.role === 'teacher' ? request.user.id : undefined,
       ...query,
+      filters,
+      sort,
     });
   });
 

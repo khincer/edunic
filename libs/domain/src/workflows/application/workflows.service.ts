@@ -1,3 +1,8 @@
+import {
+  buildCursorPage,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   CreateAssignmentBody,
   CreateEventBody,
@@ -30,18 +35,28 @@ export class WorkflowsService {
     institutionId: string;
     role: WorkflowRole;
     userId: string;
+    filters?: FilterSpec[];
+    sort?: SortSpec | null;
   }) {
     const result = await this.workflowsRepository.listAssignments(input);
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        // created_at is always set by defaultNow(); the column is typed nullable.
+        sortKey: (assignment) => assignment.createdAt as Date,
+        id: (assignment) => assignment.id,
+      },
+      result.total
+    );
 
     return {
-      data: result.items.map((assignment) =>
+      data: page.data.map((assignment) =>
         this.toAssignmentResponse(assignment)
       ),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
-      },
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 
@@ -168,16 +183,25 @@ export class WorkflowsService {
     institutionId: string;
     role: WorkflowRole;
     userId: string;
+    filters?: FilterSpec[];
+    sort?: SortSpec | null;
   }) {
     const result = await this.workflowsRepository.listEvents(input);
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        sortKey: (event) => event.createdAt as Date,
+        id: (event) => event.id,
+      },
+      result.total
+    );
 
     return {
-      data: result.items.map((event) => this.toEventResponse(event)),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
-      },
+      data: page.data.map((event) => this.toEventResponse(event)),
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 
@@ -241,16 +265,25 @@ export class WorkflowsService {
   async listMessages(input: ListWorkflowQuery & {
     institutionId: string;
     userId: string;
+    filters?: FilterSpec[];
+    sort?: SortSpec | null;
   }) {
     const result = await this.workflowsRepository.listMessages(input);
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        sortKey: (message) => message.createdAt as Date,
+        id: (message) => message.id,
+      },
+      result.total
+    );
 
     return {
-      data: result.items.map((message) => this.toMessageResponse(message)),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
-      },
+      data: page.data.map((message) => this.toMessageResponse(message)),
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 

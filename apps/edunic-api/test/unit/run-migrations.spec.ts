@@ -1,4 +1,4 @@
-import { runMigrations } from '@edunic/source/db';
+import { runMigrations, runMigrationsDown } from '@edunic/source/db';
 
 describe('runMigrations', () => {
   it('rejects with a clear error when DATABASE_URL is absent', async () => {
@@ -23,4 +23,20 @@ describe('runMigrations', () => {
       await expect(runMigrations()).resolves.toBeUndefined();
     }
   );
+});
+
+describe('runMigrationsDown', () => {
+  it('rejects with a clear error when DATABASE_URL is absent', async () => {
+    const previous = process.env.DATABASE_URL;
+    delete process.env.DATABASE_URL;
+    try {
+      await expect(runMigrationsDown()).rejects.toThrow(
+        'DATABASE_URL is not set'
+      );
+    } finally {
+      if (previous !== undefined) {
+        process.env.DATABASE_URL = previous;
+      }
+    }
+  });
 });

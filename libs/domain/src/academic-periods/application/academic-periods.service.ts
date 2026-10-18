@@ -1,3 +1,8 @@
+import {
+  buildCursorPage,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   CreateAcademicPeriodBody,
   ListAcademicPeriodsQuery,
@@ -24,19 +29,31 @@ export class AcademicPeriodsService {
   ) {}
 
   async listAcademicPeriods(
-    input: ListAcademicPeriodsQuery & { institutionId: string }
+    input: ListAcademicPeriodsQuery & {
+      institutionId: string;
+      filters?: FilterSpec[];
+      sort?: SortSpec | null;
+    }
   ) {
     const result = await this.academicPeriodsRepository.list(input);
 
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        sortKey: (academicPeriod) => academicPeriod.year,
+        id: (academicPeriod) => academicPeriod.id,
+      },
+      result.total
+    );
+
     return {
-      data: result.items.map((academicPeriod) =>
+      data: page.data.map((academicPeriod) =>
         this.toAcademicPeriodResponse(academicPeriod)
       ),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
-      },
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 

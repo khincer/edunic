@@ -73,7 +73,8 @@ function isExcludedPath(path: string) {
   return (
     path.startsWith('/auth/login') ||
     path.startsWith('/docs') ||
-    path.startsWith('/health')
+    path.startsWith('/health') ||
+    path.startsWith('/ready')
   );
 }
 

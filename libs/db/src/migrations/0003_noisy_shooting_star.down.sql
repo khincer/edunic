@@ -1,0 +1,4 @@
+-- Down for 0003_noisy_shooting_star.
+--
+-- No-op migration, no-op down: the up file created nothing (it exists only to
+-- advance the Drizzle journal past the missing 0001/0002 snapshots).

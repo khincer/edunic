@@ -3,9 +3,16 @@ import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
   createAcademicPeriodFixture,
+  createAssignmentFixture,
   createAttendanceFixture,
+  createAuditLogFixture,
+  createClassroomFixture,
   createEnrollmentFixture,
+  createGuardianFixture,
   createInstitutionFixture,
+  createMessageFixture,
+  createNotificationFixture,
+  createSchoolEventFixture,
   createStudentFixture,
   createUserFixture,
 } from '../helpers/fixtures.js';
@@ -216,5 +223,388 @@ describe('list pagination conventions', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('cursor pagination for the remaining list modules', () => {
+  let app: Awaited<ReturnType<typeof createTestApp>>;
+  let client: ReturnType<typeof createHttpClient>;
+  let institutionId: string;
+  let adminUserId: string;
+  let headers: Record<string, string>;
+
+  beforeAll(async () => {
+    app = await createTestApp();
+    client = createHttpClient(app);
+  });
+
+  beforeEach(async () => {
+    await resetTestDatabase();
+
+    const institution = await createInstitutionFixture();
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
+
+    institutionId = institution.id;
+    adminUserId = adminUser.id;
+    headers = await createAuthHeaders({
+      userId: adminUser.id,
+      institutionId: institution.id,
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  // Walks the keyset cursor until hasMore is false. Bounded so a broken cursor
+  // wire (cursor dropped, first page repeated forever) fails on duplicates
+  // instead of hanging the suite.
+  async function walkCursorPages(
+    path: string,
+    limit: number,
+    idOf: (row: Record<string, string>) => string
+  ) {
+    const ids: string[] = [];
+    let cursor: string | undefined = 'start';
+    let pages = 0;
+
+    do {
+      const response: Awaited<ReturnType<typeof client.get>> = await client
+        .get(`${path}?limit=${limit}&cursor=${encodeURIComponent(cursor)}`)
+        .set(headers);
+
+      expect(response.status).toBe(200);
+      // Cursor mode: keyset contract, no legacy metadata or deprecation.
+      expect(response.headers['x-pagination-deprecated']).toBeUndefined();
+      expect(response.body.meta).toBeUndefined();
+      // nextCursor is present if and only if another page exists.
+      expect(response.body.hasMore).toBe(response.body.nextCursor !== undefined);
+
+      ids.push(...response.body.data.map(idOf));
+      cursor = response.body.hasMore ? response.body.nextCursor : undefined;
+      pages += 1;
+    } while (cursor && pages < 10);
+
+    expect(cursor).toBeUndefined();
+    return ids;
+  }
+
+  type PaginatedListCase = {
+    label: string;
+    path: string;
+    /** Field carrying the row's stable identity in the response (default: `id`). */
+    idOf?: (row: Record<string, string>) => string;
+    /** Seeds five rows and returns the ids in the module's stable keyset order. */
+    seed: () => Promise<{ count: number; stableOrderIds: string[] }>;
+    /** Uniform filter/sort param the module whitelists, and the rows it selects. */
+    filter: { query: string; expectedCount: number };
+  };
+
+  const cases: PaginatedListCase[] = [
+    {
+      label: 'academic-periods',
+      path: '/academic-periods',
+      seed: async () => {
+        const created = [];
+
+        for (const year of [2021, 2022, 2023, 2024, 2025]) {
+          created.push(
+            await createAcademicPeriodFixture({ institutionId, year, term: 1 })
+          );
+        }
+
+        // Stable order: year desc, id desc.
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+      filter: { query: 'filter=year:eq:2023', expectedCount: 1 },
+    },
+    {
+      label: 'audit-logs',
+      path: '/audit-logs',
+      seed: async () => {
+        const created = [];
+
+        // Two entities so the filter assertion below selects a strict subset.
+        for (const second of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createAuditLogFixture({
+              institutionId,
+              entity: second % 2 === 1 ? 'students' : 'grades',
+              // Distinct createdAt values: the cursor only carries millisecond
+              // precision, so same-millisecond rows would fall out of the keyset.
+              createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
+            })
+          );
+        }
+
+        // Stable order: created_at desc, id desc.
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+      filter: { query: 'filter=entity:eq:grades', expectedCount: 2 },
+    },
+    {
+      label: 'classrooms',
+      path: '/classrooms',
+      seed: async () => {
+        const created = [];
+
+        for (const gradeLevel of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createClassroomFixture({ institutionId, gradeLevel })
+          );
+        }
+
+        // Stable order: grade_level asc, id asc.
+        return { count: 5, stableOrderIds: created.map((row) => row.id) };
+      },
+      filter: { query: 'filter=gradeLevel:eq:3', expectedCount: 1 },
+    },
+    {
+      label: 'custom-fields',
+      path: '/custom-fields',
+      seed: async () => {
+        const created: string[] = [];
+
+        // Seeded in alphabetical order: the stable order is entity asc, id asc.
+        for (const entity of ['alpha', 'bravo', 'charlie', 'delta', 'echo']) {
+          const response = await client
+            .post('/custom-fields')
+            .set(headers)
+            .send({ entity, name: `${entity} field`, type: 'text' });
+
+          expect(response.status).toBe(201);
+          created.push(response.body.data.id);
+        }
+
+        return { count: 5, stableOrderIds: created };
+      },
+      filter: { query: 'filter=entity:eq:charlie', expectedCount: 1 },
+    },
+    {
+      label: 'extensions',
+      path: '/extensions',
+      // Extensions are keyed by text (`key`), not by a uuid `id`.
+      idOf: (row) => row.key,
+      seed: async () => {
+        const created: string[] = [];
+
+        // Seeded in key order: the stable order is key asc.
+        for (const key of ['alpha', 'bravo', 'charlie', 'delta', 'echo']) {
+          const response = await client
+            .post('/extensions')
+            .set(headers)
+            .send({ key, name: `${key} extension` });
+
+          expect(response.status).toBe(201);
+          created.push(response.body.data.key);
+        }
+
+        return { count: 5, stableOrderIds: created };
+      },
+      filter: { query: 'filter=key:eq:charlie', expectedCount: 1 },
+    },
+    {
+      label: 'guardians',
+      path: '/guardians',
+      seed: async () => {
+        const created = [];
+
+        // Seeded in name order: the stable order is name asc, id asc.
+        for (const name of ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Echo']) {
+          created.push(await createGuardianFixture({ institutionId, name }));
+        }
+
+        return { count: 5, stableOrderIds: created.map((row) => row.id) };
+      },
+      filter: { query: 'filter=name:eq:Charlie', expectedCount: 1 },
+    },
+    {
+      label: 'institutions',
+      path: '/institutions',
+      // Institutions are global (not tenant-scoped), so the suite's own
+      // institution stays in the result set and sorts last by name.
+      seed: async () => {
+        const created = [];
+
+        // Seeded in name order: the stable order is name asc, id asc.
+        for (const name of ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Echo']) {
+          created.push(await createInstitutionFixture(name));
+        }
+
+        return {
+          count: 6,
+          stableOrderIds: [...created.map((row) => row.id), institutionId],
+        };
+      },
+      filter: { query: 'filter=name:eq:Charlie', expectedCount: 1 },
+    },
+    {
+      label: 'notifications',
+      path: '/notifications',
+      seed: async () => {
+        const created = [];
+
+        // Two event names so the filter assertion below selects a strict
+        // subset, and distinct seconds because the cursor only carries
+        // millisecond precision.
+        for (const second of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createNotificationFixture({
+              institutionId,
+              eventName:
+                second % 2 === 1 ? 'enrollment.created' : 'grade.submitted',
+              createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
+            })
+          );
+        }
+
+        // Stable order: created_at desc, id desc.
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+      filter: { query: 'filter=eventName:eq:grade.submitted', expectedCount: 2 },
+    },
+    {
+      label: 'workflows assignments',
+      path: '/assignments',
+      seed: async () => {
+        const created = [];
+
+        // Distinct seconds: the shared cursor only carries millisecond
+        // precision and the stable order is created_at desc, id desc.
+        for (const second of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createAssignmentFixture({
+              institutionId,
+              title: `Assignment ${second}`,
+              createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
+            })
+          );
+        }
+
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+      filter: { query: 'filter=createdAt:gte:2026-01-01T00:00:04', expectedCount: 2 },
+    },
+    {
+      label: 'workflows school-events',
+      path: '/school-events',
+      seed: async () => {
+        const created = [];
+
+        for (const second of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createSchoolEventFixture({
+              institutionId,
+              title: `Event ${second}`,
+              createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
+            })
+          );
+        }
+
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+      filter: { query: 'filter=createdAt:gte:2026-01-01T00:00:04', expectedCount: 2 },
+    },
+    {
+      label: 'workflows messages',
+      path: '/messages',
+      seed: async () => {
+        const created = [];
+
+        // The admin is the sender, so the message list (sender or recipient =
+        // current user) returns all five.
+        for (const second of [1, 2, 3, 4, 5]) {
+          created.push(
+            await createMessageFixture({
+              institutionId,
+              senderUserId: adminUserId,
+              subject: `Thread ${second}`,
+              createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
+            })
+          );
+        }
+
+        return { count: 5, stableOrderIds: created.map((row) => row.id).reverse() };
+      },
+      filter: { query: 'filter=createdAt:gte:2026-01-01T00:00:04', expectedCount: 2 },
+    },
+  ];
+
+  describe.each(cases)('$label', (listCase) => {
+    const idOf =
+      listCase.idOf ?? ((row: Record<string, string>) => row.id);
+
+    it(`pages ${listCase.label} without duplicates or gaps`, async () => {
+      const { count, stableOrderIds } = await listCase.seed();
+
+      const ids = await walkCursorPages(listCase.path, 2, idOf);
+
+      expect(ids).toEqual(stableOrderIds);
+      expect(ids).toHaveLength(count);
+      expect(new Set(ids).size).toBe(count);
+    });
+
+    it(`serves the first page of ${listCase.label} for cursor=start`, async () => {
+      const { stableOrderIds } = await listCase.seed();
+
+      const firstPage = await client
+        .get(`${listCase.path}?limit=2&cursor=start`)
+        .set(headers);
+
+      expect(firstPage.status).toBe(200);
+      expect(firstPage.headers['x-pagination-deprecated']).toBeUndefined();
+      expect(firstPage.body.data.map(idOf)).toEqual(
+        stableOrderIds.slice(0, 2)
+      );
+
+      const walked = await walkCursorPages(listCase.path, 2, idOf);
+      expect(walked).toEqual(stableOrderIds);
+    });
+
+    it(`rejects a malformed cursor on ${listCase.label}`, async () => {
+      const response = await client
+        .get(`${listCase.path}?cursor=not-a-cursor`)
+        .set(headers);
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('VALIDATION_ERROR');
+    });
+
+    it(`marks legacy offset mode as deprecated on ${listCase.label}`, async () => {
+      const { count } = await listCase.seed();
+
+      const response = await client
+        .get(`${listCase.path}?limit=2&offset=0`)
+        .set(headers);
+
+      expect(response.status).toBe(200);
+      expect(response.headers['x-pagination-deprecated']).toBe('offset');
+      expect(response.body.data).toHaveLength(2);
+      expect(response.body.hasMore).toBe(true);
+      expect(response.body.nextCursor).toBeDefined();
+      expect(response.body.meta).toEqual({ total: count, limit: 2, offset: 0 });
+    });
+
+    it(`applies the uniform filter params on ${listCase.label}`, async () => {
+      await listCase.seed();
+
+      const filtered = await client
+        .get(`${listCase.path}?${listCase.filter.query}`)
+        .set(headers);
+
+      expect(filtered.status).toBe(200);
+      expect(filtered.body.data).toHaveLength(listCase.filter.expectedCount);
+
+      // Fields outside the whitelist never reach SQL construction.
+      const unsupported = await client
+        .get(`${listCase.path}?filter=institution_id:eq:whatever`)
+        .set(headers);
+
+      expect(unsupported.status).toBe(400);
+      expect(unsupported.body.code).toBe('VALIDATION_ERROR');
+    });
   });
 });

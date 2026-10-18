@@ -113,6 +113,6 @@ describe('API error envelope contract', () => {
 
     expect(response.status).toBe(200);
     // Raw body, no `data` envelope key — /health keeps its own shape.
-    expect(response.body).toEqual({ status: 'ok', database: 'ok' });
+    expect(response.body).toEqual({ status: 'ok' });
   });
 });
