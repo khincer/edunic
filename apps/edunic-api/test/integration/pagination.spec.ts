@@ -272,7 +272,7 @@ describe('cursor pagination for the remaining list modules', () => {
     let pages = 0;
 
     do {
-      const response = await client
+      const response: Awaited<ReturnType<typeof client.get>> = await client
         .get(`${path}?limit=${limit}&cursor=${encodeURIComponent(cursor)}`)
         .set(headers);
 

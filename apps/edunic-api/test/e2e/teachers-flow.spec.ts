@@ -39,11 +39,7 @@ describe('E2E flow: teachers', () => {
     await app.close();
   });
 
-  async function loginAs(user: {
-    email: string;
-    password: string;
-    role: 'teacher' | 'admin';
-  }) {
+  async function loginAs(user: Awaited<ReturnType<typeof createUserFixture>>) {
     const response = await app.inject({
       method: 'POST',
       url: '/auth/login',
