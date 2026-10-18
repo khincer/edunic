@@ -1,5 +1,4 @@
 {
   "name": "api",
-  "private": true,
-  "type": "module"
+  "private": true
 }

@@ -1,5 +1,4 @@
 {
   "name": "worker",
-  "private": true,
-  "type": "module"
+  "private": true
 }
