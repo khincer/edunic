@@ -2,12 +2,18 @@ import { db } from '@edunic/source/db';
 import { hashPassword } from '@edunic/source/domain/auth';
 import {
   academicPeriods,
+  assignments,
   attendance,
+  auditLogs,
   classrooms,
   enrollments,
   guardians,
   grades,
   institutions,
+  messageThreads,
+  messages,
+  notifications,
+  schoolEvents,
   students,
   teacherClassroomAssignments,
   userInstitutionRoles,
@@ -219,6 +225,123 @@ export async function createAttendanceFixture(input: {
       enrollmentId: input.enrollmentId,
       date: input.date ?? new Date('2026-02-01T08:00:00.000Z'),
       status: input.status ?? 'present',
+    })
+    .returning();
+
+  return result[0];
+}
+
+export async function createAuditLogFixture(input: {
+  institutionId: string;
+  entity?: string;
+  action?: string;
+  createdAt?: Date;
+}) {
+  const result = await db
+    .insert(auditLogs)
+    .values({
+      id: nextId('90000000'),
+      institutionId: input.institutionId,
+      action: input.action ?? 'create',
+      entity: input.entity ?? 'students',
+      createdAt: input.createdAt ?? new Date('2026-01-01T00:00:00.000Z'),
+    })
+    .returning();
+
+  return result[0];
+}
+
+export async function createAssignmentFixture(input: {
+  institutionId: string;
+  title?: string;
+  dueDate?: Date | null;
+  createdAt?: Date;
+}) {
+  const result = await db
+    .insert(assignments)
+    .values({
+      id: nextId('97000000'),
+      institutionId: input.institutionId,
+      title: input.title ?? 'Homework',
+      type: 'assignment',
+      status: 'published',
+      dueDate: input.dueDate ?? null,
+      createdAt: input.createdAt ?? new Date('2026-01-01T00:00:00.000Z'),
+    })
+    .returning();
+
+  return result[0];
+}
+
+export async function createSchoolEventFixture(input: {
+  institutionId: string;
+  title?: string;
+  startsAt?: Date;
+  createdAt?: Date;
+}) {
+  const result = await db
+    .insert(schoolEvents)
+    .values({
+      id: nextId('98000000'),
+      institutionId: input.institutionId,
+      title: input.title ?? 'School event',
+      eventType: 'school',
+      startsAt: input.startsAt ?? new Date('2026-02-01T00:00:00.000Z'),
+      createdAt: input.createdAt ?? new Date('2026-01-01T00:00:00.000Z'),
+    })
+    .returning();
+
+  return result[0];
+}
+
+export async function createMessageFixture(input: {
+  institutionId: string;
+  senderUserId: string;
+  subject?: string;
+  body?: string;
+  createdAt?: Date;
+}) {
+  const thread = await db
+    .insert(messageThreads)
+    .values({
+      id: nextId('99000000'),
+      institutionId: input.institutionId,
+      subject: input.subject ?? 'Thread subject',
+      createdByUserId: input.senderUserId,
+    })
+    .returning();
+
+  const result = await db
+    .insert(messages)
+    .values({
+      id: nextId('99500000'),
+      institutionId: input.institutionId,
+      threadId: thread[0].id,
+      senderUserId: input.senderUserId,
+      body: input.body ?? 'Message body',
+      createdAt: input.createdAt ?? new Date('2026-01-01T00:00:00.000Z'),
+    })
+    .returning();
+
+  return result[0];
+}
+
+export async function createNotificationFixture(input: {
+  institutionId: string;
+  eventName?: string;
+  title?: string;
+  createdAt?: Date;
+}) {
+  const result = await db
+    .insert(notifications)
+    .values({
+      id: nextId('95000000'),
+      institutionId: input.institutionId,
+      eventName: input.eventName ?? 'enrollment.created',
+      title: input.title ?? 'Enrollment created',
+      message: 'Fixture notification',
+      metadata: null,
+      createdAt: input.createdAt ?? new Date('2026-01-01T00:00:00.000Z'),
     })
     .returning();
 

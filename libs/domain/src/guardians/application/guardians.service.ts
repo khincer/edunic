@@ -1,3 +1,8 @@
+import {
+  buildCursorPage,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type {
   CreateGuardianBody,
   ListGuardiansQuery,
@@ -21,19 +26,33 @@ export class GuardiansServiceError extends Error {
 export class GuardiansService {
   constructor(private readonly guardiansRepository: GuardiansRepository) {}
 
-  async listGuardians(input: ListGuardiansQuery & { institutionId: string }) {
+  async listGuardians(
+    input: ListGuardiansQuery & {
+      institutionId: string;
+      filters?: FilterSpec[];
+      sort?: SortSpec | null;
+    }
+  ) {
     const result = await this.guardiansRepository.list({
       ...input,
       search: input.search?.trim() || undefined,
     });
 
-    return {
-      data: result.items.map((guardian) => this.toGuardianResponse(guardian)),
-      meta: {
-        total: result.total,
-        limit: input.limit,
-        offset: input.offset,
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        sortKey: (guardian) => guardian.name,
+        id: (guardian) => guardian.id,
       },
+      result.total
+    );
+
+    return {
+      data: page.data.map((guardian) => this.toGuardianResponse(guardian)),
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
     };
   }
 

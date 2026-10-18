@@ -1,6 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import Redis from 'ioredis';
 
+// Explicit named re-exports (not `export *`): when this lib is compiled to
+// CJS for the ESM loader, Node's cjs-module-lexer cannot see star re-exports
+// and static `import { RedisStreamConsumer }` would fail at runtime.
+export {
+  RedisStreamConsumer,
+  type StreamConsumerOptions,
+  type PollOptions,
+} from './consumer.js';
+
 export type EventEnvelope<TName extends string = string, TPayload = unknown> = {
   id: string;
   name: TName;

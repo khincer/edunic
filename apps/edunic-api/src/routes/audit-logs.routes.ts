@@ -5,7 +5,16 @@ import {
   AuditLogsRepository,
   listAuditLogsQuerySchema,
 } from '@edunic/source/domain/audit-logs';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import {
+  parseWithSchema,
+  getInstitutionId,
+  parseFilterSort,
+} from '@edunic/source/domain/shared';
+
+const AUDIT_LOG_FILTER_SORT_OPTIONS = {
+  filterFields: ['entity', 'action', 'userId', 'entityId', 'createdAt'],
+  sortFields: ['entity', 'action', 'userId', 'entityId', 'createdAt'],
+};
 
 export async function auditLogRoutes(app: FastifyInstance) {
   const auditLogsService = new AuditLogsService(new AuditLogsRepository(app.db));
@@ -13,13 +22,23 @@ export async function auditLogRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
   };
 
-  app.get('/audit-logs', adminOnly, async (request) => {
+  app.get('/audit-logs', adminOnly, async (request, reply) => {
     const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listAuditLogsQuerySchema, request.query);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      AUDIT_LOG_FILTER_SORT_OPTIONS
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
 
     return auditLogsService.listAuditLogs({
       institutionId,
       ...query,
+      filters,
+      sort,
     });
   });
 }

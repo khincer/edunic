@@ -21,6 +21,7 @@ export const academicPeriodParamsSchema = z.object({
 export const listAcademicPeriodsQuerySchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100).optional(),
   term: z.coerce.number().int().min(1).max(4).optional(),
+  cursor: z.string().trim().min(1).max(512).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
   offset: z.coerce.number().int().min(0).default(0),
   sortBy: z.enum(['createdAt', 'year', 'term', 'startDate']).default('year'),

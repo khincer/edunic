@@ -368,7 +368,7 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
       let cursor: string | undefined = 'start';
 
       do {
-        const response = await app.inject({
+        const response: Awaited<ReturnType<typeof app.inject>> = await app.inject({
           method: 'GET',
           url: `/students?limit=2&cursor=${encodeURIComponent(cursor)}`,
           headers,

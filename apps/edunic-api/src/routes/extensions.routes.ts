@@ -11,7 +11,12 @@ import {
   updateExtensionBodySchema,
   upsertInstitutionExtensionBodySchema,
 } from '@edunic/source/domain/extensions';
-import { parseWithSchema } from '@edunic/source/domain/shared';
+import { parseWithSchema, parseFilterSort } from '@edunic/source/domain/shared';
+
+const EXTENSION_FILTER_SORT_OPTIONS = {
+  filterFields: ['key', 'name'],
+  sortFields: ['key', 'name'],
+};
 
 export async function extensionRoutes(app: FastifyInstance) {
   const extensionsService = new ExtensionsService(
@@ -21,10 +26,18 @@ export async function extensionRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
   };
 
-  app.get('/extensions', adminOnly, async (request) => {
+  app.get('/extensions', adminOnly, async (request, reply) => {
     const query = parseWithSchema(listExtensionsQuerySchema, request.query);
+    const { filters, sort } = parseFilterSort(
+      request.query as { filter?: string | string[]; sort?: string },
+      EXTENSION_FILTER_SORT_OPTIONS
+    );
 
-    return extensionsService.listExtensions(query);
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
+
+    return extensionsService.listExtensions({ ...query, filters, sort });
   });
 
   app.post('/extensions', adminOnly, async (request, reply) => {

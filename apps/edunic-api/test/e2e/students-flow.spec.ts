@@ -1,0 +1,186 @@
+import { sql } from 'drizzle-orm';
+import { db } from '@edunic/source/db';
+import { createTestApp } from '../helpers/app.js';
+import { resetTestDatabase } from '../helpers/db.js';
+import {
+  createInstitutionFixture,
+  createUserFixture,
+} from '../helpers/fixtures.js';
+
+// E2E flow 2 (task 3.3, P3-R5): admin logs in, then runs the student
+// lifecycle through the API — create, read, update, list — with the
+// response envelope and the persisted DB rows asserted at each step.
+// The second case walks a second institution's admin through the same
+// journey and proves tenant scoping on read paths.
+async function countStudents() {
+  const result = await db.execute(
+    sql.raw('SELECT COUNT(*)::int AS count FROM students')
+  );
+  return (result.rows[0] as { count: number }).count;
+}
+
+describe('E2E flow: students', () => {
+  let app: Awaited<ReturnType<typeof createTestApp>>;
+  let institutionId: string;
+  let admin: { email: string; password: string };
+
+  beforeAll(async () => {
+    app = await createTestApp();
+  });
+
+  beforeEach(async () => {
+    await resetTestDatabase();
+
+    const institution = await createInstitutionFixture('Students Flow Institution');
+    institutionId = institution.id;
+
+    admin = await createUserFixture({
+      institutionId,
+      role: 'admin',
+      email: 'e2e-admin@students-flow.test',
+      password: 'admin1234',
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  async function loginAsAdmin() {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { email: admin.email, password: admin.password, institutionId },
+    });
+
+    expect(response.statusCode).toBe(200);
+
+    return {
+      authorization: `Bearer ${response.json().data.token}`,
+      'x-institution-id': institutionId,
+    };
+  }
+
+  it('walks the student lifecycle: create, read, update, list', async () => {
+    const headers = await loginAsAdmin();
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/students',
+      headers,
+      payload: { firstName: 'Sofia', lastName: 'Ramirez', dateOfBirth: '2014-02-10' },
+    });
+
+    expect(created.statusCode).toBe(201);
+    const student = created.json().data;
+    expect(student).toMatchObject({
+      firstName: 'Sofia',
+      lastName: 'Ramirez',
+      dateOfBirth: '2014-02-10',
+      institutionId,
+    });
+
+    const fetched = await app.inject({
+      method: 'GET',
+      url: `/students/${student.id}`,
+      headers,
+    });
+
+    expect(fetched.statusCode).toBe(200);
+    expect(fetched.json().data).toMatchObject({
+      id: student.id,
+      firstName: 'Sofia',
+    });
+
+    const updated = await app.inject({
+      method: 'PATCH',
+      url: `/students/${student.id}`,
+      headers,
+      payload: { lastName: 'Santos' },
+    });
+
+    expect(updated.statusCode).toBe(200);
+    expect(updated.json().data).toMatchObject({
+      id: student.id,
+      firstName: 'Sofia',
+      lastName: 'Santos',
+    });
+
+    const list = await app.inject({
+      method: 'GET',
+      url: '/students?limit=10',
+      headers,
+    });
+
+    expect(list.statusCode).toBe(200);
+    const listBody = list.json();
+    expect(listBody.data).toHaveLength(1);
+    expect(listBody.data[0]).toMatchObject({
+      id: student.id,
+      lastName: 'Santos',
+    });
+    expect(listBody.meta).toEqual({ total: 1, limit: 10, offset: 0 });
+
+    // DB state: the lifecycle ended with exactly one updated row.
+    const rows = await db.execute(
+      sql.raw('SELECT last_name FROM students')
+    );
+    expect(rows.rows).toEqual([{ last_name: 'Santos' }]);
+  });
+
+  it('keeps another tenant out of the journey: scoped read finds nothing', async () => {
+    const headers = await loginAsAdmin();
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/students',
+      headers,
+      payload: { firstName: 'Private', lastName: 'Student' },
+    });
+
+    expect(created.statusCode).toBe(201);
+    const studentId = created.json().data.id;
+
+    const otherInstitution = await createInstitutionFixture('Other Tenant');
+    const otherAdmin = await createUserFixture({
+      institutionId: otherInstitution.id,
+      role: 'admin',
+      email: 'e2e-admin@other-tenant.test',
+      password: 'admin1234',
+    });
+    const otherLogin = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: {
+        email: otherAdmin.email,
+        password: otherAdmin.password,
+        institutionId: otherInstitution.id,
+      },
+    });
+    expect(otherLogin.statusCode).toBe(200);
+    const otherHeaders = {
+      authorization: `Bearer ${otherLogin.json().data.token}`,
+      'x-institution-id': otherInstitution.id,
+    };
+
+    const read = await app.inject({
+      method: 'GET',
+      url: `/students/${studentId}`,
+      headers: otherHeaders,
+    });
+
+    expect(read.statusCode).toBe(404);
+    expect(read.json().code).toBe('NOT_FOUND');
+
+    const list = await app.inject({
+      method: 'GET',
+      url: '/students',
+      headers: otherHeaders,
+    });
+
+    expect(list.statusCode).toBe(200);
+    expect(list.json().data).toHaveLength(0);
+    // The first tenant's row is untouched by the scoped read attempts.
+    expect(await countStudents()).toBe(1);
+  });
+});

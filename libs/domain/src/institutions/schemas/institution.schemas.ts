@@ -13,6 +13,7 @@ export const institutionParamsSchema = z.object({
 
 export const listInstitutionsQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
+  cursor: z.string().trim().min(1).max(512).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
   offset: z.coerce.number().int().min(0).default(0),
   sortBy: z.enum(['createdAt', 'name']).default('createdAt'),

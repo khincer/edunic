@@ -3,9 +3,31 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import {
+  applyCursorPagination,
+  buildFilterConditions,
+  buildSortSql,
+  type CursorOrderSpec,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type { ListGuardiansQuery } from '../schemas/guardian.schemas.js';
 
 type GuardianSortColumn = ListGuardiansQuery['sortBy'];
+
+// Stable keyset order for cursor pagination (P2-R4): name asc, id asc. Name is
+// not unique, so the uuid `id` closes the order; no timestamp column exists.
+export const GUARDIAN_CURSOR_ORDER: CursorOrderSpec = {
+  columns: ['name', 'id'],
+  direction: 'asc',
+};
+
+// Whitelisted columns for the uniform filter/sort convention. Constant
+// literals — never derived from user input.
+export const GUARDIAN_LIST_COLUMNS = {
+  name: 'name',
+  phone: 'phone',
+} as const;
 
 type CountRow = {
   count: string | number;
@@ -40,38 +62,66 @@ export type UpdateGuardianInput = {
 
 export type ListGuardiansInput = ListGuardiansQuery & {
   institutionId: string;
+  filters?: FilterSpec[];
+  sort?: SortSpec | null;
+};
+
+export type ListGuardiansResult = {
+  items: GuardianRecord[];
+  total?: number;
 };
 
 export class GuardiansRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
-  async list(input: ListGuardiansInput) {
-    const searchFilter = input.search
-      ? sql`and (
-          name ilike ${`%${input.search}%`}
-          or coalesce(phone, '') ilike ${`%${input.search}%`}
-        )`
-      : sql``;
+  async list(input: ListGuardiansInput): Promise<ListGuardiansResult> {
+    const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+
+    if (input.search) {
+      filters.push(
+        sql`(name ilike ${`%${input.search}%`} or coalesce(phone, '') ilike ${`%${input.search}%`})`
+      );
+    }
+
+    filters.push(
+      ...buildFilterConditions(input.filters ?? [], GUARDIAN_LIST_COLUMNS)
+    );
+
+    const plan = applyCursorPagination(input, GUARDIAN_CURSOR_ORDER);
+
+    if (plan.keyset) {
+      filters.push(plan.keyset);
+    }
+
+    const whereClause = sql`where ${sql.join(filters, sql` and `)}`;
+    const orderBy = plan.orderBy ?? this.legacyOrderBy(input);
+    const offsetClause =
+      plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
+
+    const itemsQuery = sql`
+      select
+        id,
+        institution_id as "institutionId",
+        name,
+        phone
+      from guardians
+      ${whereClause}
+      order by ${orderBy}
+      limit ${plan.fetchLimit}
+      ${offsetClause}
+    `;
+
+    if (plan.offset === null) {
+      const items = await this.db.execute<GuardianRecord>(itemsQuery);
+      return { items: items.rows };
+    }
 
     const [items, totalRows] = await Promise.all([
-      this.db.execute<GuardianRecord>(sql`
-        select
-          id,
-          institution_id as "institutionId",
-          name,
-          phone
-        from guardians
-        where institution_id = ${input.institutionId}
-        ${searchFilter}
-        order by ${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}
-        limit ${input.limit}
-        offset ${input.offset}
-      `),
+      this.db.execute<GuardianRecord>(itemsQuery),
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
         from guardians
-        where institution_id = ${input.institutionId}
-        ${searchFilter}
+        ${whereClause}
       `),
     ]);
 
@@ -275,6 +325,15 @@ export class GuardiansRepository {
     `);
 
     return this.toCount(result.rows[0]?.count);
+  }
+
+  // The standard `sort` param wins over the legacy sortBy/sortOrder pair;
+  // cursor mode never reaches here (stable order wins).
+  private legacyOrderBy(input: ListGuardiansInput): SQL {
+    return (
+      buildSortSql(input.sort ?? null, GUARDIAN_LIST_COLUMNS) ??
+      sql`${this.getSortColumn(input.sortBy)} ${this.getSortOrder(input.sortOrder)}`
+    );
   }
 
   private getSortColumn(sortBy: GuardianSortColumn) {

@@ -3,11 +3,35 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import {
+  applyCursorPagination,
+  buildFilterConditions,
+  buildSortSql,
+  type CursorOrderSpec,
+  type FilterSpec,
+  type SortSpec,
+} from '@edunic/source/domain/shared';
 import type { ListNotificationsQuery } from '../schemas/notification.schemas.js';
 
 type CountRow = {
   count: string | number;
 };
+
+// Stable keyset order for cursor pagination (P2-R4): created_at desc, id desc,
+// mirroring the legacy feed order (newest first). The uuid `id` closes the
+// order because multiple notifications can share a created_at.
+export const NOTIFICATION_CURSOR_ORDER: CursorOrderSpec = {
+  columns: ['created_at', 'id'],
+  direction: 'desc',
+};
+
+// Whitelisted columns for the uniform filter/sort convention. Constant
+// literals — never derived from user input.
+export const NOTIFICATION_LIST_COLUMNS = {
+  eventName: 'event_name',
+  title: 'title',
+  createdAt: 'created_at',
+} as const;
 
 export type NotificationRecord = {
   id: string;
@@ -77,6 +101,8 @@ export class NotificationsRepository {
     institutionId: string;
     role?: string;
     userId?: string;
+    filters?: FilterSpec[];
+    sort?: SortSpec | null;
   }) {
     const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
 
@@ -88,27 +114,48 @@ export class NotificationsRepository {
       filters.push(sql`event_name = ${input.eventName}`);
     }
 
+    filters.push(
+      ...buildFilterConditions(input.filters ?? [], NOTIFICATION_LIST_COLUMNS)
+    );
+
     filters.push(...this.getRoleFilters(input.role, input.userId));
 
+    const plan = applyCursorPagination(input, NOTIFICATION_CURSOR_ORDER);
+
+    if (plan.keyset) {
+      filters.push(plan.keyset);
+    }
+
     const whereClause = sql.join(filters, sql` and `);
+    const orderBy = plan.orderBy ?? this.legacyOrderBy(input);
+    const offsetClause =
+      plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
+
+    const itemsQuery = sql`
+      select
+        id,
+        institution_id as "institutionId",
+        event_name as "eventName",
+        title,
+        message,
+        metadata,
+        read_at as "readAt",
+        created_at as "createdAt"
+      from notifications
+      where ${whereClause}
+      order by ${orderBy}
+      limit ${plan.fetchLimit}
+      ${offsetClause}
+    `;
+
+    if (plan.offset === null) {
+      const items = await this.db.execute<NotificationRecord>(itemsQuery);
+
+      return { items: items.rows };
+    }
 
     const [items, totalRows] = await Promise.all([
-      this.db.execute<NotificationRecord>(sql`
-        select
-          id,
-          institution_id as "institutionId",
-          event_name as "eventName",
-          title,
-          message,
-          metadata,
-          read_at as "readAt",
-          created_at as "createdAt"
-        from notifications
-        where ${whereClause}
-        order by created_at desc
-        limit ${input.limit}
-        offset ${input.offset}
-      `),
+      this.db.execute<NotificationRecord>(itemsQuery),
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
         from notifications
@@ -151,6 +198,17 @@ export class NotificationsRepository {
     `);
 
     return result.rows[0] ?? null;
+  }
+
+  // The standard `sort` param wins over the legacy created_at desc order;
+  // cursor mode never reaches here (stable order wins).
+  private legacyOrderBy(input: {
+    sort?: SortSpec | null;
+  }): SQL {
+    return (
+      buildSortSql(input.sort ?? null, NOTIFICATION_LIST_COLUMNS) ??
+      sql`created_at desc`
+    );
   }
 
   private getRoleFilters(role?: string, userId?: string) {
