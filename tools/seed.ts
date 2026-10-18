@@ -129,9 +129,9 @@ const ids = {
 
 export async function seedDatabase() {
   console.log('Seeding database...');
-  const hashedAdminPassword = hashPassword('admin1234');
-  const hashedTeacherPassword = hashPassword('teacher1234');
-  const hashedParentPassword = hashPassword('parent1234');
+  const hashedAdminPassword = hashPassword('ULJaEJT9j8y8DeAQ');
+  const hashedTeacherPassword = hashPassword('37WTW9BZm2gnQkYn');
+  const hashedParentPassword = hashPassword('NP7rLvCv7HjUTM5a');
 
   await db
     .insert(institutions)
