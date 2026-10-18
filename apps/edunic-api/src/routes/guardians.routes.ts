@@ -13,8 +13,8 @@ import {
 } from '@edunic/source/domain/guardians';
 
 const GUARDIAN_FILTER_SORT_OPTIONS = {
-  filterFields: ['name', 'phone'],
-  sortFields: ['name', 'phone'],
+  filterFields: ['name', 'phone', 'email'],
+  sortFields: ['name', 'phone', 'email'],
 };
 
 export async function guardianRoutes(app: FastifyInstance) {

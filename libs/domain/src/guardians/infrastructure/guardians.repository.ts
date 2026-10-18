@@ -27,6 +27,7 @@ export const GUARDIAN_CURSOR_ORDER: CursorOrderSpec = {
 export const GUARDIAN_LIST_COLUMNS = {
   name: 'name',
   phone: 'phone',
+  email: 'email',
 } as const;
 
 type CountRow = {
@@ -38,6 +39,7 @@ export type GuardianRecord = {
   institutionId: string;
   name: string;
   phone: string | null;
+  email: string | null;
 };
 
 export type StudentRecord = {
@@ -51,6 +53,7 @@ export type CreateGuardianInput = {
   institutionId: string;
   name: string;
   phone?: string | null;
+  email?: string | null;
 };
 
 export type UpdateGuardianInput = {
@@ -58,6 +61,7 @@ export type UpdateGuardianInput = {
   guardianId: string;
   name?: string;
   phone?: string | null;
+  email?: string | null;
 };
 
 export type ListGuardiansInput = ListGuardiansQuery & {
@@ -103,7 +107,8 @@ export class GuardiansRepository {
         id,
         institution_id as "institutionId",
         name,
-        phone
+        phone,
+        email
       from guardians
       ${whereClause}
       order by ${orderBy}
@@ -137,7 +142,8 @@ export class GuardiansRepository {
         id,
         institution_id as "institutionId",
         name,
-        phone
+        phone,
+        email
       from guardians
       where id = ${guardianId}
         and institution_id = ${institutionId}
@@ -152,18 +158,21 @@ export class GuardiansRepository {
       insert into guardians (
         institution_id,
         name,
-        phone
+        phone,
+        email
       )
       values (
         ${input.institutionId},
         ${input.name},
-        ${input.phone ?? null}
+        ${input.phone ?? null},
+        ${input.email ?? null}
       )
       returning
         id,
         institution_id as "institutionId",
         name,
-        phone
+        phone,
+        email
     `);
 
     return result.rows[0];
@@ -180,6 +189,10 @@ export class GuardiansRepository {
       assignments.push(sql`phone = ${input.phone ?? null}`);
     }
 
+    if (input.email !== undefined) {
+      assignments.push(sql`email = ${input.email ?? null}`);
+    }
+
     if (assignments.length === 0) {
       return this.findById(input.institutionId, input.guardianId);
     }
@@ -193,7 +206,8 @@ export class GuardiansRepository {
         id,
         institution_id as "institutionId",
         name,
-        phone
+        phone,
+        email
     `);
 
     return result.rows[0] ?? null;
@@ -208,7 +222,8 @@ export class GuardiansRepository {
         id,
         institution_id as "institutionId",
         name,
-        phone
+        phone,
+        email
     `);
 
     return result.rows[0] ?? null;
@@ -236,7 +251,8 @@ export class GuardiansRepository {
         guardians.id,
         guardians.institution_id as "institutionId",
         guardians.name,
-        guardians.phone
+        guardians.phone,
+        guardians.email
       from student_guardians
       inner join guardians
         on guardians.id = student_guardians.guardian_id
@@ -261,7 +277,8 @@ export class GuardiansRepository {
         guardians.id,
         guardians.institution_id as "institutionId",
         guardians.name,
-        guardians.phone
+        guardians.phone,
+        guardians.email
       from student_guardians
       inner join guardians
         on guardians.id = student_guardians.guardian_id
@@ -340,6 +357,8 @@ export class GuardiansRepository {
     switch (sortBy) {
       case 'phone':
         return sql.raw('phone');
+      case 'email':
+        return sql.raw('email');
       default:
         return sql.raw('name');
     }

@@ -81,6 +81,7 @@ export class GuardiansService {
           : input.phone === null
             ? null
             : input.phone.trim() || null,
+      email: input.email ?? null,
     });
 
     return {
@@ -113,6 +114,7 @@ export class GuardiansService {
           : input.phone === null
             ? null
             : input.phone.trim() || null,
+      email: input.email === undefined ? undefined : (input.email ?? null),
     });
 
     if (!updatedGuardian) {
@@ -279,6 +281,7 @@ export class GuardiansService {
       institutionId: guardian.institutionId,
       name: guardian.name,
       phone: guardian.phone,
+      email: guardian.email,
     };
   }
 }
