@@ -16,7 +16,7 @@
     "build:api": "nx build api",
     "lint:fe": "nx lint edunic-fe",
     "start:fe": "node tools/start-fe-standalone.mjs",
-    "start:api": "node dist/apps/api/src/main.js",
+    "start:api": "node dist/apps/api/main.cjs",
     "test:api": "nx test api",
     "db:generate": "drizzle-kit generate --config=libs/db/src/drizzle.config.ts",
     "db:migrate": "tsx tools/migrate.ts",

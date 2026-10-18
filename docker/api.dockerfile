@@ -25,4 +25,4 @@ COPY package.json ./
 
 EXPOSE 3000
 
-CMD ["node", "dist/apps/api/src/main.js"]
+CMD ["node", "dist/apps/api/main.cjs"]
