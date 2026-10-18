@@ -90,7 +90,7 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
     const migrations = await scratch.query(
       'SELECT COUNT(*)::int AS count FROM drizzle.__drizzle_migrations'
     );
-    expect(migrations.rows[0]).toEqual({ count: 7 });
+    expect(migrations.rows[0]).toEqual({ count: 9 });
 
     const tables = [
       'users',
@@ -100,6 +100,7 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
       'grades',
       'attendance',
       'outbox_events',
+      'email_deliveries',
     ];
     const result = await scratch.query(
       `SELECT ${tables

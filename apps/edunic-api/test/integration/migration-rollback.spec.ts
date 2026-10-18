@@ -1,7 +1,7 @@
 import pg from 'pg';
 import { runMigrations, runMigrationsDown } from '@edunic/source/db';
 
-// P4-R6 / D6: every migration (0000-0006, incl. pre-existing) ships a sibling
+// P4-R6 / D6: every migration (0000-0008, incl. pre-existing) ships a sibling
 // .down.sql and the down runner walks the chain backwards on a real Postgres.
 // The scratch database is created empty, migrated up, rolled fully down and
 // migrated up again — the up -> down -> up chain the rollback runbook relies on.
@@ -87,29 +87,76 @@ describe('migration down runner (P4-R6, D6)', () => {
     return (result.rows[0] as { exists: boolean }).exists;
   }
 
-  it('up -> down -> up restores the full schema (0006 down to 0000)', async () => {
+  async function columnExists(table: string, column: string) {
+    const result = await db().query(
+      `SELECT EXISTS (
+         SELECT 1 FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2
+       ) AS exists`,
+      [table, column]
+    );
+    return (result.rows[0] as { exists: boolean }).exists;
+  }
+
+  async function emailFlagRows() {
+    const result = await db().query(
+      `SELECT COUNT(*)::int AS count FROM feature_flags
+       WHERE key = 'email_notifications'`
+    );
+    return (result.rows[0] as { count: number }).count;
+  }
+
+  it('up -> down -> up restores the full schema (0008 down to 0000)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(7);
+    expect(await appliedCount()).toBe(9);
 
-    for (let step = 0; step < 7; step += 1) {
+    for (let step = 0; step < 9; step += 1) {
       await withScratchDatabaseUrl(runMigrationsDown);
     }
     expect(await appliedCount()).toBe(0);
-    for (const table of ['outbox_events', 'report_history', 'users', 'students']) {
+    for (const table of [
+      'email_deliveries',
+      'outbox_events',
+      'report_history',
+      'users',
+      'students',
+    ]) {
       expect(await tableExists(table)).toBe(false);
     }
 
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(7);
-    for (const table of ['outbox_events', 'report_history', 'users', 'students']) {
+    expect(await appliedCount()).toBe(9);
+    for (const table of [
+      'email_deliveries',
+      'outbox_events',
+      'report_history',
+      'users',
+      'students',
+    ]) {
       expect(await tableExists(table)).toBe(true);
     }
   }, 60_000);
 
-  it('rolls back exactly one migration per step (0006, then 0005)', async () => {
+  it('rolls back exactly one migration per step (0008, 0007, 0006, 0005)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
+
+    // 0008 down: only the email ledger goes; 0007's columns stay.
+    await withScratchDatabaseUrl(runMigrationsDown);
+    expect(await appliedCount()).toBe(8);
+    expect(await tableExists('email_deliveries')).toBe(false);
+    expect(await tableExists('outbox_events')).toBe(true);
+    expect(await columnExists('guardians', 'email')).toBe(true);
+
+    // 0007 down: the email columns and the seeded flag row go, nothing else.
+    await withScratchDatabaseUrl(runMigrationsDown);
+    expect(await appliedCount()).toBe(7);
+    expect(await columnExists('guardians', 'email')).toBe(false);
+    expect(await columnExists('institutions', 'sender_name')).toBe(false);
+    expect(await columnExists('institutions', 'reply_to_email')).toBe(false);
+    expect(await emailFlagRows()).toBe(0);
+    expect(await tableExists('outbox_events')).toBe(true);
 
     await withScratchDatabaseUrl(runMigrationsDown);
     expect(await appliedCount()).toBe(6);
@@ -122,7 +169,7 @@ describe('migration down runner (P4-R6, D6)', () => {
     expect(await tableExists('report_history')).toBe(false);
     expect(await tableExists('messages')).toBe(false);
     expect(await tableExists('users')).toBe(true);
-  }, 60_000);
+  }, 90_000);
 
   it('rejects with a clear error when there is nothing to roll back', async () => {
     await recreateScratchDatabase();
