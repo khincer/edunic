@@ -1,0 +1,27 @@
+{
+  "name": "edunic-docs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Role guides for the Edunic academic platform",
+  "scripts": {
+    "docusaurus": "docusaurus",
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve",
+    "clear": "docusaurus clear"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "~5.6.3"
+  },
+  "engines": {
+    "node": ">=18.0"
+  }
+}
