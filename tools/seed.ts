@@ -139,10 +139,15 @@ export async function seedDatabase() {
       {
         id: ids.institutions.central,
         name: 'Colegio Central',
+        // SI-R1: per-institution sender identity, so the demo schools can send.
+        senderName: 'Colegio Central',
+        replyToEmail: 'office@central.example.com',
       },
       {
         id: ids.institutions.north,
         name: 'Instituto del Norte',
+        senderName: 'Instituto del Norte',
+        replyToEmail: 'office@north.example.com',
       },
     ])
     .onConflictDoNothing();
@@ -203,6 +208,9 @@ export async function seedDatabase() {
     ])
     .onConflictDoNothing();
 
+  // FL-R1/D7: the flag row exists so a reseed and the 0007 migration agree.
+  // The demo institutions deliberately get NO `email_notifications` override
+  // below: with the flag off, a demo database cannot send real mail.
   await db
     .insert(featureFlags)
     .values([
@@ -214,6 +222,7 @@ export async function seedDatabase() {
       { key: 'parent_portal', defaultValue: false },
       { key: 'reports_pdf', defaultValue: false },
       { key: 'teacher_gradebook', defaultValue: true },
+      { key: 'email_notifications', defaultValue: false },
     ])
     .onConflictDoNothing();
 
@@ -491,12 +500,16 @@ export async function seedDatabase() {
         institutionId: ids.institutions.central,
         name: 'Ana Doe',
         phone: '+50255551001',
+        // GE-R1: demo contact address (example.com is reserved, so it can never
+        // receive anything) — the panel shows it as a `guardian` recipient.
+        email: 'ana.doe@example.com',
       },
       {
         id: ids.guardians.janeFamily,
         institutionId: ids.institutions.central,
         name: 'Carlos Smith',
         phone: '+50255551002',
+        email: 'carlos.smith@example.com',
       },
     ])
     .onConflictDoNothing();
