@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Bell,
   BookOpenCheck,
   Building2,
   CalendarDays,
@@ -35,6 +36,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/admin/dashboard', group: 'Workspace', icon: LayoutDashboard },
   { label: 'Institutions', href: '/admin/institutions', group: 'Workspace', icon: Building2 },
+  { label: 'Notifications', href: '/admin/notifications', group: 'Workspace', icon: Bell },
   { label: 'Students', href: '/admin/students', group: 'Roadmap', icon: UsersRound },
   { label: 'Enrollments', href: '/admin/enrollments', group: 'Roadmap', icon: ClipboardList },
   { label: 'Academic periods', href: '/admin/academic-periods', group: 'Roadmap', icon: CalendarDays },
@@ -174,6 +176,10 @@ function getPageLabel(pathname: string) {
 
   if (pathname.startsWith('/admin/institutions')) {
     return 'Institutions';
+  }
+
+  if (pathname.startsWith('/admin/notifications')) {
+    return 'Notifications';
   }
 
   if (pathname.startsWith('/admin/students')) {

@@ -10,6 +10,9 @@ import {
   NotificationsRepository,
   notificationParamsSchema,
   listNotificationsQuerySchema,
+  EmailDeliveryService,
+  EmailDeliveriesRepository,
+  listEmailDeliveriesQuerySchema,
 } from '@edunic/source/domain/notifications';
 
 const NOTIFICATION_FILTER_SORT_OPTIONS = {
@@ -32,6 +35,35 @@ export async function notificationRoutes(app: FastifyInstance) {
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
   };
+  // PN-R1/PN-R3: the panel is admin-only — rows carry family email addresses.
+  const adminOnly = {
+    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+  };
+  // The API only reads the panel (design D1): no queue, no transport, no flag
+  // writes, so the service is wired with the repository alone.
+  const emailDeliveryService = new EmailDeliveryService({
+    repository: new EmailDeliveriesRepository(app.db),
+  });
+
+  app.get('/notifications/deliveries', adminOnly, async (request, reply) => {
+    const institutionId = getInstitutionId(request);
+    const query = parseWithSchema(
+      listEmailDeliveriesQuerySchema,
+      request.query
+    );
+
+    if (!query.cursor) {
+      reply.header('X-Pagination-Deprecated', 'offset');
+    }
+
+    return emailDeliveryService.listDeliveries({ institutionId, ...query });
+  });
+
+  app.get('/notifications/deliveries/state', adminOnly, async (request) => {
+    const institutionId = getInstitutionId(request);
+
+    return emailDeliveryService.getState(institutionId);
+  });
 
   app.get('/notifications', readAccess, async (request, reply) => {
     const institutionId = getInstitutionId(request);

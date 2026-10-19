@@ -51,6 +51,7 @@ export type {
 } from './infrastructure/email-job-queue.js';
 export {
   EmailDeliveryService,
+  EmailDeliveryServiceError,
 } from './application/email-delivery.service.js';
 export type {
   EmailDeliveryServiceDeps,

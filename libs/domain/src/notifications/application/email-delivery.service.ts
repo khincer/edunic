@@ -4,6 +4,7 @@ import type {
   GradeSubmittedEvent,
 } from '@edunic/source/domain/events';
 import { FeatureFlagsRepository } from '@edunic/source/domain/feature-flags';
+import { buildCursorPage } from '@edunic/source/domain/shared';
 import {
   buildAbsenceEmail,
   buildGradeEmail,
@@ -13,6 +14,7 @@ import {
 import {
   EmailDeliveriesRepository,
   type EmailDeliveryCompletion,
+  type ListEmailDeliveriesInput,
 } from '../infrastructure/email-deliveries.repository.js';
 import type {
   EmailDeliveryJob,
@@ -32,14 +34,33 @@ export type EmailTriggerEvent =
 
 export type EmailDeliveryServiceDeps = {
   repository: EmailDeliveriesRepository;
-  featureFlags: FeatureFlagsRepository;
-  queue: EmailJobQueue;
-  transport: EmailTransport;
+  // The send path below. The worker wires all five; the API process wires none
+  // of them, because it only serves the read-only admin panel (design D1/D6).
+  featureFlags?: FeatureFlagsRepository;
+  queue?: EmailJobQueue;
+  transport?: EmailTransport;
   /** Platform-verified envelope sender (EMAIL_FROM_ADDRESS). */
-  fromAddress: string;
+  fromAddress?: string;
   /** Platform reply-to default (EMAIL_REPLY_TO). */
-  defaultReplyTo: string;
+  defaultReplyTo?: string;
 };
+
+type EmailDeliverySendDeps = Required<
+  Pick<
+    EmailDeliveryServiceDeps,
+    'featureFlags' | 'queue' | 'transport' | 'fromAddress' | 'defaultReplyTo'
+  >
+>;
+
+export class EmailDeliveryServiceError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number
+  ) {
+    super(message);
+    this.name = 'EmailDeliveryServiceError';
+  }
+}
 
 const EMAIL_NOTIFICATIONS_FLAG = 'email_notifications';
 const FLAG_DISABLED_REASON = 'email_notifications disabled';
@@ -47,9 +68,30 @@ const FLAG_DISABLED_REASON = 'email_notifications disabled';
 export class EmailDeliveryService {
   constructor(private readonly deps: EmailDeliveryServiceDeps) {}
 
+  // A missing send-path group can only be a worker wiring bug, so it fails
+  // loudly instead of silently skipping a delivery.
+  private get sender(): EmailDeliverySendDeps {
+    const { featureFlags, queue, transport, fromAddress, defaultReplyTo } =
+      this.deps;
+
+    if (
+      !featureFlags ||
+      !queue ||
+      !transport ||
+      !fromAddress ||
+      !defaultReplyTo
+    ) {
+      throw new Error('Email delivery send dependencies are not configured');
+    }
+
+    return { featureFlags, queue, transport, fromAddress, defaultReplyTo };
+  }
+
   // EV-R1/RC-R1/RC-R2/RC-R3/FL-R2/SI-R3. Order matters: the flag is the first
   // statement, so a disabled institution reads no recipients and writes nothing.
   async enqueueForEvent(event: EmailTriggerEvent): Promise<void> {
+    const sendDeps = this.sender;
+
     if (!(await this.isEnabled(event.institutionId))) {
       return;
     }
@@ -102,14 +144,14 @@ export class EmailDeliveryService {
         institutionId: event.institutionId,
         eventId: event.id,
         recipientAddress: recipient.address,
-        from: this.deps.fromAddress,
-        replyTo: sender.replyToEmail ?? this.deps.defaultReplyTo,
+        from: sendDeps.fromAddress,
+        replyTo: sender.replyToEmail ?? sendDeps.defaultReplyTo,
         to: recipient.address,
         subject: content.subject,
         text: content.text,
       };
 
-      await this.deps.queue.enqueue(job);
+      await sendDeps.queue.enqueue(job);
     }
   }
 
@@ -138,7 +180,7 @@ export class EmailDeliveryService {
     }
 
     try {
-      const result = await this.deps.transport.send({
+      const result = await this.sender.transport.send({
         from: job.from,
         replyTo: job.replyTo,
         to: job.to,
@@ -166,9 +208,46 @@ export class EmailDeliveryService {
     }
   }
 
+  // PN-R1/DR-R2: the admin panel list. Same CursorPage envelope as every other
+  // list endpoint (offset when no cursor, keyset when there is one).
+  async listDeliveries(input: ListEmailDeliveriesInput) {
+    const result = await this.deps.repository.list(input);
+    const total = 'total' in result ? result.total : undefined;
+
+    const page = buildCursorPage(
+      result.items,
+      input,
+      {
+        // created_at is always set by defaultNow().
+        sortKey: (delivery) => delivery.createdAt as Date,
+        id: (delivery) => delivery.id,
+      },
+      total
+    );
+
+    return {
+      data: page.data,
+      hasMore: page.hasMore,
+      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
+      ...(page.meta !== undefined ? { meta: page.meta } : {}),
+    };
+  }
+
+  // PN-R3/SI-R3: the flag and sender-identity state the panel banner reads. Not
+  // gated by the flag: the panel stays visible when email is off.
+  async getState(institutionId: string) {
+    const state = await this.deps.repository.getState(institutionId);
+
+    if (!state) {
+      throw new EmailDeliveryServiceError('Institution not found', 404);
+    }
+
+    return { data: state };
+  }
+
   private async isEnabled(institutionId: string): Promise<boolean> {
     // D7: a missing flag row reads as disabled.
-    const flag = await this.deps.featureFlags.findEffective(
+    const flag = await this.sender.featureFlags.findEffective(
       institutionId,
       EMAIL_NOTIFICATIONS_FLAG
     );
