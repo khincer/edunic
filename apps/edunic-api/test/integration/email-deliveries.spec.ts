@@ -55,7 +55,7 @@ function deliverySubtreeLines(app: FastifyInstance) {
   }
 
   const indentOf = (line: string) =>
-    (/^(?:[│ ]   )*/.exec(line)?.[0] ?? '').length;
+    (/^(?:[│ ]{3})*/.exec(line)?.[0] ?? '').length;
   const baseIndent = indentOf(lines[index]);
 
   return lines
