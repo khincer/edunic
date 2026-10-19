@@ -54,7 +54,7 @@ flowchart LR
 | Auth | `plugins/auth.plugin.ts` (`preHandler`) | Verifies the JWT and resolves the caller's role before the handler runs. |
 | Validation | `libs/domain/src/shared/parse-with-schema.ts` | Rejects malformed input at the boundary. Called **inside each route handler**, not as a Fastify `preValidation` hook. |
 | Service | `libs/domain/src/<module>/application/*.service.ts` | Orchestrates the use case, enforces rules, maps DB errors to HTTP status codes. |
-| Repository | `libs/domain/src/<module>/infrastructure/*.repository.ts` | The only place that talks to the database. Every tenant-scoped query filters by `institutionId` (global catalogs: see section 4). |
+| Repository | `libs/domain/src/<module>/infrastructure/*.repository.ts` | The only place that talks to the database. Every tenant-scoped query filters by `institutionId`; the catalog reads that deliberately do not are listed in section 4. |
 | Events | `libs/events`, service constructor | Publishes domain events after a state change so other parts of the system can react. |
 
 **Worked example (`POST /enrollments`):** `apps/edunic-api/src/routes/enrollments.routes.ts` builds
@@ -64,6 +64,10 @@ flowchart LR
 `createEnrollment()`. The service (`libs/domain/src/enrollments/application/enrollments.service.ts`)
 verifies related rows exist, writes through the repository, and finally
 `eventBus.publish(createEnrollmentCreatedEvent(...))`.
+
+**The asynchronous tail.** Everything after `eventBus.publish` leaves the request: the outbox row →
+stream → worker chain, and the two worker-side effects it drives (the in-app notification row and the
+email delivery stage) are described in section 5.
 
 **Current error handling.** `apps/edunic-api/src/plugins/error-handler.plugin.ts` owns the global
 Fastify error handler (the bare `{ message }` handler that used to live in `app.ts` was removed). An
@@ -142,9 +146,16 @@ the `/health` prefix, `/ready` via `readyRoutes` at the root. Both paths are lis
 - To close the cross-tenant hole, `authenticate` (in `plugins/auth.plugin.ts`) rejects the request with
   `403` when the `x-institution-id` header does not match the institution embedded in the token.
 - Repositories receive `institutionId` and include it in the `where` clause of every tenant-scoped
-  query (the two global catalogs, `institutions` and the `extensions` catalog, are the documented
-  exceptions — see section 4), so tenant isolation is enforced at the data-access layer as well as at
-  the edge.
+  query, so tenant isolation is enforced at the data-access layer as well as at the edge. Reading the
+  `institutions` and `extensions` catalogs is the documented exception — see section 4.
+- **Catalog reads stay global; the identity write does not.** `GET /institutions` and
+  `GET /institutions/:institutionId` remain unscoped reads, but `PATCH /institutions/:institutionId`
+  now compares the token's institution with the path parameter and answers `403` for any other
+  institution (`assertInstitutionAccess` in `institutions.routes.ts`, mirroring
+  `feature-flags.routes.ts`) — added with the per-institution sender identity (SI-R2). `POST` and
+  `DELETE` on `/institutions` remain platform-level operations with no tenant comparison. So
+  `institutions` is a global catalog for reads and creation and a tenant-scoped resource for updates;
+  an admin can therefore no longer rename or configure a school that is not its own.
 
 ## 4. Database patterns
 
@@ -159,13 +170,14 @@ the `/health` prefix, `/ready` via `readyRoutes` at the root. Both paths are lis
   - `check` — e.g. grade `score` between 0 and 100, attendance `status` in `('present','absent','late')`,
     academic period `term` between 1 and 4, `startDate <= endDate`.
   - foreign keys on `institution_id` and relationships (`student_id`, `enrollment_id`, …).
-- **Migrations:** SQL files under `libs/db/src/migrations` (`0000`–`0006`), each with a sibling
+- **Migrations:** SQL files under `libs/db/src/migrations` (`0000`–`0008`), each with a sibling
   `.down.sql`, plus Drizzle's `meta/_journal.json`. `drizzle-kit` config lives in
   `libs/db/src/drizzle.config.ts` (schema `./libs/db/src/schema`, out `./libs/db/src/migrations`).
   `runMigrations()` (`libs/db/src/run-migrations.ts`) applies them with `migrate()` against
   `DATABASE_URL`; `npm run db:migrate:down` (`tools/migrate-down.ts`) rolls back one step per run.
-  Every migration is structurally reversible, but the downs of `0000`, `0002`, `0004`, `0005` (and
-  `0006` while unpublished events remain) are data-destructive — follow `docs/migrations-runbook.md`.
+  Every migration is structurally reversible, but the downs of `0000`, `0002`, `0004`, `0005`, `0007`
+  (the email columns and the flag row) and `0006`/`0008` (pending outbox events, delivery history) are
+  data-destructive — follow `docs/migrations-runbook.md`.
 - **Transactions and the transactional outbox:** `outbox_events` (migration `0006`) is inserted
   **inside the same `db.transaction()`** as the domain row for the enrollment, grade and attendance
   creates, so neither can commit without the other. The `outbox-publisher` plugin polls unpublished
@@ -252,11 +264,13 @@ high-precision `timestamp` inherits the `toCursorSortKey(Date)` millisecond-trun
 `w` so a single constant order serves all three endpoints — which is why its uniform whitelist is only
 `createdAt`.
 
-Two of the paginated lists are global catalogs rather than tenant-scoped collections, so their `WHERE`
-clause is assembled from optional filters and is empty when none are supplied: `institutions` and the
-`extensions` catalog (`GET /extensions`). Everything else keeps the tenant filter described in
+Two of the paginated lists are global catalog **reads** rather than tenant-scoped collections, so their
+`WHERE` clause is assembled from optional filters and is empty when none are supplied: `institutions`
+and the `extensions` catalog (`GET /extensions`). Everything else keeps the tenant filter described in
 section 1; the tenant-scoped nested GETs (`/guardians` by student, `/custom-fields/values/...`,
-`/institutions/:institutionId/extensions`) still filter by their parent entity.
+`/institutions/:institutionId/extensions`) still filter by their parent entity. The exception covers
+reads only: writing an institution (`PATCH /institutions/:institutionId`) is tenant-scoped — see
+section 3.
 
 ## 5. Events and Redis
 
@@ -291,8 +305,9 @@ part of `AcademicDomainEvent` — that union is the notifications subscriber's c
 
 ### Redis
 
-- Redis carries three things: the event-bus transport, the `Idempotency-Key` store, and the worker's
-  per-event dedupe markers. It is not used for caching or rate limiting.
+- Redis carries four things: the event-bus transport, the `Idempotency-Key` store, the worker's
+  per-event dedupe markers, and the BullMQ email queue (keys under the `edunic:email` prefix by
+  default). It is not used for caching or rate limiting.
 - In Redis mode, `RedisStreamsEventBus.publish` calls Redis `XADD` on the stream
   `edunic:domain-events` (override with `EVENT_STREAM_NAME`) using `ioredis`, then also dispatches to
   its in-memory subscribers. `subscribe` still delegates to the in-memory bus: the Redis transport is
@@ -302,8 +317,73 @@ part of `AcademicDomainEvent` — that union is the notifications subscriber's c
   which it creates at the stream tip (`$`) and then polls with `XREADGROUP`. Each delivery runs the
   handler first, then writes `processed:{event.id}` and `XACK`s the entry — so a failed or crashed
   delivery stays pending and is retried (at-least-once), while a repeated delivery is acked without
-  re-running the side effect. For `enrollment.created` the side effect is publishing
-  `enrollment.welcomed`, which closes the `POST /enrollments` → outbox → stream → worker loop.
+  re-running the side effect. For `enrollment.created` the first side effect is publishing
+  `enrollment.welcomed`, which closes the `POST /enrollments` → outbox → stream → worker loop; the
+  second is the email enqueue described next.
+
+### Email delivery (worker)
+
+Email is a **worker-side side effect**, never part of the request path: `POST /enrollments` answers
+`201` long before any mail exists, and the API process neither enqueues nor sends (it has no Resend
+client, no BullMQ import and no email env keys). The stage lives in `libs/domain/src/notifications`
+and is executed by `apps/edunic-worker`; the admin panel reads the ledger back through
+`GET /notifications/deliveries` and `GET /notifications/deliveries/state`.
+
+```text
+event on edunic:domain-events — enrollment.welcomed | grade.submitted | attendance.marked
+ └─ enqueueForEvent   (notifications/application/email-delivery.service.ts)
+     1 flag off  (findEffective('email_notifications'); a missing key reads as off)
+                 → STOP: no recipient read, no ledger row, no job
+     2 institutions.sender_name is null → STOP (no sender identity, no platform fallback)
+     3 recipients of the student, institution-scoped and deduped:
+          guardians.email  ∪  users.email reachable through guardian_user_links
+     4 insert email_deliveries ... on conflict do nothing   (status 'queued', attempt_count 0)
+     5 queue.add('email-send', job) with the deterministic job id
+ └─ the consumer then writes processed:{event.id} and XACKs (unchanged)
+ └─ BullMQ Worker (concurrency 5)
+     1 claim: status 'sending', attempt_count + 1  where status in ('queued','retried')
+          zero rows → return without touching the transport
+     2 flag re-read → 'failed' + provider_error 'email_notifications disabled', no retry
+     3 transport.send(...) → Resend
+     4 'sent' + provider_message_id | 'retried' + rethrow | 'failed' + provider_error
+GET /notifications/deliveries → the ledger, read-only
+```
+
+**Worker shape.** `apps/edunic-worker` gained its first database access (`createDb()` and the same
+domain repositories the API uses) and its first BullMQ client. `src/bootstrap.ts` is the composition
+root: it wires the delivery repository, the feature-flags read, the queue, the Resend adapter and the
+service, then starts the stream consumer and the BullMQ `Worker` side by side; `src/main.ts` waits for
+the worker to be ready, joins the consumer group, and closes **worker → queue → pool** on `SIGINT` or
+`SIGTERM`. The queue factory (`apps/edunic-worker/src/email/bullmq-email-queue.ts`) sits in the worker
+app on purpose: `libs/domain` exports only the `EmailJobQueue` port, so importing the delivery service
+never drags BullMQ into `dist/apps/api/main.cjs`. Queue name `EMAIL_QUEUE_NAME` (default
+`email-delivery`), key prefix `EMAIL_QUEUE_PREFIX` (default `edunic:email`), and its own Redis
+connection with `maxRetriesPerRequest: null` — the repo's other clients set `1`, which aborts BullMQ's
+blocking reads. Retries: `attempts: 5`, exponential backoff from 1 s, completed jobs kept 7 days,
+failed jobs 30 days.
+
+**Idempotency (design D2, corrected).** Three layers, in this order: the **queue** refuses a duplicate
+job id, the **ledger**'s unique key `(institution_id, event_id, recipient_address)` makes a re-insert a
+no-op, and the **claim** transition above is the last line of defence. The job id is
+`email-<eventId>-<sha256(trimmed, lowercased address)>` (`emailJobId()` in
+`notifications/infrastructure/email-job-queue.ts`) — BullMQ reserves `:` inside custom job ids, so the
+design's original `email:<eventId>:<sha256>` form is invalid; `EMAIL_QUEUE_PREFIX`'s `edunic:email` is
+a BullMQ *key* prefix, a different thing, and unaffected. Because retained job records expire, dedupe
+is bounded by those windows: once a job record is evicted the id is addable again, and the claim guard
+is what still prevents a second send.
+
+**Startup validation.** The worker validates its environment with Zod
+(`apps/edunic-worker/src/config/env.ts`) and fails by naming every offending key. Required:
+`DATABASE_URL`, `REDIS_URL`, `EVENT_BUS_BACKEND` (must be `redis`), `RESEND_API_KEY`,
+`EMAIL_FROM_ADDRESS`, `EMAIL_REPLY_TO`; optional with defaults: `EVENT_STREAM_NAME`,
+`EMAIL_QUEUE_NAME`, `EMAIL_QUEUE_PREFIX`. `EMAIL_FROM_ADDRESS` is the platform envelope sender — Resend
+only sends from a domain verified in the account, and per institution only the display name
+(`sender_name`) and `reply_to_email` are configurable. The API's schema is untouched, so a missing
+Resend key never fails API startup.
+
+**Ledger statuses.** `queued`, `sending` (the transient claim), `sent`, `failed`, `retried`; a
+completed record carries one of the four non-transient values, and a retryable provider failure (429,
+5xx, network) is the only reason a row leaves `sending` as `retried`.
 
 ## Current status (summary)
 
@@ -321,6 +401,7 @@ part of `AcademicDomainEvent` — that union is the notifications subscriber's c
 | Tests (unit / integration / API / DB / E2E) | Current | `apps/edunic-api/test` (56 suites), `apps/edunic-worker/test` |
 | Docker / Railway / `/health`, `/ready` | Current | `docker/{api.dockerfile,worker.dockerfile}`, `railway*.json`, `health.routes.ts` |
 | Worker + Redis Streams consumer | Current | `apps/edunic-worker`, `libs/events/src/consumer.ts` |
+| Email delivery (Resend via BullMQ, worker-side, flag-gated) | Current | `libs/domain/src/notifications`, `apps/edunic-worker/src/email`, migration 0008 |
 
 ## Reference
 
