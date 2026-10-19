@@ -283,6 +283,12 @@ export class EmailDeliveriesRepository {
   // completion write it triggers refreshes `updated_at`, so a row can only
   // become stale here after the send it guards has already ended.
   //
+  // P10: a send that ended by *succeeding* at the provider, with no completion
+  // write to show for it, is still reclaimed and re-sent — the deadline has
+  // nothing left to cut off. The re-send is not a second message because the
+  // transport call carries this row's id as the provider's idempotency key
+  // (the same key the crashed attempt used), so the provider absorbs it.
+  //
   // The cutoff is computed on the database clock: `updated_at` is written by
   // `now()`, and the column carries no time zone, so a client-side date would
   // compare two different clocks.

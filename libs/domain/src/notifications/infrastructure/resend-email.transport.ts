@@ -19,9 +19,12 @@ export type ResendEmailClient = {
         text: string;
         replyTo?: string;
       },
-      // The SDK's second argument (P9): the request options carry the deadline's
-      // AbortSignal, which aborts the underlying fetch.
-      options?: { signal?: AbortSignal }
+      // The SDK's second argument (P9/P10): the request options carry the
+      // deadline's AbortSignal, which aborts the underlying fetch, and the
+      // caller's idempotency key, which the SDK sends as `Idempotency-Key` so
+      // the provider recognises a re-send instead of delivering a second
+      // message.
+      options?: { signal?: AbortSignal; idempotencyKey?: string }
     ): Promise<
       | { data: { id: string }; error: null }
       | { data: null; error: { message: string; statusCode: number | null } }
@@ -60,7 +63,11 @@ export class ResendEmailTransport implements EmailTransport {
         // P9: the caller's deadline reaches the provider request. Resend 6.x
         // threads this signal into its fetch, so the abort ends the request
         // instead of merely abandoning it.
-        { signal: input.signal }
+        // P10: the caller's idempotency key reaches it too, as the
+        // `Idempotency-Key` header the SDK's own option name maps to
+        // (`CreateEmailRequestOptions extends PostOptions, IdempotentRequest`),
+        // so the provider absorbs a re-send it has already accepted.
+        { signal: input.signal, idempotencyKey: input.idempotencyKey }
       );
     } catch (error) {
       // Network, DNS, timeout and deadline failures never reach a provider

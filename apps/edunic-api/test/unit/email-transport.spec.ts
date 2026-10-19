@@ -64,11 +64,15 @@ describe('ResendEmailTransport', () => {
     });
   });
 
-  it('sends the envelope sender, reply-to and body the provider expects', async () => {
+  it('sends the envelope sender, reply-to, body and dedupe key the provider expects', async () => {
     const client = clientReturning({ data: { id: 'id-1' }, error: null });
     const transport = new ResendEmailTransport({ client });
 
-    await transport.send({ ...message, replyTo: 'replies@colegio.test' });
+    await transport.send({
+      ...message,
+      replyTo: 'replies@colegio.test',
+      idempotencyKey: 'delivery-row-1',
+    });
 
     expect(client.emails.send).toHaveBeenCalledWith(
       {
@@ -78,9 +82,10 @@ describe('ResendEmailTransport', () => {
         text: message.text,
         replyTo: 'replies@colegio.test',
       },
-      // P9: the second argument is the request options, which carry the
-      // caller's deadline. This message declares none.
-      { signal: undefined }
+      // P9/P10: the second argument is the request options. `signal` is the
+      // caller's deadline and `idempotencyKey` is the key the SDK sends as the
+      // `Idempotency-Key` header, so the provider can absorb a re-send.
+      { signal: undefined, idempotencyKey: 'delivery-row-1' }
     );
   });
 
@@ -100,7 +105,7 @@ describe('ResendEmailTransport', () => {
         text: message.text,
         replyTo: undefined,
       },
-      { signal: undefined }
+      { signal: undefined, idempotencyKey: undefined }
     );
   });
 

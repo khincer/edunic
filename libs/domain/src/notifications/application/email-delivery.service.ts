@@ -205,6 +205,15 @@ export class EmailDeliveryService {
         to: job.to,
         subject: job.subject,
         text: job.text,
+        // P10: the provider's dedupe key, and the third layer of the
+        // once-only guarantee. It is the claim's own row id — one row per
+        // (institution, event, recipient), minted once and never rewritten, so
+        // the original attempt and every reclaim or retry of that row derive
+        // the same key while a different event or address derives a different
+        // one. The deadline below bounds a send that is still in flight; this
+        // covers the one the provider already accepted and the ledger never
+        // recorded, which is exactly what a reclaim re-sends.
+        idempotencyKey: claim.id,
         // P9: the send is bounded, so it cannot outlive its claim. Without
         // this, a slow provider response is still in flight when the reclaim
         // threshold passes, and the row is reclaimed and re-sent — one email

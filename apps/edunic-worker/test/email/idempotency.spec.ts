@@ -40,6 +40,10 @@ import { FakeEmailTransport } from '../helpers/fake-email-transport.js';
 // threshold must be cut off by its deadline rather than reclaimed and re-sent,
 // a stranded row whose job record is gone must not be advertised as a pending
 // retry, and the reclaim must work through its production timer path.
+// P10 adds the last window of that kind: a send the provider accepted and the
+// ledger never recorded, which a reclaim re-sends. The deadline cannot close
+// it (the send is over), so the retry carries the delivery row's provider key
+// and the provider absorbs it — one message, not two.
 // Real Postgres, real Redis and a real BullMQ Worker; the provider is the only
 // substitute, behind the injected EmailTransport port.
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
@@ -200,6 +204,19 @@ describe('worker email delivery idempotency', () => {
       studentId: student.id,
       enrollmentId: enrollment.id,
     };
+  };
+
+  // A second address for the same student, resolved exactly as production
+  // resolves the first one (RC-R1).
+  const addGuardian = async (
+    institutionId: string,
+    studentId: string,
+    email: string
+  ): Promise<void> => {
+    const guardian = await createGuardianFixture({ institutionId, email });
+    await db
+      .insert(studentGuardians)
+      .values({ studentId, guardianId: guardian.id });
   };
 
   const deliveryJob = (
@@ -507,6 +524,113 @@ describe('worker email delivery idempotency', () => {
     },
     15000
   );
+
+  it(
+    'P10: a reclaim of an accepted-but-unrecorded send carries the row key and delivers one message',
+    async () => {
+      const scenario = await createScenario();
+      const event = createEnrollmentWelcomedEvent({
+        institutionId: scenario.institutionId,
+        payload: {
+          enrollmentId: scenario.enrollmentId,
+          studentId: scenario.studentId,
+        },
+      });
+
+      // The first attempt runs the production send path, so the provider sees
+      // the exact key the service derives for this row and accepts the message.
+      await runtime.emailWorker.pause();
+      await runtime.emailDelivery.enqueueForEvent(event);
+      await waitForDeliveries(scenario.institutionId, {
+        status: 'queued',
+        count: 1,
+      });
+      await runtime.emailWorker.resume();
+
+      const [delivered] = await waitForDeliveries(scenario.institutionId, {
+        status: 'sent',
+        count: 1,
+      });
+      const rowId = delivered.id;
+      expect(fake.delivered).toBe(1);
+
+      // The crash this case is about (P10): the provider accepted the message
+      // and the ledger never learned it. The row goes back to exactly the state
+      // that crash leaves — claimed once, an hour old — while the provider
+      // keeps what it already accepted.
+      await db.execute(sql`
+        update email_deliveries
+        set status = 'sending',
+            attempt_count = 1,
+            provider_message_id = null,
+            provider_error = null,
+            sent_at = null,
+            updated_at = now() - make_interval(secs => ${HOUR_MS / 1000})
+        where id = ${rowId}
+      `);
+
+      expect(await runtime.claimSweeper.sweepOnce()).toBe(1);
+
+      const rows = await waitForDeliveries(
+        scenario.institutionId,
+        { status: 'sent', count: 1 },
+        10000
+      );
+
+      // Two sends, one email: the retry had to go out — nothing in the ledger
+      // or the queue could know the first was accepted — and the provider is
+      // what absorbed it.
+      expect(fake.calls).toBe(2);
+      expect(fake.delivered).toBe(1);
+      // Same key on both attempts of the row, so a provider can recognise the
+      // retry; the message id the ledger ends with is the one accepted first.
+      expect(fake.sent[1].idempotencyKey).toBe(fake.sent[0].idempotencyKey);
+      expect(fake.sent[0].idempotencyKey).toBe(rowId);
+      expect(rows[0].providerMessageId).toBe(delivered.providerMessageId);
+      expect(rows[0].attemptCount).toBe(2);
+      expect(await queue.getJob(reclaimJobId(rowId, 1))).toBeDefined();
+    },
+    20000
+  );
+
+  it('P10: the provider key is the row identity, so no two rows can share one', async () => {
+    const scenario = await createScenario();
+    await addGuardian(scenario.institutionId, scenario.studentId, 'dad@example.com');
+
+    // Two events for one address and one event for a second address: the keys
+    // have to separate the events and the addresses alike.
+    const first = createEnrollmentWelcomedEvent({
+      institutionId: scenario.institutionId,
+      payload: {
+        enrollmentId: scenario.enrollmentId,
+        studentId: scenario.studentId,
+      },
+    });
+    const second = createEnrollmentWelcomedEvent({
+      institutionId: scenario.institutionId,
+      payload: {
+        enrollmentId: scenario.enrollmentId,
+        studentId: scenario.studentId,
+      },
+    });
+
+    await runtime.emailDelivery.enqueueForEvent(first);
+    await runtime.emailDelivery.enqueueForEvent(second);
+
+    const rows = await waitForDeliveries(
+      scenario.institutionId,
+      { status: 'sent', count: 4 },
+      15000
+    );
+
+    const keys = fake.sent.map((message) => message.idempotencyKey);
+
+    expect(keys).toHaveLength(4);
+    expect(new Set(keys).size).toBe(4);
+    // The key is the delivery row it belongs to, and nothing else: one distinct
+    // key per (institution, event, address) row.
+    expect(new Set(keys)).toEqual(new Set(rows.map((row) => row.id)));
+  }, 20000);
 
   it('OC-R1: a fresh sending row is never reclaimed (an in-flight send is not double-sent)', async () => {
     const scenario = await createScenario();

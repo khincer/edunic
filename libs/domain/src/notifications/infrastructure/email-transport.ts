@@ -22,6 +22,15 @@ export type SendEmailInput = {
    * a reclaim from firing while a send is still in flight.
    */
   signal?: AbortSignal;
+  /**
+   * The provider's dedupe key (P10), stable for every attempt of one logical
+   * delivery. An adapter must pass it on to the provider's own idempotency
+   * mechanism, so a re-send the caller cannot know was already accepted is
+   * absorbed by the provider instead of delivering a second message. The send
+   * deadline above only bounds a send that is still in flight; this covers the
+   * one that already succeeded and was never recorded.
+   */
+  idempotencyKey?: string;
 };
 
 export type SendEmailResult = {

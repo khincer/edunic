@@ -19,13 +19,16 @@ import { EMAIL_JOB_NAME } from './bullmq-email-queue.js';
 // requeued job through the same transition as the original, so a reclaim racing
 // a *job* loses at the claim and sends nothing.
 //
-// That guard is not what keeps a live send single, though (P9): a reclaim is
+// That guard is not what keeps a live send single, though (P9/P10): a reclaim is
 // triggered by the age of a claim, and the guard cannot tell a crashed claim
 // from one whose provider call is merely slow. What does is the deadline the
 // delivery service puts on every send (EMAIL_SEND_TIMEOUT_MS) together with the
 // startup validation that refuses a threshold which does not clear it by a
 // safety factor — the send is guaranteed to have ended, and to have recorded
-// its outcome, before this sweeper may call its claim stale.
+// its outcome, before this sweeper may call its claim stale. For the send that
+// ended *successfully* at the provider while its outcome was never recorded, no
+// deadline can help: the re-send below carries the row's own provider key, and
+// the provider absorbs it.
 export const CLAIM_SWEEP_INTERVAL_MS = 60_000;
 export const CLAIM_SWEEP_BATCH_SIZE = 100;
 

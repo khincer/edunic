@@ -20,6 +20,9 @@ export class FakeEmailTransport implements EmailTransport {
   private inFlightCount = 0;
   private peakInFlightCount = 0;
   private deliveredCount = 0;
+  // What the provider has already accepted, keyed by the caller's idempotency
+  // key — the way a real provider recognises a re-send.
+  private readonly accepted = new Map<string, string>();
 
   get calls(): number {
     return this.sent.length;
@@ -79,14 +82,27 @@ export class FakeEmailTransport implements EmailTransport {
     this.inFlightCount = 0;
     this.peakInFlightCount = 0;
     this.deliveredCount = 0;
+    this.accepted.clear();
   }
 
-  // The deadline field is part of this parameter type rather than of the port
-  // it is read from, so the double compiles against both port shapes.
-  async send(
-    input: SendEmailInput & { signal?: AbortSignal }
-  ): Promise<SendEmailResult> {
+  /**
+   * The provider absorbs a re-send it has already accepted under the same
+   * idempotency key: no second message, the original message id comes back.
+   * Without a key there is nothing to recognise it by, so the message is
+   * delivered again — which is what the duplicate this double exists to
+   * reproduce looks like.
+   */
+  async send(input: SendEmailInput): Promise<SendEmailResult> {
     this.sent.push(input);
+
+    const acceptedId = input.idempotencyKey
+      ? this.accepted.get(input.idempotencyKey)
+      : undefined;
+
+    if (acceptedId !== undefined) {
+      return { providerMessageId: acceptedId };
+    }
+
     this.inFlightCount += 1;
     this.peakInFlightCount = Math.max(
       this.peakInFlightCount,
@@ -109,6 +125,10 @@ export class FakeEmailTransport implements EmailTransport {
       }
 
       this.deliveredCount += 1;
+
+      if (input.idempotencyKey !== undefined) {
+        this.accepted.set(input.idempotencyKey, this.providerMessageId);
+      }
 
       return { providerMessageId: this.providerMessageId };
     } finally {
