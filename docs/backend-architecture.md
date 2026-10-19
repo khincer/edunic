@@ -345,8 +345,11 @@ event on edunic:domain-events — enrollment.welcomed | grade.submitted | attend
      1 claim: status 'sending', attempt_count + 1  where status in ('queued','retried')
           zero rows → return without touching the transport
      2 flag re-read → 'failed' + provider_error 'email_notifications disabled', no retry
-     3 transport.send(..., signal) → Resend, From: "<sender_name>" <EMAIL_FROM_ADDRESS>
+     3 transport.send(..., signal, idempotencyKey) → Resend
+          From: "<sender_name>" <EMAIL_FROM_ADDRESS>
           the signal is EMAIL_SEND_TIMEOUT_MS: the provider call is aborted at the deadline
+          the key is the delivery row's uuid: sent as Idempotency-Key, so a re-send of
+            that row is absorbed by the provider instead of delivering a second message
      4 'sent' + provider_message_id | 'retried' + rethrow | 'failed' + provider_error
  └─ claim sweeper (every 60 s, beside the delivery worker)
      rows in 'sending' older than EMAIL_CLAIM_STALE_MS: transition to 'retried'
@@ -368,16 +371,40 @@ connection with `maxRetriesPerRequest: null` — the repo's other clients set `1
 blocking reads. Retries: `attempts: 5`, exponential backoff from 1 s, completed jobs kept 7 days,
 failed jobs 30 days.
 
-**Idempotency (design D2, corrected).** Three layers, in this order: the **queue** refuses a duplicate
-job id, the **ledger**'s unique key `(institution_id, event_id, recipient_address)` makes a re-insert a
-no-op, and the **claim** transition above is the last line of defence. The job id is
+**Idempotency (design D2, corrected; third layer added in P10).** Three layers, in this order, each
+closing a different crash window:
+
+| Layer | Where it lives | The window it closes |
+|-------|----------------|----------------------|
+| the **job id** | `queue.add` under `email-<eventId>-<sha256(trimmed, lowercased address)>` (`emailJobId()`) | a redelivered event, or a second enqueue of the same event: BullMQ refuses a duplicate id while the record exists. Bounded by job-record retention. |
+| the **ledger claim** | the `email_deliveries` unique key `(institution_id, event_id, recipient_address)` makes the re-insert a no-op, and the claim `status in ('queued','retried') -> 'sending'` admits exactly one job to the transport | two *jobs* racing one row — the loser claims zero rows and sends nothing. Bounded only by the ledger row, which never expires. |
+| the **provider key** | `idempotencyKey` on `SendEmailInput`, carried to Resend as its `Idempotency-Key` request option | a *send* whose acceptance the ledger never recorded — the worker dying between the provider accepting the message and the completion write, and any reclaim that follows: the provider has already accepted that key, so it absorbs the re-send instead of delivering a second message. |
+
+The first two layers only ever fence *jobs*. Neither can fence a send that has already passed the
+claim, and the ledger cannot see a message the provider accepted: the row is still `sending` with no
+`provider_message_id`, indistinguishable from a claim whose provider call never started. That is what
+the third layer is for. The job id is
 `email-<eventId>-<sha256(trimmed, lowercased address)>` (`emailJobId()` in
 `notifications/infrastructure/email-job-queue.ts`) — BullMQ reserves `:` inside custom job ids, so the
 design's original `email:<eventId>:<sha256>` form is invalid; `EMAIL_QUEUE_PREFIX`'s `edunic:email` is
 a BullMQ *key* prefix, a different thing, and unaffected. Because retained job records expire, dedupe
 is bounded by those windows: once a job record is evicted the id is addable again, and the claim guard
-is what still keeps a *concurrent* job to one send. It never fenced a send that had already passed the
-claim — the send deadline does that, as the reclaim section below explains.
+is what still keeps a *concurrent* job to one send.
+
+**The provider key (P10).** The key is the ledger row's own primary key: `email_deliveries.id`, the
+uuid minted once for the `(institution, event, recipient address)` row. The delivery service does not
+invent it — `claimDelivery()` returns it with the claim it just took, and
+`EmailDeliveryService.handleDeliveryJob` puts it on the send. It is stable across every attempt of one
+logical delivery because the row is: the unique key makes a redelivered event a no-op rather than a new
+row, a reclaim and a BullMQ retry transition *that* row instead of inserting one, and nothing in the
+pipeline deletes a row. It separates deliveries because the row does: a different event, a different
+address or a different institution is a different row and therefore a different key, so no two logical
+deliveries can ever share one. `ResendEmailTransport` hands it to the SDK's request options beside the
+P9 deadline (`{ signal, idempotencyKey }`; the SDK's `CreateEmailRequestOptions` extends
+`PostOptions, IdempotentRequest`, and `idempotencyKey` is the option that becomes the
+`Idempotency-Key` header). A provider that already accepted a message under that key returns the
+original message id instead of sending again, so `email_deliveries.provider_message_id` ends up naming
+the message the first attempt created, whichever attempt recorded it last.
 
 **Reclaim (the crash window).** The guarded claim makes a send *at-most*-once, so a worker that dies
 between the claim and the completion write would leave the row `sending` forever: the stalled-job retry
@@ -390,11 +417,16 @@ returns them to `retried` in one atomic statement, and requeues them.
 **The guard is not what makes the requeue safe (corrected).** The claim guard fences concurrent
 *jobs*: it admits one job per row and every other job for that row leaves without sending. It cannot
 fence a send that has already passed the claim, because the sweep decides from the *age* of a claim
-alone and cannot tell a crashed claim from one whose provider call is merely slow. What fences that is
-the send deadline. `EMAIL_SEND_TIMEOUT_MS` (optional, default 30000 ms, well under the 300 s socket
+alone and cannot tell a crashed claim from one whose provider call is merely slow. Two things close
+that, and they close different halves of it. The **send deadline**,
+`EMAIL_SEND_TIMEOUT_MS` (optional, default 30000 ms, well under the 300 s socket
 default) is turned into an `AbortSignal.timeout(...)` by the delivery service, threaded through the
 `EmailTransport` port, and handed to Resend as its request option, so the provider call is aborted at
-the deadline rather than merely abandoned. The worker then refuses the pair at startup:
+the deadline rather than merely abandoned — a reclaim can no longer race a send that is still running.
+The **provider key** closes the half the deadline cannot reach: a send that *did* complete at the
+provider has already ended, so no deadline can undo it, and the reclaim re-sends it — the retry
+carries the row's key and the provider absorbs it, so the recipient gets one message. The worker
+refuses the pair at startup anyway:
 `EMAIL_CLAIM_STALE_MS` must be at least twice `EMAIL_SEND_TIMEOUT_MS` and never under 1 s
 (`CLAIM_STALE_SAFETY_FACTOR` and `MIN_CLAIM_STALE_MS` in `apps/edunic-worker/src/config/env.ts`), and a
 configuration that fails that test does not boot. The deadline therefore ends the send before any
