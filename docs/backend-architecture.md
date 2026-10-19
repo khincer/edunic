@@ -338,23 +338,27 @@ event on edunic:domain-events — enrollment.welcomed | grade.submitted | attend
      3 recipients of the student, institution-scoped and deduped:
           guardians.email  ∪  users.email reachable through guardian_user_links
      4 insert email_deliveries ... on conflict do nothing   (status 'queued', attempt_count 0)
-     5 queue.add('email-send', job) with the deterministic job id
+     5 queue.add('email-send', job) with the deterministic job id; the job carries
+          fromName = institutions.sender_name (the From: display name)
  └─ the consumer then writes processed:{event.id} and XACKs (unchanged)
  └─ BullMQ Worker (concurrency 5)
      1 claim: status 'sending', attempt_count + 1  where status in ('queued','retried')
           zero rows → return without touching the transport
      2 flag re-read → 'failed' + provider_error 'email_notifications disabled', no retry
-     3 transport.send(...) → Resend
+     3 transport.send(...) → Resend, From: "<sender_name>" <EMAIL_FROM_ADDRESS>
      4 'sent' + provider_message_id | 'retried' + rethrow | 'failed' + provider_error
+ └─ claim sweeper (every 60 s, beside the delivery worker)
+     rows in 'sending' older than EMAIL_CLAIM_STALE_MS: transition to 'retried'
+       and requeue under a reclaim job id
 GET /notifications/deliveries → the ledger, read-only
 ```
 
 **Worker shape.** `apps/edunic-worker` gained its first database access (`createDb()` and the same
 domain repositories the API uses) and its first BullMQ client. `src/bootstrap.ts` is the composition
-root: it wires the delivery repository, the feature-flags read, the queue, the Resend adapter and the
-service, then starts the stream consumer and the BullMQ `Worker` side by side; `src/main.ts` waits for
-the worker to be ready, joins the consumer group, and closes **worker → queue → pool** on `SIGINT` or
-`SIGTERM`. The queue factory (`apps/edunic-worker/src/email/bullmq-email-queue.ts`) sits in the worker
+root: it wires the delivery repository, the feature-flags read, the queue, the Resend adapter, the
+service and the claim sweeper, then starts the stream consumer and the BullMQ `Worker` side by side;
+`src/main.ts` waits for the worker to be ready, joins the consumer group, starts the sweeper, and closes
+**sweeper → worker → queue → pool** on `SIGINT` or `SIGTERM`. The queue factory (`apps/edunic-worker/src/email/bullmq-email-queue.ts`) sits in the worker
 app on purpose: `libs/domain` exports only the `EmailJobQueue` port, so importing the delivery service
 never drags BullMQ into `dist/apps/api/main.cjs`. Queue name `EMAIL_QUEUE_NAME` (default
 `email-delivery`), key prefix `EMAIL_QUEUE_PREFIX` (default `edunic:email`), and its own Redis
@@ -372,18 +376,39 @@ a BullMQ *key* prefix, a different thing, and unaffected. Because retained job r
 is bounded by those windows: once a job record is evicted the id is addable again, and the claim guard
 is what still prevents a second send.
 
+**Reclaim (the crash window).** The guarded claim makes a send *at-most*-once, so a worker that dies
+between the claim and the completion write would leave the row `sending` forever: the stalled-job retry
+re-enters the processor, the claim guard refuses the row, and the job finishes having sent nothing.
+`apps/edunic-worker/src/email/email-claim-sweeper.ts` closes that window — it runs beside the delivery
+worker, and every 60 s (`CLAIM_SWEEP_INTERVAL_MS`) it takes rows whose `sending` claim is older than
+`EMAIL_CLAIM_STALE_MS` (optional, default 5 minutes; `updated_at` is the claim's own timestamp),
+returns them to `retried` in one atomic statement, and requeues them.
+
+The requeue cannot reuse the deterministic job id: the crashed attempt's record is still in Redis
+(completed jobs are kept 7 days) and `queue.add` with an existing id is a silently ignored no-op, so
+the row would never be delivered again — reclaiming *and* requeueing is what restores exactly-once.
+The requeued job therefore travels under `email-reclaim-<row id>-<attempt count>`
+(`reclaimJobId()`), a fresh id per stale-claim episode, and the claim guard is still the admission gate:
+the reclaiming job enters through the same `queued | retried` transition as any other, so a reclaim
+racing a live attempt — or two sweeps racing each other — sends once and the loser sends nothing.
+Reclaim happens at most `EMAIL_CLAIM_STALE_MS + 60 s` after the crash. The job payload is reused from
+the retained job record (the ledger stores no content), so a row whose job record has been evicted
+cannot be requeued and is left at `retried` for the panel to show.
+
 **Startup validation.** The worker validates its environment with Zod
 (`apps/edunic-worker/src/config/env.ts`) and fails by naming every offending key. Required:
 `DATABASE_URL`, `REDIS_URL`, `EVENT_BUS_BACKEND` (must be `redis`), `RESEND_API_KEY`,
 `EMAIL_FROM_ADDRESS`, `EMAIL_REPLY_TO`; optional with defaults: `EVENT_STREAM_NAME`,
-`EMAIL_QUEUE_NAME`, `EMAIL_QUEUE_PREFIX`. `EMAIL_FROM_ADDRESS` is the platform envelope sender — Resend
-only sends from a domain verified in the account, and per institution only the display name
-(`sender_name`) and `reply_to_email` are configurable. The API's schema is untouched, so a missing
-Resend key never fails API startup.
+`EMAIL_QUEUE_NAME`, `EMAIL_QUEUE_PREFIX`, `EMAIL_CLAIM_STALE_MS` (the reclaim threshold, 300000).
+`EMAIL_FROM_ADDRESS` is the platform envelope sender — Resend
+only sends from a domain verified in the account, and per institution the display name
+(`sender_name`, rendered as the `From:` name) and `reply_to_email` are configurable. The API's schema is
+untouched, so a missing Resend key never fails API startup.
 
 **Ledger statuses.** `queued`, `sending` (the transient claim), `sent`, `failed`, `retried`; a
-completed record carries one of the four non-transient values, and a retryable provider failure (429,
-5xx, network) is the only reason a row leaves `sending` as `retried`.
+completed record carries one of the four non-transient values. A row leaves `sending` as `retried` when
+the provider failure is retryable (429, 5xx, network) and also when the claim sweeper reclaims a stale
+claim — the two are distinguishable by `provider_error`, which a reclaim leaves untouched.
 
 ## Current status (summary)
 
@@ -398,7 +423,7 @@ completed record carries one of the four non-transient values, and a retryable p
 | Cursor pagination / filter-sort (13 modules, 15 endpoints) | Current | `libs/domain/src/shared/http/{pagination,filter-sort}.ts` (section 4, "List conventions") |
 | Idempotency keys (Redis) | Current | `libs/domain/src/shared/http/idempotency.ts`, `idempotency.plugin.ts` |
 | Transactional outbox + publisher | Current | `libs/db` `outbox_events` (migration 0006), `libs/domain/src/shared/outbox.ts`, `outbox-publisher.plugin.ts` |
-| Tests (unit / integration / API / DB / E2E) | Current | `apps/edunic-api/test` (56 suites), `apps/edunic-worker/test` |
+| Tests (unit / integration / API / DB / E2E) | Current | `apps/edunic-api/test`, `apps/edunic-worker/test` |
 | Docker / Railway / `/health`, `/ready` | Current | `docker/{api.dockerfile,worker.dockerfile}`, `railway*.json`, `health.routes.ts` |
 | Worker + Redis Streams consumer | Current | `apps/edunic-worker`, `libs/events/src/consumer.ts` |
 | Email delivery (Resend via BullMQ, worker-side, flag-gated) | Current | `libs/domain/src/notifications`, `apps/edunic-worker/src/email`, migration 0008 |
