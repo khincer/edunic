@@ -345,11 +345,13 @@ event on edunic:domain-events — enrollment.welcomed | grade.submitted | attend
      1 claim: status 'sending', attempt_count + 1  where status in ('queued','retried')
           zero rows → return without touching the transport
      2 flag re-read → 'failed' + provider_error 'email_notifications disabled', no retry
-     3 transport.send(...) → Resend, From: "<sender_name>" <EMAIL_FROM_ADDRESS>
+     3 transport.send(..., signal) → Resend, From: "<sender_name>" <EMAIL_FROM_ADDRESS>
+          the signal is EMAIL_SEND_TIMEOUT_MS: the provider call is aborted at the deadline
      4 'sent' + provider_message_id | 'retried' + rethrow | 'failed' + provider_error
  └─ claim sweeper (every 60 s, beside the delivery worker)
      rows in 'sending' older than EMAIL_CLAIM_STALE_MS: transition to 'retried'
        and requeue under a reclaim job id
+     a reclaimed row whose job record was evicted: 'failed' + reason, because the payload is gone
 GET /notifications/deliveries → the ledger, read-only
 ```
 
@@ -374,7 +376,8 @@ no-op, and the **claim** transition above is the last line of defence. The job i
 design's original `email:<eventId>:<sha256>` form is invalid; `EMAIL_QUEUE_PREFIX`'s `edunic:email` is
 a BullMQ *key* prefix, a different thing, and unaffected. Because retained job records expire, dedupe
 is bounded by those windows: once a job record is evicted the id is addable again, and the claim guard
-is what still prevents a second send.
+is what still keeps a *concurrent* job to one send. It never fenced a send that had already passed the
+claim — the send deadline does that, as the reclaim section below explains.
 
 **Reclaim (the crash window).** The guarded claim makes a send *at-most*-once, so a worker that dies
 between the claim and the completion write would leave the row `sending` forever: the stalled-job retry
@@ -384,22 +387,48 @@ worker, and every 60 s (`CLAIM_SWEEP_INTERVAL_MS`) it takes rows whose `sending`
 `EMAIL_CLAIM_STALE_MS` (optional, default 5 minutes; `updated_at` is the claim's own timestamp),
 returns them to `retried` in one atomic statement, and requeues them.
 
+**The guard is not what makes the requeue safe (corrected).** The claim guard fences concurrent
+*jobs*: it admits one job per row and every other job for that row leaves without sending. It cannot
+fence a send that has already passed the claim, because the sweep decides from the *age* of a claim
+alone and cannot tell a crashed claim from one whose provider call is merely slow. What fences that is
+the send deadline. `EMAIL_SEND_TIMEOUT_MS` (optional, default 30000 ms, well under the 300 s socket
+default) is turned into an `AbortSignal.timeout(...)` by the delivery service, threaded through the
+`EmailTransport` port, and handed to Resend as its request option, so the provider call is aborted at
+the deadline rather than merely abandoned. The worker then refuses the pair at startup:
+`EMAIL_CLAIM_STALE_MS` must be at least twice `EMAIL_SEND_TIMEOUT_MS` and never under 1 s
+(`CLAIM_STALE_SAFETY_FACTOR` and `MIN_CLAIM_STALE_MS` in `apps/edunic-worker/src/config/env.ts`), and a
+configuration that fails that test does not boot. The deadline therefore ends the send before any
+threshold can call its claim stale, and the completion write that follows refreshes `updated_at`, so a
+row only becomes reclaimable once the send it guards is over.
+
+**Operator rule for the two knobs.** The threshold is the crash-to-reclaim lag, and it is *not*
+independently tunable: raising `EMAIL_SEND_TIMEOUT_MS` raises the smallest legal threshold with it, and
+lowering `EMAIL_CLAIM_STALE_MS` below twice the deadline is a startup error rather than a tuning choice.
+Setting the threshold to a value near the deadline (or to 1 ms, which the old schema accepted) is what
+put a live send back inside the reclaim window.
+
 The requeue cannot reuse the deterministic job id: the crashed attempt's record is still in Redis
 (completed jobs are kept 7 days) and `queue.add` with an existing id is a silently ignored no-op, so
 the row would never be delivered again — reclaiming *and* requeueing is what restores exactly-once.
 The requeued job therefore travels under `email-reclaim-<row id>-<attempt count>`
 (`reclaimJobId()`), a fresh id per stale-claim episode, and the claim guard is still the admission gate:
 the reclaiming job enters through the same `queued | retried` transition as any other, so a reclaim
-racing a live attempt — or two sweeps racing each other — sends once and the loser sends nothing.
+racing another *job* — or two sweeps racing each other — sends once and the loser sends nothing.
 Reclaim happens at most `EMAIL_CLAIM_STALE_MS + 60 s` after the crash. The job payload is reused from
-the retained job record (the ledger stores no content), so a row whose job record has been evicted
-cannot be requeued and is left at `retried` for the panel to show.
+the retained job record (the ledger stores no content), so a row whose job record has been evicted has
+nothing left to replay and can never be retried: the sweep closes it as `failed` with
+`provider_error` naming that (`failUnreclaimable()`) rather than leaving it at `retried`, which would
+advertise a retry that cannot happen. The panel shows the loss instead of a pending redelivery.
 
 **Startup validation.** The worker validates its environment with Zod
 (`apps/edunic-worker/src/config/env.ts`) and fails by naming every offending key. Required:
 `DATABASE_URL`, `REDIS_URL`, `EVENT_BUS_BACKEND` (must be `redis`), `RESEND_API_KEY`,
 `EMAIL_FROM_ADDRESS`, `EMAIL_REPLY_TO`; optional with defaults: `EVENT_STREAM_NAME`,
-`EMAIL_QUEUE_NAME`, `EMAIL_QUEUE_PREFIX`, `EMAIL_CLAIM_STALE_MS` (the reclaim threshold, 300000).
+`EMAIL_QUEUE_NAME`, `EMAIL_QUEUE_PREFIX`, `EMAIL_CLAIM_STALE_MS` (the reclaim threshold, 300000) and
+`EMAIL_SEND_TIMEOUT_MS` (the deadline on one provider call, 30000). The last two are validated as a
+pair — the threshold must be at least twice the deadline and never under 1 s — so an unsafe
+combination fails startup with `EMAIL_CLAIM_STALE_MS` named in the message instead of silently
+reintroducing the duplicate-send window.
 `EMAIL_FROM_ADDRESS` is the platform envelope sender — Resend
 only sends from a domain verified in the account, and per institution the display name
 (`sender_name`, rendered as the `From:` name) and `reply_to_email` are configurable. The API's schema is
@@ -407,8 +436,11 @@ untouched, so a missing Resend key never fails API startup.
 
 **Ledger statuses.** `queued`, `sending` (the transient claim), `sent`, `failed`, `retried`; a
 completed record carries one of the four non-transient values. A row leaves `sending` as `retried` when
-the provider failure is retryable (429, 5xx, network) and also when the claim sweeper reclaims a stale
-claim — the two are distinguishable by `provider_error`, which a reclaim leaves untouched.
+the provider failure is retryable (429, 5xx, network, or the send deadline) and also when the claim
+sweeper reclaims a stale claim — the two are distinguishable by `provider_error`, which a reclaim
+leaves untouched. The sweeper's one exception is a reclaimed row whose job record was evicted: with no
+payload left to replay, it is closed as `failed` with `provider_error` saying so, because `retried`
+would promise a retry that cannot happen.
 
 ## Current status (summary)
 
