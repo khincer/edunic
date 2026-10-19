@@ -63,6 +63,7 @@ export async function createGuardianFixture(input: {
   institutionId: string;
   name?: string;
   phone?: string | null;
+  email?: string | null;
 }) {
   const result = await db
     .insert(guardians)
@@ -71,6 +72,7 @@ export async function createGuardianFixture(input: {
       institutionId: input.institutionId,
       name: input.name ?? 'Maria Lopez',
       phone: input.phone ?? '+50255550000',
+      email: input.email ?? null,
     })
     .returning();
 

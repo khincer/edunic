@@ -23,3 +23,21 @@ export {
   isRetryableResendStatus,
 } from './infrastructure/resend-email.transport.js';
 export type { ResendEmailClient } from './infrastructure/resend-email.transport.js';
+export {
+  EmailDeliveriesRepository,
+  EMAIL_DELIVERY_CURSOR_ORDER,
+  EMAIL_DELIVERY_LIST_COLUMNS,
+} from './infrastructure/email-deliveries.repository.js';
+export type {
+  EmailDeliveryRecord,
+  EmailDeliveryState,
+  RecipientRecord,
+} from './infrastructure/email-deliveries.repository.js';
+export {
+  emailDeliveryStatusSchema,
+  listEmailDeliveriesQuerySchema,
+} from './schemas/email-delivery.schemas.js';
+export type {
+  EmailDeliveryStatus,
+  ListEmailDeliveriesQuery,
+} from './schemas/email-delivery.schemas.js';
