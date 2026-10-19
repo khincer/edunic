@@ -3,6 +3,7 @@ import {
 } from 'drizzle-orm';
 import {
   check,
+  index,
   pgTable,
   uuid,
   text,
@@ -18,11 +19,29 @@ import {
    🏫 INSTITUTIONS
 ========================================================= */
 
-export const institutions = pgTable('institutions', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  name: text('name').notNull(),
-  createdAt: timestamp('created_at').defaultNow(),
-});
+export const institutions = pgTable(
+  'institutions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: text('name').notNull(),
+    // Per-institution sender identity (design D4). Both nullable: the envelope
+    // From: stays the platform-verified EMAIL_FROM_ADDRESS, so a NULL
+    // sender_name means "unconfigured" and nothing is sent (SI-R1, SI-R3).
+    senderName: text('sender_name'),
+    replyToEmail: text('reply_to_email'),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (t) => ({
+    senderNameNotBlank: check(
+      'institutions_sender_name_not_blank_check',
+      sql`${t.senderName} is null or length(trim(${t.senderName})) > 0`
+    ),
+    replyToEmailNotBlank: check(
+      'institutions_reply_to_email_not_blank_check',
+      sql`${t.replyToEmail} is null or length(trim(${t.replyToEmail})) > 0`
+    ),
+  })
+);
 
 /* =========================================================
    👤 USERS & ROLES
@@ -71,14 +90,26 @@ export const students = pgTable('students', {
    👪 GUARDIANS
 ========================================================= */
 
-export const guardians = pgTable('guardians', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  institutionId: uuid('institution_id')
-    .notNull()
-    .references(() => institutions.id),
-  name: text('name').notNull(),
-  phone: text('phone'),
-});
+export const guardians = pgTable(
+  'guardians',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id),
+    name: text('name').notNull(),
+    phone: text('phone'),
+    // Guardian contact address (GE-R1). NULL and '' both mean "no email"; the
+    // CHECK keeps a blank string from masquerading as a contact.
+    email: text('email'),
+  },
+  (t) => ({
+    emailNotBlank: check(
+      'guardians_email_not_blank_check',
+      sql`${t.email} is null or length(trim(${t.email})) > 0`
+    ),
+  })
+);
 
 export const studentGuardians = pgTable(
   'student_guardians',
@@ -455,3 +486,56 @@ export const outboxEvents = pgTable('outbox_events', {
   occurredAt: timestamp('occurred_at').notNull().defaultNow(),
   publishedAt: timestamp('published_at'),
 });
+
+/* =========================================================
+   ✉️ EMAIL DELIVERY LEDGER (design D4)
+   ========================================================= */
+
+// One row per (institution, event, recipient address) delivery attempt. The
+// unique key is the database half of the once-only guarantee: the enqueue
+// inserts `on conflict do nothing`, so a redelivered event cannot add a second
+// record for the same address. `event_id` is the envelope id and has no FK to
+// `outbox_events`, so the ledger is independent of outbox retention.
+export const emailDeliveries = pgTable(
+  'email_deliveries',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id),
+    eventId: uuid('event_id').notNull(),
+    eventName: text('event_name').notNull(),
+    // Trimmed and lowercased on write; the same normalization the queue's
+    // deterministic jobId hashes (D2).
+    recipientAddress: text('recipient_address').notNull(),
+    recipientSource: text('recipient_source').notNull(),
+    studentId: uuid('student_id'),
+    // DR-R1's four statuses plus `sending`, the transient in-flight claim.
+    status: text('status').notNull().default('queued'),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    providerMessageId: text('provider_message_id'),
+    providerError: text('provider_error'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    sentAt: timestamp('sent_at'),
+  },
+  (t) => ({
+    uniqueEventRecipient: unique(
+      'email_deliveries_institution_event_recipient_unique'
+    ).on(t.institutionId, t.eventId, t.recipientAddress),
+    validRecipientSource: check(
+      'email_deliveries_recipient_source_check',
+      sql`${t.recipientSource} in ('guardian', 'user')`
+    ),
+    validStatus: check(
+      'email_deliveries_status_check',
+      sql`${t.status} in ('queued', 'sending', 'sent', 'failed', 'retried')`
+    ),
+    institutionCreatedIdx: index(
+      'email_deliveries_institution_created_idx'
+    ).on(t.institutionId, t.createdAt.desc(), t.id.desc()),
+    inflightIdx: index('email_deliveries_inflight_idx')
+      .on(t.institutionId)
+      .where(sql`${t.status} in ('queued', 'sending', 'retried')`),
+  })
+);

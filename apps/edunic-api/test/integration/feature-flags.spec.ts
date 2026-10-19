@@ -45,6 +45,14 @@ describe('feature flag routes', () => {
     expect(listResponse.status).toBe(200);
     expect(listResponse.body.data).toEqual([
       {
+        // Seeded by migration 0007 (FL-R1) and restored by resetTestDatabase.
+        key: 'email_notifications',
+        defaultValue: false,
+        institutionEnabled: null,
+        enabled: false,
+        source: 'default',
+      },
+      {
         key: 'parent_portal',
         defaultValue: false,
         institutionEnabled: null,
