@@ -15,12 +15,24 @@ import { EMAIL_JOB_NAME } from './bullmq-email-queue.js';
 //
 // The reclaim is a new job id, not the deterministic one: the crashed attempt's
 // job record is still in Redis (completed jobs are kept 7 days) and `queue.add`
-// with an existing id is a silently ignored no-op. What keeps the row to one
-// send is the ledger's claim guard — the requeued job is admitted by exactly the
-// same claim transition as the original, so a reclaim racing a live attempt (or
-// a second sweep) loses at the claim and sends nothing.
+// with an existing id is a silently ignored no-op. The claim guard admits the
+// requeued job through the same transition as the original, so a reclaim racing
+// a *job* loses at the claim and sends nothing.
+//
+// That guard is not what keeps a live send single, though (P9): a reclaim is
+// triggered by the age of a claim, and the guard cannot tell a crashed claim
+// from one whose provider call is merely slow. What does is the deadline the
+// delivery service puts on every send (EMAIL_SEND_TIMEOUT_MS) together with the
+// startup validation that refuses a threshold which does not clear it by a
+// safety factor — the send is guaranteed to have ended, and to have recorded
+// its outcome, before this sweeper may call its claim stale.
 export const CLAIM_SWEEP_INTERVAL_MS = 60_000;
 export const CLAIM_SWEEP_BATCH_SIZE = 100;
+
+// P9: the reason left on a row that cannot be requeued, so the panel says what
+// was lost instead of promising a retry.
+export const UNRECLAIMABLE_REASON =
+  'reclaim lost: the job record was evicted before the delivery could be requeued';
 
 export type EmailClaimSweeper = {
   /** Starts the periodic pass; idempotent. */
@@ -60,16 +72,21 @@ export function createEmailClaimSweeper(
     for (const row of stuck) {
       // The job payload is not in the ledger, so the reclaim reuses the payload
       // the crashed attempt left behind in its retained job record.
-      // shortcut: a row whose job record was evicted cannot be requeued; it
-      // stays visible in the panel. Add payload columns to the ledger if the
-      // delivery itself has to outlive the queue's retention.
+      // shortcut: a row whose job record was evicted cannot be requeued — the
+      // content is gone. It is closed as `failed` with the reason rather than
+      // advertised as a pending `retried` retry; add payload columns to the
+      // ledger if the delivery itself has to outlive the queue's retention.
       const job = await deps.queue.getJob(
         emailJobId(row.eventId, row.recipientAddress)
       );
 
       if (!job) {
+        await deps.repository.failUnreclaimable({
+          id: row.id,
+          reason: UNRECLAIMABLE_REASON,
+        });
         console.error(
-          `[worker] claim sweep: no job record left for delivery ${row.id}`
+          `[worker] claim sweep: no job record left for delivery ${row.id}; marked it failed`
         );
         continue;
       }

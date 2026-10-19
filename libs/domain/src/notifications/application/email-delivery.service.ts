@@ -43,6 +43,13 @@ export type EmailDeliveryServiceDeps = {
   fromAddress?: string;
   /** Platform reply-to default (EMAIL_REPLY_TO). */
   defaultReplyTo?: string;
+  /**
+   * P9: how long one provider call may run before it is aborted. The worker
+   * passes EMAIL_SEND_TIMEOUT_MS; the default keeps the service usable on its
+   * own (and in tests). Its startup validation is what couples this bound to
+   * the reclaim threshold.
+   */
+  sendTimeoutMs?: number;
 };
 
 type EmailDeliverySendDeps = Required<
@@ -64,6 +71,14 @@ export class EmailDeliveryServiceError extends Error {
 
 const EMAIL_NOTIFICATIONS_FLAG = 'email_notifications';
 const FLAG_DISABLED_REASON = 'email_notifications disabled';
+
+/**
+ * P9: the deadline on one provider call, well under the 300 s socket default.
+ * The worker reads it as the schema default of `EMAIL_SEND_TIMEOUT_MS` and
+ * validates the reclaim threshold against it, so this bound and that threshold
+ * cannot drift apart.
+ */
+export const EMAIL_SEND_TIMEOUT_DEFAULT_MS = 30_000;
 
 export class EmailDeliveryService {
   constructor(private readonly deps: EmailDeliveryServiceDeps) {}
@@ -190,6 +205,14 @@ export class EmailDeliveryService {
         to: job.to,
         subject: job.subject,
         text: job.text,
+        // P9: the send is bounded, so it cannot outlive its claim. Without
+        // this, a slow provider response is still in flight when the reclaim
+        // threshold passes, and the row is reclaimed and re-sent — one email
+        // to the recipient twice over. The threshold is validated at startup to
+        // be clear of this deadline, which is what makes the guarantee real.
+        signal: AbortSignal.timeout(
+          this.deps.sendTimeoutMs ?? EMAIL_SEND_TIMEOUT_DEFAULT_MS
+        ),
       });
 
       await this.complete(job, {

@@ -70,13 +70,18 @@ describe('ResendEmailTransport', () => {
 
     await transport.send({ ...message, replyTo: 'replies@colegio.test' });
 
-    expect(client.emails.send).toHaveBeenCalledWith({
-      from: message.from,
-      to: message.to,
-      subject: message.subject,
-      text: message.text,
-      replyTo: 'replies@colegio.test',
-    });
+    expect(client.emails.send).toHaveBeenCalledWith(
+      {
+        from: message.from,
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+        replyTo: 'replies@colegio.test',
+      },
+      // P9: the second argument is the request options, which carry the
+      // caller's deadline. This message declares none.
+      { signal: undefined }
+    );
   });
 
   it('renders the institution sender name as the From display name', async () => {
@@ -87,13 +92,16 @@ describe('ResendEmailTransport', () => {
 
     // The platform address stays the envelope sender; only the display name is
     // the institution's (P8/SI-R1).
-    expect(client.emails.send).toHaveBeenCalledWith({
-      from: '"Colegio Las Flores" <notifications@edunic.test>',
-      to: message.to,
-      subject: message.subject,
-      text: message.text,
-      replyTo: undefined,
-    });
+    expect(client.emails.send).toHaveBeenCalledWith(
+      {
+        from: '"Colegio Las Flores" <notifications@edunic.test>',
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+        replyTo: undefined,
+      },
+      { signal: undefined }
+    );
   });
 
   it('keeps a header-breaking display name inside the quoted name', async () => {

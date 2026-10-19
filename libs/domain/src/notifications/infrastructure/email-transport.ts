@@ -15,6 +15,13 @@ export type SendEmailInput = {
   to: string;
   subject: string;
   text: string;
+  /**
+   * The caller's deadline (P9). An adapter must pass this on to the provider
+   * request, so a send can never outlive the claim that admits it: the reclaim
+   * threshold is validated to be well clear of this bound, which is what keeps
+   * a reclaim from firing while a send is still in flight.
+   */
+  signal?: AbortSignal;
 };
 
 export type SendEmailResult = {

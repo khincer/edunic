@@ -53,6 +53,7 @@ export type {
 export {
   EmailDeliveryService,
   EmailDeliveryServiceError,
+  EMAIL_SEND_TIMEOUT_DEFAULT_MS,
 } from './application/email-delivery.service.js';
 export type {
   EmailDeliveryServiceDeps,

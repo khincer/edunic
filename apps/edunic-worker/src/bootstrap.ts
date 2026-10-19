@@ -42,6 +42,8 @@ export type WorkerConfig = {
   emailFromAddress: string;
   emailReplyTo: string;
   emailClaimStaleMs: number;
+  /** P9: the send deadline, validated to sit well inside the threshold. */
+  emailSendTimeoutMs: number;
 };
 
 export type WorkerDeps = {
@@ -89,6 +91,7 @@ export function loadWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     emailFromAddress: parsed.EMAIL_FROM_ADDRESS,
     emailReplyTo: parsed.EMAIL_REPLY_TO,
     emailClaimStaleMs: parsed.EMAIL_CLAIM_STALE_MS,
+    emailSendTimeoutMs: parsed.EMAIL_SEND_TIMEOUT_MS,
   };
 }
 
@@ -125,6 +128,7 @@ export function bootstrapWorker(
     transport: emailTransport,
     fromAddress: config.emailFromAddress,
     defaultReplyTo: config.emailReplyTo,
+    sendTimeoutMs: config.emailSendTimeoutMs,
   });
 
   // D6 (P8): the reclaim path shares the worker's own ledger repository and its

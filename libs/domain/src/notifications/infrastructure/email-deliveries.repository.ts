@@ -273,6 +273,16 @@ export class EmailDeliveriesRepository {
   // requeued job is admitted by exactly the same `queued | retried` transition
   // as the original.
   //
+  // P9 correction: the guard fences concurrent *jobs*, it does not fence a send
+  // that has already passed the claim. This row is reclaimed because of its age
+  // alone, so a send that outlives the threshold is reclaimed — and re-sent —
+  // while it is still in flight. What closes that window is the pair the worker
+  // validates at startup: the transport call carries a deadline
+  // (EMAIL_SEND_TIMEOUT_MS), and this threshold is refused unless it clears
+  // that deadline by a safety factor. The deadline ends the send and the
+  // completion write it triggers refreshes `updated_at`, so a row can only
+  // become stale here after the send it guards has already ended.
+  //
   // The cutoff is computed on the database clock: `updated_at` is written by
   // `now()`, and the column carries no time zone, so a client-side date would
   // compare two different clocks.
@@ -302,6 +312,24 @@ export class EmailDeliveriesRepository {
     `);
 
     return result.rows;
+  }
+
+  // P9: the honest end state for a reclaimed row that cannot be requeued. The
+  // job payload lives in the queue record, so once that record is evicted the
+  // content is gone and no retry can ever deliver the row: leaving it at
+  // `retried` advertises a retry that cannot happen, while `failed` with the
+  // reason tells the operator what was lost. Guarded on `retried` so a live
+  // claim that admitted the row in the meantime is never overwritten.
+  async failUnreclaimable(input: { id: string; reason: string }): Promise<void> {
+    await this.db.execute(sql`
+      update email_deliveries
+      set
+        status = 'failed',
+        provider_error = ${input.reason},
+        updated_at = now()
+      where id = ${input.id}
+        and status = 'retried'
+    `);
   }
 
   // DR-R1: the outcome transition of one send attempt, addressed by the ledger's
