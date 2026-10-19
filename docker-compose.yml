@@ -66,6 +66,13 @@ services:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/edu_platform
       REDIS_URL: redis://redis:6379
       EVENT_BUS_BACKEND: redis
+      # The worker validates its env at startup (CF-R2) and is the only process
+      # that sends mail. These are dummy local values on purpose — the Resend
+      # key is never real in this file, and the demo flag stays off, so nothing
+      # can send. A real key belongs in the Railway service variables only.
+      RESEND_API_KEY: re_local_dummy_key
+      EMAIL_FROM_ADDRESS: no-reply@edunic.local
+      EMAIL_REPLY_TO: support@edunic.local
     volumes:
       - .:/app
       - worker_node_modules:/app/node_modules
