@@ -76,7 +76,7 @@ export default function InstitutionDetailPage() {
         </div>
         <div className="button-row">
           <ButtonLink href={`/admin/institutions/${institutionId}/edit`} variant="secondary">
-            Rename
+            Edit
           </ButtonLink>
           <ButtonLink href="/admin/institutions" variant="secondary">
             Back

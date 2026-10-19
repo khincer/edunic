@@ -19,7 +19,40 @@ export type ApiSingleResponse<T> = {
 export type Institution = {
   id: string;
   name: string;
+  // PN-R1/SI-R2: the per-institution sender identity (design D4). Absent on
+  // responses that do not select the columns, e.g. institution creation.
+  senderName?: string | null;
+  replyToEmail?: string | null;
   createdAt: string;
+};
+
+export type EmailDeliveryStatus =
+  | 'queued'
+  | 'sending'
+  | 'sent'
+  | 'failed'
+  | 'retried';
+
+export type EmailDelivery = {
+  id: string;
+  institutionId: string;
+  eventId: string;
+  eventName: string;
+  recipientAddress: string;
+  recipientSource: 'guardian' | 'user';
+  studentId: string | null;
+  status: EmailDeliveryStatus;
+  attemptCount: number;
+  providerMessageId: string | null;
+  providerError: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sentAt: string | null;
+};
+
+export type EmailDeliveryState = {
+  emailNotificationsEnabled: boolean;
+  senderIdentityConfigured: boolean;
 };
 
 export type Student = {

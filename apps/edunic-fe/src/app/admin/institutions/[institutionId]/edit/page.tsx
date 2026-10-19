@@ -2,11 +2,12 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Button, ButtonLink } from '@/components/button';
 import { Card } from '@/components/card';
 import { FormField } from '@/components/form-field';
+import { getSession, onSessionChange } from '@/lib/auth';
 import {
   apiRequest,
   type ApiSingleResponse,
@@ -17,7 +18,15 @@ export default function EditInstitutionPage() {
   const params = useParams<{ institutionId: string }>();
   const router = useRouter();
   const institutionId = params.institutionId;
+  const session = useSyncExternalStore(onSessionChange, getSession, () => null);
+  // SI-R2: the API scopes PATCH to the caller's own institution (P2 added the
+  // guard), so this page is only usable for that one. For any other school we
+  // show what the read API returned and no form, instead of a form whose save
+  // would always fail with 403.
+  const isOwnInstitution = session?.user.institutionId === institutionId;
   const [name, setName] = useState('');
+  const [senderName, setSenderName] = useState('');
+  const [replyToEmail, setReplyToEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -32,6 +41,8 @@ export default function EditInstitutionPage() {
           `/institutions/${institutionId}`
         );
         setName(result.data.name);
+        setSenderName(result.data.senderName ?? '');
+        setReplyToEmail(result.data.replyToEmail ?? '');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unable to load institution');
       } finally {
@@ -50,7 +61,7 @@ export default function EditInstitutionPage() {
     try {
       await apiRequest<ApiSingleResponse<Institution>>(`/institutions/${institutionId}`, {
         method: 'PATCH',
-        body: { name },
+        body: { name, senderName, replyToEmail },
       });
       router.push(`/admin/institutions/${institutionId}`);
     } catch (err) {
@@ -64,9 +75,12 @@ export default function EditInstitutionPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Rename institution</p>
-          <h1 className="page-title">Edit school name</h1>
-          <p className="body-copy">Keep the school record recognizable for platform operators.</p>
+          <p className="eyebrow">Institution settings</p>
+          <h1 className="page-title">Edit institution</h1>
+          <p className="body-copy">
+            Keep the school record recognizable and set the sender identity used
+            on the emails this school sends to families.
+          </p>
         </div>
         <ButtonLink href={`/admin/institutions/${institutionId}`} variant="secondary">
           Back to detail
@@ -76,7 +90,13 @@ export default function EditInstitutionPage() {
       <Card>
         {error ? <div className="alert alert-error">{error}</div> : null}
         {loading ? <p className="body-copy">Loading institution...</p> : null}
-        {!loading ? (
+        {!loading && !isOwnInstitution ? (
+          <div className="alert alert-info">
+            You can only edit your own institution ({name}). Institution
+            settings are scoped to the signed-in admin&apos;s school.
+          </div>
+        ) : null}
+        {!loading && isOwnInstitution ? (
           <form className="form" onSubmit={handleSubmit}>
             <FormField
               autoFocus
@@ -86,6 +106,23 @@ export default function EditInstitutionPage() {
               onChange={(event) => setName(event.target.value)}
               required
               value={name}
+            />
+            <FormField
+              help="Display name shown to families as the sender. Leave empty and no email is sent."
+              label="Sender name"
+              maxLength={120}
+              name="senderName"
+              onChange={(event) => setSenderName(event.target.value)}
+              value={senderName}
+            />
+            <FormField
+              help="Where families reply. Left empty, the platform reply-to address is used."
+              label="Reply-to email"
+              maxLength={160}
+              name="replyToEmail"
+              onChange={(event) => setReplyToEmail(event.target.value)}
+              type="email"
+              value={replyToEmail}
             />
             <div className="button-row">
               <Button disabled={busy} type="submit">
