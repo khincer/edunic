@@ -75,10 +75,58 @@ describe('worker bootstrap', () => {
   it('defaults the stale-claim threshold and honors its optional override', () => {
     // OC-R1 (P8): optional, so the worker's required keys do not grow.
     expect(loadWorkerConfig(requiredEnv()).emailClaimStaleMs).toBe(300000);
+    // The override has to keep the threshold clear of the send deadline.
     expect(
-      loadWorkerConfig(requiredEnv({ EMAIL_CLAIM_STALE_MS: '1500' }))
-        .emailClaimStaleMs
+      loadWorkerConfig(
+        requiredEnv({
+          EMAIL_SEND_TIMEOUT_MS: '500',
+          EMAIL_CLAIM_STALE_MS: '1500',
+        })
+      ).emailClaimStaleMs
     ).toBe(1500);
+  });
+
+  it('defaults the send deadline under the socket default and honors its override', () => {
+    // P9: optional too — the send path gains a bound, not a new requirement.
+    expect(loadWorkerConfig(requiredEnv()).emailSendTimeoutMs).toBe(30000);
+    expect(
+      loadWorkerConfig(requiredEnv({ EMAIL_SEND_TIMEOUT_MS: '500' }))
+        .emailSendTimeoutMs
+    ).toBe(500);
+  });
+
+  it('refuses a claim threshold that does not clear the send deadline', () => {
+    // P9: the invariant that makes a reclaim safe. A row may only be treated as
+    // crashed once the send it guards is guaranteed to have ended, so a
+    // threshold at or below the deadline must fail startup instead of shipping
+    // a duplicate send.
+    expect(() =>
+      loadWorkerConfig(requiredEnv({ EMAIL_CLAIM_STALE_MS: '1000' }))
+    ).toThrow(/EMAIL_CLAIM_STALE_MS/);
+    expect(() =>
+      loadWorkerConfig(
+        requiredEnv({
+          EMAIL_SEND_TIMEOUT_MS: '500',
+          EMAIL_CLAIM_STALE_MS: '999',
+        })
+      )
+    ).toThrow(/EMAIL_CLAIM_STALE_MS/);
+    expect(
+      loadWorkerConfig(
+        requiredEnv({
+          EMAIL_SEND_TIMEOUT_MS: '500',
+          EMAIL_CLAIM_STALE_MS: '1000',
+        })
+      ).emailClaimStaleMs
+    ).toBe(1000);
+  });
+
+  it('makes a 1 ms claim threshold impossible', () => {
+    // The shipped default accepted it because the schema only asked for
+    // "positive", which is what let the duplicate window be configuration.
+    expect(() =>
+      loadWorkerConfig(requiredEnv({ EMAIL_CLAIM_STALE_MS: '1' }))
+    ).toThrow(/EMAIL_CLAIM_STALE_MS/);
   });
 
   it('rejects a non-numeric EMAIL_CLAIM_STALE_MS naming the key', () => {

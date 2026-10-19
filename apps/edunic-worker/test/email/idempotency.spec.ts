@@ -4,6 +4,7 @@ import Redis from 'ioredis';
 import { Queue } from 'bullmq';
 import { createEnrollmentWelcomedEvent } from '@edunic/source/domain/events';
 import {
+  EmailDeliveriesRepository,
   emailJobId,
   reclaimJobId,
   type EmailDeliveryJob,
@@ -25,6 +26,7 @@ import {
   createEmailQueue,
   EMAIL_JOB_NAME,
 } from '../../src/email/bullmq-email-queue.js';
+import { createEmailClaimSweeper } from '../../src/email/email-claim-sweeper.js';
 import { FakeEmailTransport } from '../helpers/fake-email-transport.js';
 
 // Task 5.1 (OC-R1, DR-R1): the ledger's claim guard is the job's first write —
@@ -34,6 +36,10 @@ import { FakeEmailTransport } from '../helpers/fake-email-transport.js';
 // was evicted while its row is still awaiting, and two jobs for one row. The
 // last three cover the other half of the guard: a claim that is never completed
 // (P8), which the sweeper has to reclaim.
+// P9 adds the window the reclaim itself opened: a send that outlives the
+// threshold must be cut off by its deadline rather than reclaimed and re-sent,
+// a stranded row whose job record is gone must not be advertised as a pending
+// retry, and the reclaim must work through its production timer path.
 // Real Postgres, real Redis and a real BullMQ Worker; the provider is the only
 // substitute, behind the injected EmailTransport port.
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
@@ -42,7 +48,13 @@ const QUEUE_PREFIX = 'edunic:email-idempotency-test';
 const FROM_ADDRESS = 'no-reply@edunic.test';
 const PLATFORM_REPLY_TO = 'support@edunic.test';
 const RECIPIENT = 'maria@example.com';
-const CLAIM_STALE_MS = 60_000;
+// The reclaim threshold is above the send deadline by the shipped safety
+// factor, so a claim that is still inside its own send is never stale.
+const CLAIM_STALE_MS = 1_500;
+const SEND_TIMEOUT_MS = 500;
+// A provider response slower than the deadline: it is still in flight when the
+// threshold passes, which is the window the deadline has to close.
+const HANG_MS = 3_000;
 const HOUR_MS = 60 * 60 * 1000;
 
 type DeliveryRow = {
@@ -51,6 +63,7 @@ type DeliveryRow = {
   status: string;
   attemptCount: number;
   providerMessageId: string | null;
+  providerError: string | null;
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -74,6 +87,7 @@ describe('worker email delivery idempotency', () => {
     EMAIL_QUEUE_NAME: QUEUE_NAME,
     EMAIL_QUEUE_PREFIX: QUEUE_PREFIX,
     EMAIL_CLAIM_STALE_MS: String(CLAIM_STALE_MS),
+    EMAIL_SEND_TIMEOUT_MS: String(SEND_TIMEOUT_MS),
   });
 
   const readDeliveries = async (
@@ -85,7 +99,8 @@ describe('worker email delivery idempotency', () => {
         recipient_address as "recipientAddress",
         status,
         attempt_count as "attemptCount",
-        provider_message_id as "providerMessageId"
+        provider_message_id as "providerMessageId",
+        provider_error as "providerError"
       from email_deliveries
       where institution_id = ${institutionId}
       order by recipient_address asc
@@ -244,6 +259,41 @@ describe('worker email delivery idempotency', () => {
     await queue.add(EMAIL_JOB_NAME, job, { jobId });
 
     return jobId;
+  };
+
+  // The claim lands in the ledger before the transport is entered, so "one
+  // call" is the moment the row is owned by a send that is now in flight.
+  const waitForCalls = async (
+    expected: number,
+    timeoutMs = 10000
+  ): Promise<void> => {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      if (fake.calls >= expected) {
+        return;
+      }
+      await sleep(10);
+    }
+
+    throw new Error(
+      `timed out waiting for ${expected} transport call(s); saw ${fake.calls}`
+    );
+  };
+
+  // Every attempt has ended (delivered or aborted), so a second delivery can
+  // no longer arrive unobserved.
+  const waitForQuiescence = async (timeoutMs = 10000): Promise<void> => {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      if (fake.inFlight === 0) {
+        return;
+      }
+      await sleep(10);
+    }
+
+    throw new Error('timed out waiting for the transport to go quiet');
   };
 
   beforeAll(async () => {
@@ -491,6 +541,138 @@ describe('worker email delivery idempotency', () => {
     expect(after.status).toBe('sending');
     expect(fake.calls).toBe(0);
   });
+
+  it(
+    'OC-R1: a send that outlives the claim threshold is aborted, never duplicated',
+    async () => {
+      const scenario = await createScenario();
+      const event = createEnrollmentWelcomedEvent({
+        institutionId: scenario.institutionId,
+        payload: {
+          enrollmentId: scenario.enrollmentId,
+          studentId: scenario.studentId,
+        },
+      });
+
+      // The slow provider response: this attempt is still in flight when the
+      // reclaim threshold passes, which is the only window in which a reclaim
+      // can race a live send.
+      await runtime.emailWorker.pause();
+      await runtime.emailDelivery.enqueueForEvent(event);
+      const [queued] = await waitForDeliveries(scenario.institutionId, {
+        status: 'queued',
+        count: 1,
+      });
+      expect(queued.attemptCount).toBe(0);
+
+      fake.hangOnceFor(HANG_MS);
+      await runtime.emailWorker.resume();
+      await waitForCalls(1);
+
+      // Past the threshold, so the sweeper is entitled to treat the claim as
+      // crashed — the deadline has to have ended the send before this point.
+      await sleep(CLAIM_STALE_MS + SEND_TIMEOUT_MS + 300);
+      const reclaimed = await runtime.claimSweeper.sweepOnce();
+
+      const rows = await waitForDeliveries(
+        scenario.institutionId,
+        { status: 'sent', count: 1 },
+        10000
+      );
+
+      // Let the slow attempt end too, so a second delivery cannot hide behind
+      // its not having resolved yet.
+      await waitForQuiescence();
+
+      // Exactly one email reached the recipient: the hanging attempt was cut
+      // off at the deadline, and the claim it guarded was never reclaimed
+      // while it was still running.
+      expect(fake.delivered).toBe(1);
+      expect(fake.peakInFlight).toBe(1);
+      expect(reclaimed).toBe(0);
+      expect(rows[0].status).toBe('sent');
+      expect(rows[0].providerMessageId).not.toBeNull();
+    },
+    20000
+  );
+
+  it('OC-R1: a stranded row whose job record is gone is reported as failed, not retried', async () => {
+    const scenario = await createScenario();
+    const event = createEnrollmentWelcomedEvent({
+      institutionId: scenario.institutionId,
+      payload: {
+        enrollmentId: scenario.enrollmentId,
+        studentId: scenario.studentId,
+      },
+    });
+
+    await stageStrandedRow({
+      institutionId: scenario.institutionId,
+      eventId: event.id,
+      studentId: scenario.studentId,
+      ageMs: HOUR_MS,
+    });
+
+    // Redis never kept — or has already evicted — the job record whose payload
+    // the reclaim replays. Nothing can retry this delivery, ever.
+    expect(await queue.getJob(emailJobId(event.id, RECIPIENT))).toBeUndefined();
+
+    expect(await runtime.claimSweeper.sweepOnce()).toBe(0);
+
+    const [row] = await readDeliveries(scenario.institutionId);
+    // Claiming it is `retried` would advertise a retry that cannot happen.
+    expect(row.status).toBe('failed');
+    expect(row.providerError).toMatch(/job record/i);
+    expect(fake.calls).toBe(0);
+  });
+
+  it('reclaims through the periodic pass, not only through an explicit sweep', async () => {
+    const scenario = await createScenario();
+    const event = createEnrollmentWelcomedEvent({
+      institutionId: scenario.institutionId,
+      payload: {
+        enrollmentId: scenario.enrollmentId,
+        studentId: scenario.studentId,
+      },
+    });
+    const jobId = emailJobId(event.id, RECIPIENT);
+
+    // The crash's end state, with the job record a live worker cannot use: the
+    // claim guard refuses its replay, so the row leaves `sending` only if the
+    // sweep reaches it.
+    await stageStrandedRow({
+      institutionId: scenario.institutionId,
+      eventId: event.id,
+      studentId: scenario.studentId,
+      ageMs: HOUR_MS,
+    });
+    await queue.add(EMAIL_JOB_NAME, deliveryJob(scenario, event.id), { jobId });
+    expect(await waitForJobEnd(jobId)).toBe('completed');
+    expect(fake.calls).toBe(0);
+
+    // The production entry point: start() → setInterval → runOnce → sweepOnce.
+    const periodic = createEmailClaimSweeper({
+      repository: new EmailDeliveriesRepository(db),
+      queue,
+      staleAfterMs: CLAIM_STALE_MS,
+      intervalMs: 100,
+    });
+
+    try {
+      periodic.start();
+
+      const rows = await waitForDeliveries(
+        scenario.institutionId,
+        { status: 'sent', count: 1 },
+        10000
+      );
+
+      expect(fake.calls).toBe(1);
+      expect(rows[0].attemptCount).toBe(2);
+    } finally {
+      await periodic.close();
+    }
+  }, 20000);
 
   it('starts and stops the periodic claim sweep idempotently', async () => {
     runtime.claimSweeper.start();
