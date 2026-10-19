@@ -9,6 +9,7 @@ module.exports = {
   collectCoverageFrom: [
     '<rootDir>/apps/edunic-worker/src/**/*.ts',
     '<rootDir>/libs/events/src/**/*.ts',
+    '<rootDir>/libs/domain/src/notifications/**/*.ts',
     '!**/*.d.ts',
   ],
   moduleFileExtensions: ['ts', 'js', 'json'],
