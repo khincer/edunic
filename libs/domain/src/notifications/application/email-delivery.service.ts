@@ -6,7 +6,7 @@ import type {
 import { FeatureFlagsRepository } from '@edunic/source/domain/feature-flags';
 import { buildCursorPage } from '@edunic/source/domain/shared';
 import {
-  buildAbsenceEmail,
+  buildAttendanceEmail,
   buildGradeEmail,
   buildWelcomeEmail,
   type EmailContent,
@@ -145,6 +145,9 @@ export class EmailDeliveryService {
         eventId: event.id,
         recipientAddress: recipient.address,
         from: sendDeps.fromAddress,
+        // SI-R1: the display name the institution configured, kept beside the
+        // platform envelope address the transport actually sends from.
+        fromName: sender.senderName,
         replyTo: sender.replyToEmail ?? sendDeps.defaultReplyTo,
         to: recipient.address,
         subject: content.subject,
@@ -182,6 +185,7 @@ export class EmailDeliveryService {
     try {
       const result = await this.sender.transport.send({
         from: job.from,
+        fromName: job.fromName ?? null,
         replyTo: job.replyTo,
         to: job.to,
         subject: job.subject,
@@ -281,9 +285,10 @@ export class EmailDeliveryService {
           score: event.payload.score,
         });
       default:
-        return buildAbsenceEmail({
+        return buildAttendanceEmail({
           ...context,
           date: event.payload.date,
+          status: event.payload.status,
         });
     }
   }

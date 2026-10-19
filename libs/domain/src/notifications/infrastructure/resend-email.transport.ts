@@ -45,7 +45,7 @@ export class ResendEmailTransport implements EmailTransport {
 
     try {
       response = await this.client.emails.send({
-        from: input.from,
+        from: formatFromAddress(input.from, input.fromName ?? null),
         to: input.to,
         subject: input.subject,
         text: input.text,
@@ -65,6 +65,21 @@ export class ResendEmailTransport implements EmailTransport {
 
     return { providerMessageId: response.data.id };
   }
+}
+
+// SI-R1 (P8): the institution's sender name becomes the From: display name and
+// the platform's verified address stays the envelope sender. The name is
+// institution-admin input, so it is quoted and stripped of the characters that
+// would end the quoted string or start a new header line before it reaches the
+// provider.
+function formatFromAddress(address: string, name: string | null): string {
+  const display =
+    name
+      ?.replace(/[\r\n"<>]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim() ?? '';
+
+  return display.length > 0 ? `"${display}" <${address}>` : address;
 }
 
 function toErrorMessage(error: unknown): string {

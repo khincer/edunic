@@ -72,6 +72,21 @@ describe('worker bootstrap', () => {
     expect(config.emailQueuePrefix).toBe('edunic:email-custom');
   });
 
+  it('defaults the stale-claim threshold and honors its optional override', () => {
+    // OC-R1 (P8): optional, so the worker's required keys do not grow.
+    expect(loadWorkerConfig(requiredEnv()).emailClaimStaleMs).toBe(300000);
+    expect(
+      loadWorkerConfig(requiredEnv({ EMAIL_CLAIM_STALE_MS: '1500' }))
+        .emailClaimStaleMs
+    ).toBe(1500);
+  });
+
+  it('rejects a non-numeric EMAIL_CLAIM_STALE_MS naming the key', () => {
+    expect(() =>
+      loadWorkerConfig(requiredEnv({ EMAIL_CLAIM_STALE_MS: 'soon' }))
+    ).toThrow(/EMAIL_CLAIM_STALE_MS/);
+  });
+
   it('rejects a non-redis backend because the worker consumes Redis Streams', () => {
     expect(() =>
       loadWorkerConfig(requiredEnv({ EVENT_BUS_BACKEND: 'memory' }))
@@ -130,6 +145,7 @@ describe('worker bootstrap', () => {
     expect(runtime.db).toBeDefined();
     expect(runtime.pool).toBeDefined();
     expect(runtime.emailDelivery).toBeDefined();
+    expect(runtime.claimSweeper).toBeDefined();
     expect(runtime.emailTransport).toBe(emailTransport);
     expect(runtime.emailQueue.queue.name).toBe(
       `email-delivery-bootstrap-test-${process.pid}`

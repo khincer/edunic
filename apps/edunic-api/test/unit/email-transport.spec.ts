@@ -7,6 +7,7 @@ import {
 
 const message = {
   from: 'notifications@edunic.test',
+  fromName: null,
   replyTo: null,
   to: 'family@example.com',
   subject: 'Welcome to Colegio Las Flores',
@@ -76,6 +77,43 @@ describe('ResendEmailTransport', () => {
       text: message.text,
       replyTo: 'replies@colegio.test',
     });
+  });
+
+  it('renders the institution sender name as the From display name', async () => {
+    const client = clientReturning({ data: { id: 'id-1' }, error: null });
+    const transport = new ResendEmailTransport({ client });
+
+    await transport.send({ ...message, fromName: 'Colegio Las Flores' });
+
+    // The platform address stays the envelope sender; only the display name is
+    // the institution's (P8/SI-R1).
+    expect(client.emails.send).toHaveBeenCalledWith({
+      from: '"Colegio Las Flores" <notifications@edunic.test>',
+      to: message.to,
+      subject: message.subject,
+      text: message.text,
+      replyTo: undefined,
+    });
+  });
+
+  it('keeps a header-breaking display name inside the quoted name', async () => {
+    const client = clientReturning({ data: { id: 'id-1' }, error: null });
+    const transport = new ResendEmailTransport({ client });
+
+    await transport.send({
+      ...message,
+      fromName: 'Evil "School"\r\nBcc: attacker@example.com',
+    });
+
+    const sent = (client.emails.send as jest.Mock).mock.calls[0][0] as {
+      from: string;
+    };
+
+    // No header break survives, and the name cannot close its own quoting.
+    expect(sent.from).not.toMatch(/[\r\n]/);
+    expect(sent.from).toBe(
+      '"Evil School Bcc: attacker@example.com" <notifications@edunic.test>'
+    );
   });
 
   it('classifies a provider 429 as retryable', async () => {

@@ -5,7 +5,7 @@ export { notificationParamsSchema, listNotificationsQuerySchema } from './schema
 export type { ListNotificationsQuery } from './schemas/notification.schemas.js';
 
 export {
-  buildAbsenceEmail,
+  buildAttendanceEmail,
   buildGradeEmail,
   buildWelcomeEmail,
 } from './application/email-templates.js';
@@ -31,6 +31,7 @@ export {
 export type {
   EmailDeliveryRecord,
   EmailDeliveryCompletion,
+  EmailDeliveryClaim,
   EmailDeliveryState,
   EmailSenderIdentity,
   EmailStudentTarget,
@@ -44,7 +45,7 @@ export type {
   EmailDeliveryStatus,
   ListEmailDeliveriesQuery,
 } from './schemas/email-delivery.schemas.js';
-export { emailJobId } from './infrastructure/email-job-queue.js';
+export { emailJobId, reclaimJobId } from './infrastructure/email-job-queue.js';
 export type {
   EmailDeliveryJob,
   EmailJobQueue,

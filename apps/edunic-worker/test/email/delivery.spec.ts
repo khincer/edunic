@@ -302,7 +302,10 @@ describe('worker email delivery', () => {
       'dad@example.com',
       'maria@example.com',
     ]);
+    // The platform address stays the envelope sender; the institution's
+    // configured sender name travels beside it (P8: the From: display name).
     expect(fake.sent[0].from).toBe(FROM_ADDRESS);
+    expect(fake.sent[0].fromName).toBe('Central School');
     expect(fake.sent[0].replyTo).toBe(PLATFORM_REPLY_TO);
     expect(fake.sent[0].subject).toBe('Welcome to Central School');
     expect(fake.sent[0].text).toContain('Wren Vasquez');
@@ -387,6 +390,53 @@ describe('worker email delivery', () => {
     expect(fake.sent[0].subject).toBe('Absence recorded for Wren Vasquez');
     expect(fake.sent[0].text).toContain('on 2026-02-03');
   });
+
+  it.each([
+    {
+      status: 'late',
+      date: '2026-02-04',
+      subject: 'Late arrival recorded for Wren Vasquez',
+      sentence: 'recorded a late arrival for Wren Vasquez on 2026-02-04.',
+    },
+    {
+      status: 'present',
+      date: '2026-02-05',
+      subject: 'Attendance recorded for Wren Vasquez',
+      sentence: 'recorded Wren Vasquez as present on 2026-02-05.',
+    },
+  ])(
+    'branches the attendance copy by status: $status (EV-R1)',
+    async ({ status, date, subject, sentence }) => {
+      const scenario = await createScenario();
+      await addGuardian(
+        scenario.institutionId,
+        scenario.studentId,
+        'maria@example.com'
+      );
+
+      await publish(
+        createAttendanceMarkedEvent({
+          institutionId: scenario.institutionId,
+          payload: {
+            attendanceId: randomUUID(),
+            enrollmentId: scenario.enrollmentId,
+            date,
+            status,
+          },
+        })
+      );
+
+      expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
+      await waitForDeliveries(scenario.institutionId, {
+        status: 'sent',
+        count: 1,
+      });
+
+      expect(fake.calls).toBe(1);
+      expect(fake.sent[0].subject).toBe(subject);
+      expect(fake.sent[0].text).toContain(sentence);
+    }
+  );
 
   it('resolves no recipients and does not fail when the guardian has no email and no linked user (RS-R1)', async () => {
     const scenario = await createScenario();

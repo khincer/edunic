@@ -5,6 +5,7 @@ import { Queue } from 'bullmq';
 import { createEnrollmentWelcomedEvent } from '@edunic/source/domain/events';
 import {
   emailJobId,
+  reclaimJobId,
   type EmailDeliveryJob,
 } from '@edunic/source/domain/notifications';
 import { db } from '@edunic/source/db';
@@ -30,7 +31,9 @@ import { FakeEmailTransport } from '../helpers/fake-email-transport.js';
 // `status in ('queued','retried') -> 'sending'` — and a claim that affects no
 // row means "do not send" (design D2). The three cases below close the OC-R1
 // paths the queue-level suite cannot: a row that is already final, a job that
-// was evicted while its row is still awaiting, and two jobs for one row.
+// was evicted while its row is still awaiting, and two jobs for one row. The
+// last three cover the other half of the guard: a claim that is never completed
+// (P8), which the sweeper has to reclaim.
 // Real Postgres, real Redis and a real BullMQ Worker; the provider is the only
 // substitute, behind the injected EmailTransport port.
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
@@ -38,8 +41,12 @@ const QUEUE_NAME = `email-idempotency-test-${randomUUID()}`;
 const QUEUE_PREFIX = 'edunic:email-idempotency-test';
 const FROM_ADDRESS = 'no-reply@edunic.test';
 const PLATFORM_REPLY_TO = 'support@edunic.test';
+const RECIPIENT = 'maria@example.com';
+const CLAIM_STALE_MS = 60_000;
+const HOUR_MS = 60 * 60 * 1000;
 
 type DeliveryRow = {
+  id: string;
   recipientAddress: string;
   status: string;
   attemptCount: number;
@@ -66,6 +73,7 @@ describe('worker email delivery idempotency', () => {
     EMAIL_REPLY_TO: PLATFORM_REPLY_TO,
     EMAIL_QUEUE_NAME: QUEUE_NAME,
     EMAIL_QUEUE_PREFIX: QUEUE_PREFIX,
+    EMAIL_CLAIM_STALE_MS: String(CLAIM_STALE_MS),
   });
 
   const readDeliveries = async (
@@ -73,6 +81,7 @@ describe('worker email delivery idempotency', () => {
   ): Promise<DeliveryRow[]> => {
     const result = await db.execute<DeliveryRow>(sql`
       select
+        id,
         recipient_address as "recipientAddress",
         status,
         attempt_count as "attemptCount",
@@ -181,7 +190,7 @@ describe('worker email delivery idempotency', () => {
   const deliveryJob = (
     scenario: { institutionId: string; enrollmentId: string },
     eventId: string,
-    recipientAddress = 'maria@example.com'
+    recipientAddress = RECIPIENT
   ): EmailDeliveryJob => ({
     institutionId: scenario.institutionId,
     eventId,
@@ -192,6 +201,40 @@ describe('worker email delivery idempotency', () => {
     subject: 'Welcome to Central School',
     text: 'Hello,',
   });
+
+  // The end state a worker that died between the claim and the completion write
+  // leaves behind: the row is stuck in 'sending' and its claim is `ageMs` old.
+  const stageStrandedRow = async (input: {
+    institutionId: string;
+    eventId: string;
+    studentId: string;
+    ageMs: number;
+  }): Promise<void> => {
+    await db.execute(sql`
+      insert into email_deliveries (
+        institution_id,
+        event_id,
+        event_name,
+        recipient_address,
+        recipient_source,
+        student_id,
+        status,
+        attempt_count,
+        updated_at
+      )
+      values (
+        ${input.institutionId},
+        ${input.eventId},
+        'enrollment.welcomed',
+        ${RECIPIENT},
+        'guardian',
+        ${input.studentId},
+        'sending',
+        1,
+        now() - make_interval(secs => ${input.ageMs / 1000})
+      )
+    `);
+  };
 
   // A job for the same ledger row that escapes the deterministic id — an
   // operator replay, a queue restored from a dump, or a duplicate produced by
@@ -351,5 +394,112 @@ describe('worker email delivery idempotency', () => {
     });
     expect(fake.calls).toBe(1);
     expect(rows[0].attemptCount).toBe(1);
+  });
+
+  it(
+    'OC-R1: a stranded sending row past the threshold is reclaimed and delivered exactly once',
+    async () => {
+      const scenario = await createScenario();
+      const event = createEnrollmentWelcomedEvent({
+        institutionId: scenario.institutionId,
+        payload: {
+          enrollmentId: scenario.enrollmentId,
+          studentId: scenario.studentId,
+        },
+      });
+      const jobId = emailJobId(event.id, RECIPIENT);
+      const job = deliveryJob(scenario, event.id);
+
+      // The crash window's end state: the row was claimed, the process died
+      // before the completion write, the stalled retry re-entered the processor,
+      // the claim guard refused it, and the job finished having sent nothing.
+      // Its record survives under the deterministic id (7-day retention).
+      await stageStrandedRow({
+        institutionId: scenario.institutionId,
+        eventId: event.id,
+        studentId: scenario.studentId,
+        ageMs: HOUR_MS,
+      });
+
+      await queue.add(EMAIL_JOB_NAME, job, { jobId });
+      expect(await waitForJobEnd(jobId)).toBe('completed');
+      expect(fake.calls).toBe(0);
+      expect((await queue.getJobCounts()).completed).toBe(1);
+
+      // The hard part, stated by the queue itself: the record is retained, so a
+      // naive re-add under the same id adds nothing.
+      await queue.add(EMAIL_JOB_NAME, job, { jobId });
+      expect((await queue.getJobCounts()).completed).toBe(1);
+
+      // One sweep pass: an hour-old claim is reclaimed and requeued.
+      expect(await runtime.claimSweeper.sweepOnce()).toBe(1);
+
+      const rows = await waitForDeliveries(
+        scenario.institutionId,
+        {
+          status: 'sent',
+          count: 1,
+        },
+        4000
+      );
+
+      // Exactly one send for the row: the crash consumed one claim, the reclaim
+      // one, and no transport call happened before the reclaim.
+      expect(fake.calls).toBe(1);
+      expect(rows[0].providerMessageId).not.toBeNull();
+      expect(rows[0].attemptCount).toBe(2);
+
+      // The reclaim had to travel under its own id because the deterministic one
+      // is still taken — and the ledger, not the job id, kept it to one send.
+      expect(await queue.getJob(jobId)).toBeDefined();
+      expect(await queue.getJob(reclaimJobId(rows[0].id, 1))).toBeDefined();
+      expect((await queue.getJobCounts()).completed).toBe(2);
+    },
+    15000
+  );
+
+  it('OC-R1: a fresh sending row is never reclaimed (an in-flight send is not double-sent)', async () => {
+    const scenario = await createScenario();
+    const event = createEnrollmentWelcomedEvent({
+      institutionId: scenario.institutionId,
+      payload: {
+        enrollmentId: scenario.enrollmentId,
+        studentId: scenario.studentId,
+      },
+    });
+
+    await stageStrandedRow({
+      institutionId: scenario.institutionId,
+      eventId: event.id,
+      studentId: scenario.studentId,
+      ageMs: 0,
+    });
+
+    expect(await runtime.claimSweeper.sweepOnce()).toBe(0);
+
+    const [row] = await readDeliveries(scenario.institutionId);
+    expect(row.status).toBe('sending');
+    expect(row.attemptCount).toBe(1);
+
+    // The row is still owned by the attempt that claimed it: another job for it
+    // leaves without sending and without a second claim.
+    const duplicateId = await addDuplicateJob(deliveryJob(scenario, event.id));
+    expect(await waitForJobEnd(duplicateId)).toBe('completed');
+
+    const [after] = await readDeliveries(scenario.institutionId);
+    expect(after.attemptCount).toBe(1);
+    expect(after.status).toBe('sending');
+    expect(fake.calls).toBe(0);
+  });
+
+  it('starts and stops the periodic claim sweep idempotently', async () => {
+    runtime.claimSweeper.start();
+    runtime.claimSweeper.start();
+    await runtime.claimSweeper.close();
+    await runtime.claimSweeper.close();
+
+    // Stopping stops the timer only; an explicit pass stays available (the two
+    // cases above drive it directly).
+    expect(await runtime.claimSweeper.sweepOnce()).toBe(0);
   });
 });

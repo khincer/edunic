@@ -46,19 +46,54 @@ export function buildGradeEmail(input: {
   };
 }
 
-export function buildAbsenceEmail(input: {
+// One builder for the attendance trigger, branched by the recorded status: the
+// schema allows present | absent | late and the in-app notification already
+// carries the status, so an email that always read "absence" was wrong for two
+// of the three (P8). The absence copy is byte-identical to the copy this
+// function replaced, and every status still emails — the trigger's "one
+// delivery per recipient" contract is unchanged.
+export function buildAttendanceEmail(input: {
   senderName: string;
   studentName: string;
   date: string | Date;
+  status: string;
 }): EmailContent {
+  const day = toCalendarDay(input.date);
+
+  if (input.status === 'late') {
+    return {
+      subject: `Late arrival recorded for ${input.studentName}`,
+      text: joinLines([
+        'Hello,',
+        '',
+        `${input.senderName} recorded a late arrival for ${input.studentName} on ${day}.`,
+        '',
+        'Please contact the school if this record is not correct.',
+        '',
+        input.senderName,
+      ]),
+    };
+  }
+
+  if (input.status === 'present') {
+    return {
+      subject: `Attendance recorded for ${input.studentName}`,
+      text: joinLines([
+        'Hello,',
+        '',
+        `${input.senderName} recorded ${input.studentName} as present on ${day}.`,
+        '',
+        input.senderName,
+      ]),
+    };
+  }
+
   return {
     subject: `Absence recorded for ${input.studentName}`,
     text: joinLines([
       'Hello,',
       '',
-      `${input.senderName} recorded an absence for ${input.studentName} on ${toCalendarDay(
-        input.date
-      )}.`,
+      `${input.senderName} recorded an absence for ${input.studentName} on ${day}.`,
       '',
       'Please contact the school if this record is not correct.',
       '',

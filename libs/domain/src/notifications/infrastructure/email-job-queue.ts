@@ -10,6 +10,11 @@ export type EmailDeliveryJob = {
   /** Normalized recipient address — the other half. */
   recipientAddress: string;
   from: string;
+  /**
+   * Institution display name for the `From:` header (SI-R1). Optional because
+   * jobs already in Redis when this field was introduced have no name.
+   */
+  fromName?: string | null;
   replyTo: string | null;
   to: string;
   subject: string;
@@ -31,4 +36,17 @@ export function emailJobId(eventId: string, recipientAddress: string): string {
     .digest('hex');
 
   return `email-${eventId}-${digest}`;
+}
+
+// The reclaim job id (P8): a stranded row is requeued under its own id because
+// the deterministic id above is still occupied by the retained record of the
+// attempt that crashed (BullMQ keeps completed jobs 7 days), and `queue.add`
+// with an existing id is a no-op. The ledger row id plus the attempt count make
+// one id per stale-claim episode; the ledger's claim guard, not this id, is
+// what keeps the row to a single send.
+export function reclaimJobId(
+  deliveryRowId: string,
+  attemptCount: number
+): string {
+  return `email-reclaim-${deliveryRowId}-${attemptCount}`;
 }

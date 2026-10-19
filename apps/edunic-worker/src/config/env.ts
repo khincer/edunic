@@ -27,6 +27,14 @@ export const workerEnvSchema = z.object({
     .email('EMAIL_REPLY_TO must be a valid email address'),
   EMAIL_QUEUE_NAME: z.string().min(1).default('email-delivery'),
   EMAIL_QUEUE_PREFIX: z.string().min(1).default('edunic:email'),
+  // OC-R1 (P8): how long a `sending` claim may sit before the sweep treats it
+  // as a crashed attempt and reclaims it. Optional — the worker's required keys
+  // do not grow.
+  EMAIL_CLAIM_STALE_MS: z.coerce
+    .number({ message: 'EMAIL_CLAIM_STALE_MS must be a number of milliseconds' })
+    .int()
+    .positive('EMAIL_CLAIM_STALE_MS must be a positive number of milliseconds')
+    .default(5 * 60 * 1000),
 });
 
 export type WorkerEnv = z.infer<typeof workerEnvSchema>;

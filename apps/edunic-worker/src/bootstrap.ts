@@ -24,6 +24,10 @@ import {
   createEmailWorker,
   type BullmqEmailQueue,
 } from './email/bullmq-email-queue.js';
+import {
+  createEmailClaimSweeper,
+  type EmailClaimSweeper,
+} from './email/email-claim-sweeper.js';
 
 // Same env-loading convention as apps/edunic-api and libs/db.
 dotenv.config();
@@ -37,6 +41,7 @@ export type WorkerConfig = {
   emailQueuePrefix: string;
   emailFromAddress: string;
   emailReplyTo: string;
+  emailClaimStaleMs: number;
 };
 
 export type WorkerDeps = {
@@ -54,6 +59,8 @@ export type WorkerRuntime = {
   emailWorker: Worker;
   emailTransport: EmailTransport;
   emailDelivery: EmailDeliveryService;
+  /** OC-R1 (P8): the stale-claim reclaim path, not started by this factory. */
+  claimSweeper: EmailClaimSweeper;
 };
 
 const EMAIL_TRIGGER_NAMES = [
@@ -81,6 +88,7 @@ export function loadWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     emailQueuePrefix: parsed.EMAIL_QUEUE_PREFIX,
     emailFromAddress: parsed.EMAIL_FROM_ADDRESS,
     emailReplyTo: parsed.EMAIL_REPLY_TO,
+    emailClaimStaleMs: parsed.EMAIL_CLAIM_STALE_MS,
   };
 }
 
@@ -108,13 +116,24 @@ export function bootstrapWorker(
     deps.emailTransport ??
     new ResendEmailTransport({ client: new Resend(config.resendApiKey) });
 
+  const emailDeliveries = new EmailDeliveriesRepository(db);
+
   const emailDelivery = new EmailDeliveryService({
-    repository: new EmailDeliveriesRepository(db),
+    repository: emailDeliveries,
     featureFlags: new FeatureFlagsRepository(db),
     queue: emailQueue,
     transport: emailTransport,
     fromAddress: config.emailFromAddress,
     defaultReplyTo: config.emailReplyTo,
+  });
+
+  // D6 (P8): the reclaim path shares the worker's own ledger repository and its
+  // queue. It is built here but started by main.ts, so a test runtime is a
+  // runtime without a background timer.
+  const claimSweeper = createEmailClaimSweeper({
+    repository: emailDeliveries,
+    queue: emailQueue.queue,
+    staleAfterMs: config.emailClaimStaleMs,
   });
 
   const emailWorker = createEmailWorker({
@@ -162,5 +181,6 @@ export function bootstrapWorker(
     emailWorker,
     emailTransport,
     emailDelivery,
+    claimSweeper,
   };
 }

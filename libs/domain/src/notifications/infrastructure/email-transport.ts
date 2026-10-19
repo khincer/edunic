@@ -5,6 +5,11 @@
 export type SendEmailInput = {
   /** Platform-verified envelope sender (EMAIL_FROM_ADDRESS). */
   from: string;
+  /**
+   * Institution display name, rendered as the `From:` name beside the platform
+   * address (SI-R1). Null or absent leaves the address bare.
+   */
+  fromName?: string | null;
   /** Per-institution reply-to override; null keeps the platform default. */
   replyTo: string | null;
   to: string;

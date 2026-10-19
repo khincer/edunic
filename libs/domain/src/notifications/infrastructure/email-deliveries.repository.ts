@@ -260,6 +260,50 @@ export class EmailDeliveriesRepository {
     return result.rows[0] ?? null;
   }
 
+  // OC-R1 (P8): the reclaim half of the crash window. A process that dies
+  // between the claim above and the completion write leaves the row in
+  // `sending`; its job record survives, but the stalled-job retry is refused by
+  // the claim guard and finishes with zero sends, so nothing ever delivers that
+  // row again. This returns such a row to a claimable state, and one statement
+  // is the whole concurrency story: only a `sending` row older than the
+  // threshold is transitioned, so two sweeps — or a sweep racing the live claim
+  // that just wrote `updated_at` — cannot both reclaim the same row. `skip
+  // locked` keeps a second sweep moving instead of blocking on these rows, and
+  // even if both fired the claim guard remains the admission gate, because the
+  // requeued job is admitted by exactly the same `queued | retried` transition
+  // as the original.
+  //
+  // The cutoff is computed on the database clock: `updated_at` is written by
+  // `now()`, and the column carries no time zone, so a client-side date would
+  // compare two different clocks.
+  async reclaimStaleSending(input: {
+    staleSeconds: number;
+    limit: number;
+  }): Promise<EmailDeliveryClaim[]> {
+    const result = await this.db.execute<EmailDeliveryClaim>(sql`
+      update email_deliveries
+      set
+        status = 'retried',
+        updated_at = now()
+      where id in (
+        select id
+        from email_deliveries
+        where status = 'sending'
+          and updated_at < now() - make_interval(secs => ${input.staleSeconds})
+        order by updated_at asc
+        limit ${input.limit}
+        for update skip locked
+      )
+      returning
+        id,
+        event_id as "eventId",
+        recipient_address as "recipientAddress",
+        attempt_count as "attemptCount"
+    `);
+
+    return result.rows;
+  }
+
   // DR-R1: the outcome transition of one send attempt, addressed by the ledger's
   // unique key so the job payload needs no row id. The claim that admits a send
   // (and increments `attempt_count`) belongs to the idempotency guard, not this
