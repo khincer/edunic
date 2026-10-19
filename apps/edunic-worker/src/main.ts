@@ -1,12 +1,16 @@
 import { bootstrapWorker } from './bootstrap.js';
 
 async function main() {
-  const { config, consumer, emailWorker, emailQueue, pool } = bootstrapWorker();
+  const { config, consumer, emailWorker, emailQueue, claimSweeper, pool } =
+    bootstrapWorker();
 
   // The BullMQ worker starts with the stream loop and drains its own queue; the
   // group is joined before the first read so the stream tip is the start point.
   await emailWorker.waitUntilReady();
   await consumer.ensureGroup();
+
+  // The reclaim pass runs beside the delivery worker (OC-R1/P8).
+  claimSweeper.start();
 
   let running = true;
   let stopping: Promise<void> | null = null;
@@ -20,8 +24,9 @@ async function main() {
     // Disconnecting unblocks a pending XREADGROUP so the loop can finish.
     consumer.close();
 
-    // D3: close queue and worker before the database pool.
+    // D3: close the sweep, worker and queue before the database pool.
     stopping = (async () => {
+      await claimSweeper.close();
       await emailWorker.close();
       await emailQueue.close();
       await pool.end();

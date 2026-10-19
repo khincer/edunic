@@ -5,11 +5,32 @@
 export type SendEmailInput = {
   /** Platform-verified envelope sender (EMAIL_FROM_ADDRESS). */
   from: string;
+  /**
+   * Institution display name, rendered as the `From:` name beside the platform
+   * address (SI-R1). Null or absent leaves the address bare.
+   */
+  fromName?: string | null;
   /** Per-institution reply-to override; null keeps the platform default. */
   replyTo: string | null;
   to: string;
   subject: string;
   text: string;
+  /**
+   * The caller's deadline (P9). An adapter must pass this on to the provider
+   * request, so a send can never outlive the claim that admits it: the reclaim
+   * threshold is validated to be well clear of this bound, which is what keeps
+   * a reclaim from firing while a send is still in flight.
+   */
+  signal?: AbortSignal;
+  /**
+   * The provider's dedupe key (P10), stable for every attempt of one logical
+   * delivery. An adapter must pass it on to the provider's own idempotency
+   * mechanism, so a re-send the caller cannot know was already accepted is
+   * absorbed by the provider instead of delivering a second message. The send
+   * deadline above only bounds a send that is still in flight; this covers the
+   * one that already succeeded and was never recorded.
+   */
+  idempotencyKey?: string;
 };
 
 export type SendEmailResult = {

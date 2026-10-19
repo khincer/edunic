@@ -6,7 +6,7 @@ import type {
 import { FeatureFlagsRepository } from '@edunic/source/domain/feature-flags';
 import { buildCursorPage } from '@edunic/source/domain/shared';
 import {
-  buildAbsenceEmail,
+  buildAttendanceEmail,
   buildGradeEmail,
   buildWelcomeEmail,
   type EmailContent,
@@ -43,6 +43,13 @@ export type EmailDeliveryServiceDeps = {
   fromAddress?: string;
   /** Platform reply-to default (EMAIL_REPLY_TO). */
   defaultReplyTo?: string;
+  /**
+   * P9: how long one provider call may run before it is aborted. The worker
+   * passes EMAIL_SEND_TIMEOUT_MS; the default keeps the service usable on its
+   * own (and in tests). Its startup validation is what couples this bound to
+   * the reclaim threshold.
+   */
+  sendTimeoutMs?: number;
 };
 
 type EmailDeliverySendDeps = Required<
@@ -64,6 +71,14 @@ export class EmailDeliveryServiceError extends Error {
 
 const EMAIL_NOTIFICATIONS_FLAG = 'email_notifications';
 const FLAG_DISABLED_REASON = 'email_notifications disabled';
+
+/**
+ * P9: the deadline on one provider call, well under the 300 s socket default.
+ * The worker reads it as the schema default of `EMAIL_SEND_TIMEOUT_MS` and
+ * validates the reclaim threshold against it, so this bound and that threshold
+ * cannot drift apart.
+ */
+export const EMAIL_SEND_TIMEOUT_DEFAULT_MS = 30_000;
 
 export class EmailDeliveryService {
   constructor(private readonly deps: EmailDeliveryServiceDeps) {}
@@ -145,6 +160,9 @@ export class EmailDeliveryService {
         eventId: event.id,
         recipientAddress: recipient.address,
         from: sendDeps.fromAddress,
+        // SI-R1: the display name the institution configured, kept beside the
+        // platform envelope address the transport actually sends from.
+        fromName: sender.senderName,
         replyTo: sender.replyToEmail ?? sendDeps.defaultReplyTo,
         to: recipient.address,
         subject: content.subject,
@@ -182,10 +200,28 @@ export class EmailDeliveryService {
     try {
       const result = await this.sender.transport.send({
         from: job.from,
+        fromName: job.fromName ?? null,
         replyTo: job.replyTo,
         to: job.to,
         subject: job.subject,
         text: job.text,
+        // P10: the provider's dedupe key, and the third layer of the
+        // once-only guarantee. It is the claim's own row id — one row per
+        // (institution, event, recipient), minted once and never rewritten, so
+        // the original attempt and every reclaim or retry of that row derive
+        // the same key while a different event or address derives a different
+        // one. The deadline below bounds a send that is still in flight; this
+        // covers the one the provider already accepted and the ledger never
+        // recorded, which is exactly what a reclaim re-sends.
+        idempotencyKey: claim.id,
+        // P9: the send is bounded, so it cannot outlive its claim. Without
+        // this, a slow provider response is still in flight when the reclaim
+        // threshold passes, and the row is reclaimed and re-sent — one email
+        // to the recipient twice over. The threshold is validated at startup to
+        // be clear of this deadline, which is what makes the guarantee real.
+        signal: AbortSignal.timeout(
+          this.deps.sendTimeoutMs ?? EMAIL_SEND_TIMEOUT_DEFAULT_MS
+        ),
       });
 
       await this.complete(job, {
@@ -281,9 +317,10 @@ export class EmailDeliveryService {
           score: event.payload.score,
         });
       default:
-        return buildAbsenceEmail({
+        return buildAttendanceEmail({
           ...context,
           date: event.payload.date,
+          status: event.payload.status,
         });
     }
   }

@@ -260,6 +260,84 @@ export class EmailDeliveriesRepository {
     return result.rows[0] ?? null;
   }
 
+  // OC-R1 (P8): the reclaim half of the crash window. A process that dies
+  // between the claim above and the completion write leaves the row in
+  // `sending`; its job record survives, but the stalled-job retry is refused by
+  // the claim guard and finishes with zero sends, so nothing ever delivers that
+  // row again. This returns such a row to a claimable state, and one statement
+  // is the whole concurrency story: only a `sending` row older than the
+  // threshold is transitioned, so two sweeps — or a sweep racing the live claim
+  // that just wrote `updated_at` — cannot both reclaim the same row. `skip
+  // locked` keeps a second sweep moving instead of blocking on these rows, and
+  // even if both fired the claim guard remains the admission gate, because the
+  // requeued job is admitted by exactly the same `queued | retried` transition
+  // as the original.
+  //
+  // P9 correction: the guard fences concurrent *jobs*, it does not fence a send
+  // that has already passed the claim. This row is reclaimed because of its age
+  // alone, so a send that outlives the threshold is reclaimed — and re-sent —
+  // while it is still in flight. What closes that window is the pair the worker
+  // validates at startup: the transport call carries a deadline
+  // (EMAIL_SEND_TIMEOUT_MS), and this threshold is refused unless it clears
+  // that deadline by a safety factor. The deadline ends the send and the
+  // completion write it triggers refreshes `updated_at`, so a row can only
+  // become stale here after the send it guards has already ended.
+  //
+  // P10: a send that ended by *succeeding* at the provider, with no completion
+  // write to show for it, is still reclaimed and re-sent — the deadline has
+  // nothing left to cut off. The re-send is not a second message because the
+  // transport call carries this row's id as the provider's idempotency key
+  // (the same key the crashed attempt used), so the provider absorbs it.
+  //
+  // The cutoff is computed on the database clock: `updated_at` is written by
+  // `now()`, and the column carries no time zone, so a client-side date would
+  // compare two different clocks.
+  async reclaimStaleSending(input: {
+    staleSeconds: number;
+    limit: number;
+  }): Promise<EmailDeliveryClaim[]> {
+    const result = await this.db.execute<EmailDeliveryClaim>(sql`
+      update email_deliveries
+      set
+        status = 'retried',
+        updated_at = now()
+      where id in (
+        select id
+        from email_deliveries
+        where status = 'sending'
+          and updated_at < now() - make_interval(secs => ${input.staleSeconds})
+        order by updated_at asc
+        limit ${input.limit}
+        for update skip locked
+      )
+      returning
+        id,
+        event_id as "eventId",
+        recipient_address as "recipientAddress",
+        attempt_count as "attemptCount"
+    `);
+
+    return result.rows;
+  }
+
+  // P9: the honest end state for a reclaimed row that cannot be requeued. The
+  // job payload lives in the queue record, so once that record is evicted the
+  // content is gone and no retry can ever deliver the row: leaving it at
+  // `retried` advertises a retry that cannot happen, while `failed` with the
+  // reason tells the operator what was lost. Guarded on `retried` so a live
+  // claim that admitted the row in the meantime is never overwritten.
+  async failUnreclaimable(input: { id: string; reason: string }): Promise<void> {
+    await this.db.execute(sql`
+      update email_deliveries
+      set
+        status = 'failed',
+        provider_error = ${input.reason},
+        updated_at = now()
+      where id = ${input.id}
+        and status = 'retried'
+    `);
+  }
+
   // DR-R1: the outcome transition of one send attempt, addressed by the ledger's
   // unique key so the job payload needs no row id. The claim that admits a send
   // (and increments `attempt_count`) belongs to the idempotency guard, not this
