@@ -35,6 +35,8 @@ export const INSTITUTION_LIST_COLUMNS = {
 export type InstitutionRecord = {
   id: string;
   name: string;
+  senderName: string | null;
+  replyToEmail: string | null;
   createdAt: Date | null;
 };
 
@@ -49,6 +51,8 @@ export type CreateInstitutionInput = {
 export type UpdateInstitutionInput = {
   institutionId: string;
   name?: string;
+  senderName?: string | null;
+  replyToEmail?: string | null;
 };
 
 export type ListInstitutionsInput = ListInstitutionsQuery & {
@@ -93,6 +97,8 @@ export class InstitutionsRepository {
       select
         id,
         name,
+        sender_name as "senderName",
+        reply_to_email as "replyToEmail",
         created_at as "createdAt"
       from institutions
       ${whereClause}
@@ -127,6 +133,8 @@ export class InstitutionsRepository {
       select
         id,
         name,
+        sender_name as "senderName",
+        reply_to_email as "replyToEmail",
         created_at as "createdAt"
       from institutions
       where id = ${institutionId}
@@ -143,6 +151,8 @@ export class InstitutionsRepository {
       returning
         id,
         name,
+        sender_name as "senderName",
+        reply_to_email as "replyToEmail",
         created_at as "createdAt"
     `);
 
@@ -156,6 +166,14 @@ export class InstitutionsRepository {
       assignments.push(sql`name = ${input.name}`);
     }
 
+    if (input.senderName !== undefined) {
+      assignments.push(sql`sender_name = ${input.senderName}`);
+    }
+
+    if (input.replyToEmail !== undefined) {
+      assignments.push(sql`reply_to_email = ${input.replyToEmail}`);
+    }
+
     if (assignments.length === 0) {
       return this.findById(input.institutionId);
     }
@@ -167,6 +185,8 @@ export class InstitutionsRepository {
       returning
         id,
         name,
+        sender_name as "senderName",
+        reply_to_email as "replyToEmail",
         created_at as "createdAt"
     `);
 
@@ -180,6 +200,8 @@ export class InstitutionsRepository {
       returning
         id,
         name,
+        sender_name as "senderName",
+        reply_to_email as "replyToEmail",
         created_at as "createdAt"
     `);
 

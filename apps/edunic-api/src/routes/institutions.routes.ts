@@ -18,6 +18,18 @@ const INSTITUTION_FILTER_SORT_OPTIONS = {
   sortFields: ['name', 'createdAt'],
 };
 
+// SI-R2: an institution admin may only write its own institution. Mirrors
+// `assertInstitutionAccess` in feature-flags.routes.ts. This covers the whole
+// PATCH endpoint, not only the sender identity fields.
+function assertInstitutionAccess(
+  userInstitutionId: string | undefined,
+  institutionId: string
+) {
+  if (userInstitutionId !== institutionId) {
+    throw new InstitutionsServiceError('Institution access denied', 403);
+  }
+}
+
 export async function institutionRoutes(app: FastifyInstance) {
   const institutionsService = new InstitutionsService(
     new InstitutionsRepository(app.db)
@@ -60,6 +72,7 @@ export async function institutionRoutes(app: FastifyInstance) {
   app.patch('/:institutionId', adminOnly, async (request) => {
     const params = parseWithSchema(institutionParamsSchema, request.params);
     const body = parseWithSchema(updateInstitutionBodySchema, request.body);
+    assertInstitutionAccess(request.user?.institutionId, params.institutionId);
 
     return institutionsService.updateInstitution({
       institutionId: params.institutionId,

@@ -1,5 +1,5 @@
 ﻿import { createTestApp, createHttpClient } from '../helpers/app.js';
-import { createBearerToken } from '../helpers/auth.js';
+import { createAuthHeaders, createBearerToken } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
   createInstitutionFixture,
@@ -60,7 +60,7 @@ describe('institutions routes', () => {
     expect(detailResponse.status).toBe(200);
 
     const updateResponse = await client
-      .patch(`/institutions/${institutionId}`)
+      .patch(`/institutions/${bootstrapInstitution.id}`)
       .set(authHeaders)
       .send({ name: 'Updated Institution' });
     expect(updateResponse.status).toBe(200);
@@ -71,6 +71,155 @@ describe('institutions routes', () => {
       .set(authHeaders);
     expect(deleteResponse.status).toBe(200);
     expect(deleteResponse.body.data.deleted).toBe(true);
+  });
+
+  it('lets an admin configure its own institution sender identity', async () => {
+    const institution = await createInstitutionFixture();
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
+    const headers = await createAuthHeaders({
+      userId: adminUser.id,
+      institutionId: institution.id,
+    });
+
+    const updateResponse = await client
+      .patch(`/institutions/${institution.id}`)
+      .set(headers)
+      .send({
+        senderName: '  Colegio Central  ',
+        replyToEmail: '  respuestas@colegio.example  ',
+      });
+
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.data.senderName).toBe('Colegio Central');
+    expect(updateResponse.body.data.replyToEmail).toBe(
+      'respuestas@colegio.example'
+    );
+
+    const detailResponse = await client
+      .get(`/institutions/${institution.id}`)
+      .set(headers);
+
+    expect(detailResponse.status).toBe(200);
+    expect(detailResponse.body.data.senderName).toBe('Colegio Central');
+    expect(detailResponse.body.data.replyToEmail).toBe(
+      'respuestas@colegio.example'
+    );
+  });
+
+  it('rejects an admin writing another institution sender identity', async () => {
+    const institution = await createInstitutionFixture('School A');
+    const otherInstitution = await createInstitutionFixture('School B');
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
+    const otherAdminUser = await createUserFixture({
+      institutionId: otherInstitution.id,
+      role: 'admin',
+    });
+    const headers = await createAuthHeaders({
+      userId: adminUser.id,
+      institutionId: institution.id,
+    });
+    const otherHeaders = await createAuthHeaders({
+      userId: otherAdminUser.id,
+      institutionId: otherInstitution.id,
+    });
+
+    const ownResponse = await client
+      .patch(`/institutions/${otherInstitution.id}`)
+      .set(otherHeaders)
+      .send({ senderName: 'School B Sender' });
+
+    expect(ownResponse.status).toBe(200);
+    expect(ownResponse.body.data.senderName).toBe('School B Sender');
+
+    const crossTenantResponse = await client
+      .patch(`/institutions/${otherInstitution.id}`)
+      .set(headers)
+      .send({ senderName: 'Hijacked Sender' });
+
+    expect(crossTenantResponse.status).toBe(403);
+    expect(crossTenantResponse.body.message).toBe('Institution access denied');
+
+    const detailResponse = await client
+      .get(`/institutions/${otherInstitution.id}`)
+      .set(otherHeaders);
+
+    expect(detailResponse.body.data.senderName).toBe('School B Sender');
+  });
+
+  it('rejects an admin writing another institution name', async () => {
+    const institution = await createInstitutionFixture('School A');
+    const otherInstitution = await createInstitutionFixture('School B');
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
+    const otherAdminUser = await createUserFixture({
+      institutionId: otherInstitution.id,
+      role: 'admin',
+    });
+    const headers = await createAuthHeaders({
+      userId: adminUser.id,
+      institutionId: institution.id,
+    });
+    const otherHeaders = await createAuthHeaders({
+      userId: otherAdminUser.id,
+      institutionId: otherInstitution.id,
+    });
+
+    const crossTenantResponse = await client
+      .patch(`/institutions/${otherInstitution.id}`)
+      .set(headers)
+      .send({ name: 'Renamed by School A' });
+
+    expect(crossTenantResponse.status).toBe(403);
+    expect(crossTenantResponse.body.message).toBe('Institution access denied');
+
+    const detailResponse = await client
+      .get(`/institutions/${otherInstitution.id}`)
+      .set(otherHeaders);
+
+    expect(detailResponse.body.data.name).toBe('School B');
+  });
+
+  it('validates sender identity values', async () => {
+    const institution = await createInstitutionFixture();
+    const adminUser = await createUserFixture({
+      institutionId: institution.id,
+      role: 'admin',
+    });
+    const headers = await createAuthHeaders({
+      userId: adminUser.id,
+      institutionId: institution.id,
+    });
+
+    const invalidResponse = await client
+      .patch(`/institutions/${institution.id}`)
+      .set(headers)
+      .send({ replyToEmail: 'respuestas(at)colegio.example' });
+
+    expect(invalidResponse.status).toBe(400);
+
+    const seedResponse = await client
+      .patch(`/institutions/${institution.id}`)
+      .set(headers)
+      .send({ senderName: 'Colegio Central' });
+
+    expect(seedResponse.body.data.senderName).toBe('Colegio Central');
+
+    const clearResponse = await client
+      .patch(`/institutions/${institution.id}`)
+      .set(headers)
+      .send({ senderName: '   ', replyToEmail: '' });
+
+    expect(clearResponse.status).toBe(200);
+    expect(clearResponse.body.data.senderName).toBeNull();
+    expect(clearResponse.body.data.replyToEmail).toBeNull();
   });
 
   it('returns 409 when deleting an institution with dependent records', async () => {
