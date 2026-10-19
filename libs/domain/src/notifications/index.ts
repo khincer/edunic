@@ -30,7 +30,10 @@ export {
 } from './infrastructure/email-deliveries.repository.js';
 export type {
   EmailDeliveryRecord,
+  EmailDeliveryCompletion,
   EmailDeliveryState,
+  EmailSenderIdentity,
+  EmailStudentTarget,
   RecipientRecord,
 } from './infrastructure/email-deliveries.repository.js';
 export {
@@ -41,3 +44,15 @@ export type {
   EmailDeliveryStatus,
   ListEmailDeliveriesQuery,
 } from './schemas/email-delivery.schemas.js';
+export { emailJobId } from './infrastructure/email-job-queue.js';
+export type {
+  EmailDeliveryJob,
+  EmailJobQueue,
+} from './infrastructure/email-job-queue.js';
+export {
+  EmailDeliveryService,
+} from './application/email-delivery.service.js';
+export type {
+  EmailDeliveryServiceDeps,
+  EmailTriggerEvent,
+} from './application/email-delivery.service.js';
