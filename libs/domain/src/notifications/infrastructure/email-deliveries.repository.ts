@@ -60,6 +60,27 @@ export type EmailDeliveryState = {
   senderIdentityConfigured: boolean;
 };
 
+// Per-institution sender identity (D4/SI-R1). `senderName` is the configured
+// display name; a NULL means the institution is unconfigured and nothing is
+// sent (SI-R3).
+export type EmailSenderIdentity = {
+  senderName: string | null;
+  replyToEmail: string | null;
+};
+
+// The student behind one triggering event (RC-R1). Grade and attendance events
+// carry only the enrollment, so the student is resolved through `enrollments`.
+export type EmailStudentTarget = {
+  studentId: string;
+  studentName: string;
+};
+
+export type EmailDeliveryCompletion = {
+  status: 'sent' | 'failed' | 'retried';
+  providerMessageId?: string | null;
+  providerError?: string | null;
+};
+
 export type ListEmailDeliveriesInput = ListEmailDeliveriesQuery & {
   institutionId: string;
   filters?: FilterSpec[];
@@ -155,6 +176,72 @@ export class EmailDeliveriesRepository {
       )
       values ${sql.join(values, sql`, `)}
       on conflict (institution_id, event_id, recipient_address) do nothing
+    `);
+  }
+
+  // SI-R1/SI-R3: the institution's own sender identity, scoped to the row
+  // keyed by `institution_id`. NULL means unconfigured.
+  async findSenderIdentity(
+    institutionId: string
+  ): Promise<EmailSenderIdentity | null> {
+    const result = await this.db.execute<EmailSenderIdentity>(sql`
+      select
+        sender_name as "senderName",
+        reply_to_email as "replyToEmail"
+      from institutions
+      where id = ${institutionId}
+      limit 1
+    `);
+
+    return result.rows[0] ?? null;
+  }
+
+  // RC-R1/RC-R3: the student the event is about, resolved from the enrollment
+  // every trigger carries, scoped to the institution on both joins.
+  async findDeliveryTarget(input: {
+    institutionId: string;
+    enrollmentId: string;
+  }): Promise<EmailStudentTarget | null> {
+    const result = await this.db.execute<EmailStudentTarget>(sql`
+      select
+        students.id as "studentId",
+        trim(concat_ws(' ', students.first_name, students.last_name)) as "studentName"
+      from enrollments
+      inner join students
+        on students.id = enrollments.student_id
+      where enrollments.id = ${input.enrollmentId}
+        and enrollments.institution_id = ${input.institutionId}
+        and students.institution_id = ${input.institutionId}
+      limit 1
+    `);
+
+    return result.rows[0] ?? null;
+  }
+
+  // DR-R1: the outcome transition of one send attempt, addressed by the ledger's
+  // unique key so the job payload needs no row id. The claim that admits a send
+  // (and increments `attempt_count`) belongs to the idempotency guard, not this
+  // transition.
+  async completeDelivery(input: {
+    institutionId: string;
+    eventId: string;
+    recipientAddress: string;
+    completion: EmailDeliveryCompletion;
+  }): Promise<void> {
+    const { status, providerMessageId = null, providerError = null } =
+      input.completion;
+
+    await this.db.execute(sql`
+      update email_deliveries
+      set
+        status = ${status},
+        provider_message_id = ${providerMessageId},
+        provider_error = ${providerError},
+        sent_at = case when ${status} = 'sent' then now() else sent_at end,
+        updated_at = now()
+      where institution_id = ${input.institutionId}
+        and event_id = ${input.eventId}
+        and recipient_address = ${input.recipientAddress}
     `);
   }
 

@@ -1,23 +1,41 @@
 import { bootstrapWorker } from './bootstrap.js';
 
 async function main() {
-  const { config, consumer } = bootstrapWorker();
+  const { config, consumer, emailWorker, emailQueue, pool } = bootstrapWorker();
 
-  // Join first, then read: the group starts at the stream tip, so events
-  // published while the worker was down before its first start are skipped
-  // (unconsumed rows stay recoverable in the outbox until published).
+  // The BullMQ worker starts with the stream loop and drains its own queue; the
+  // group is joined before the first read so the stream tip is the start point.
+  await emailWorker.waitUntilReady();
   await consumer.ensureGroup();
 
   let running = true;
-  const stop = () => {
+  let stopping: Promise<void> | null = null;
+
+  const stop = (): Promise<void> => {
+    if (stopping) {
+      return stopping;
+    }
+
     running = false;
     // Disconnecting unblocks a pending XREADGROUP so the loop can finish.
     consumer.close();
-  };
-  process.on('SIGINT', stop);
-  process.on('SIGTERM', stop);
 
-  console.log(`worker consuming "${config.streamName}" (group edunic-worker)`);
+    // D3: close queue and worker before the database pool.
+    stopping = (async () => {
+      await emailWorker.close();
+      await emailQueue.close();
+      await pool.end();
+    })();
+
+    return stopping;
+  };
+
+  process.on('SIGINT', () => void stop());
+  process.on('SIGTERM', () => void stop());
+
+  console.log(
+    `worker consuming "${config.streamName}" (group edunic-worker) and sending email through queue "${config.emailQueueName}"`
+  );
 
   while (running) {
     try {
@@ -31,6 +49,8 @@ async function main() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
+
+  await stop();
 }
 
 void main().catch((error) => {

@@ -17,10 +17,15 @@ import { bootstrapWorker } from '../../src/bootstrap.js';
 // test publishes through RedisStreamsEventBus, not the in-memory bus.
 const STREAM = 'edunic:domain-events';
 const GROUP = 'edunic-worker';
+// The email runtime is incidental to this flow, but bootstrapWorker now builds
+// it: a test-scoped queue name/prefix keeps the suite off production-named keys.
+const EMAIL_QUEUE_NAME = `email-delivery-workflow-test-${process.pid}`;
+const EMAIL_QUEUE_PREFIX = 'edunic:email-workflow-test';
 
 describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let redis: Redis;
+  let runtime: ReturnType<typeof bootstrapWorker>;
   let consumer: ReturnType<typeof bootstrapWorker>['consumer'];
   let institutionId: string;
   let headers: Record<string, string>;
@@ -76,7 +81,12 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
 
     app = await createTestApp();
 
-    const boot = bootstrapWorker();
+    const boot = bootstrapWorker({
+      ...process.env,
+      EMAIL_QUEUE_NAME,
+      EMAIL_QUEUE_PREFIX,
+    });
+    runtime = boot;
     consumer = boot.consumer;
     // Worker joins before the write: the group starts at the stream tip.
     await consumer.ensureGroup();
@@ -144,6 +154,11 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
 
   afterAll(async () => {
     consumer?.close();
+    // bootstrapWorker now owns a queue, a worker and a pool: close them in the
+    // order the worker's own shutdown uses (queue/worker before the pool).
+    await runtime?.emailWorker.close();
+    await runtime?.emailQueue.close();
+    await runtime?.pool.end();
     await app.close();
     await closeTestDatabase();
     redis.disconnect();
