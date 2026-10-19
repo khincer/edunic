@@ -81,6 +81,15 @@ export type EmailDeliveryCompletion = {
   providerError?: string | null;
 };
 
+// The result of a successful claim (D2/OC-R1). `attemptCount` is the count
+// after the claim's increment, so the first attempt reads 1.
+export type EmailDeliveryClaim = {
+  id: string;
+  eventId: string;
+  recipientAddress: string;
+  attemptCount: number;
+};
+
 export type ListEmailDeliveriesInput = ListEmailDeliveriesQuery & {
   institutionId: string;
   filters?: FilterSpec[];
@@ -213,6 +222,39 @@ export class EmailDeliveriesRepository {
         and enrollments.institution_id = ${input.institutionId}
         and students.institution_id = ${input.institutionId}
       limit 1
+    `);
+
+    return result.rows[0] ?? null;
+  }
+
+  // D2/OC-R1: the guarded claim that makes a send exactly-once even when two
+  // jobs reach the processor for one row. `status in ('queued','retried')` is
+  // the whole guard — a row already `sending`, `sent` or `failed` is not
+  // claimable, and an evicted job's replay is admitted once for a row that is
+  // still awaiting delivery. A single statement, so Postgres serialises
+  // concurrent claims on the row lock; zero rows means "do not send".
+  // `attempt_count` increments here, at the claim, so it counts attempts, not
+  // completions.
+  async claimDelivery(input: {
+    institutionId: string;
+    eventId: string;
+    recipientAddress: string;
+  }): Promise<EmailDeliveryClaim | null> {
+    const result = await this.db.execute<EmailDeliveryClaim>(sql`
+      update email_deliveries
+      set
+        status = 'sending',
+        attempt_count = attempt_count + 1,
+        updated_at = now()
+      where institution_id = ${input.institutionId}
+        and event_id = ${input.eventId}
+        and recipient_address = ${input.recipientAddress}
+        and status in ('queued', 'retried')
+      returning
+        id,
+        event_id as "eventId",
+        recipient_address as "recipientAddress",
+        attempt_count as "attemptCount"
     `);
 
     return result.rows[0] ?? null;

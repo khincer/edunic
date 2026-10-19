@@ -113,10 +113,22 @@ export class EmailDeliveryService {
     }
   }
 
-  // The send path. The claim guard that admits exactly one send per delivery
-  // record is added separately; this method records the outcome (DR-R1) and
+  // The send path. D2/OC-R1: the guarded claim is the job's first write, so a
+  // job that arrives for a row already in flight or final leaves without
+  // touching the transport. The claim also records the outcome (DR-R1) and
   // rethrows a retryable provider failure so BullMQ retries the same job id.
   async handleDeliveryJob(job: EmailDeliveryJob): Promise<void> {
+    const claim = await this.deps.repository.claimDelivery({
+      institutionId: job.institutionId,
+      eventId: job.eventId,
+      recipientAddress: job.recipientAddress,
+    });
+
+    // Zero rows: another attempt owns this row, or it is done. Do not send.
+    if (!claim) {
+      return;
+    }
+
     if (!(await this.isEnabled(job.institutionId))) {
       await this.complete(job, {
         status: 'failed',
