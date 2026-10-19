@@ -458,6 +458,28 @@ describe('worker email delivery', () => {
       text: 'Hello,',
     };
 
+    // The claim guard (P5/D2) sends only for a row the ledger already holds, so
+    // the row this job belongs to is staged exactly as `enqueueForEvent` writes
+    // it. Stages the fixture only — every assertion below is unchanged.
+    await db.execute(sql`
+      insert into email_deliveries (
+        institution_id,
+        event_id,
+        event_name,
+        recipient_address,
+        recipient_source,
+        student_id
+      )
+      values (
+        ${scenario.institutionId},
+        ${eventId},
+        'enrollment.welcomed',
+        'maria@example.com',
+        'guardian',
+        ${scenario.studentId}
+      )
+    `);
+
     await runtime.emailQueue.enqueue(delivery);
     await runtime.emailQueue.enqueue({ ...delivery });
 
