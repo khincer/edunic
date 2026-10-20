@@ -4,6 +4,7 @@ import {
   getInstitutionId,
   parseFilterSort,
 } from '@edunic/source/domain/shared';
+import { AccessRepository, AccessService } from '@edunic/source/domain/authorization';
 import {
   AttendanceService,
   AttendanceServiceError,
@@ -22,7 +23,8 @@ const ATTENDANCE_FILTER_SORT_OPTIONS = {
 export async function attendanceRoutes(app: FastifyInstance) {
   const attendanceService = new AttendanceService(
     new AttendanceRepository(app.db),
-    app.eventBus
+    app.eventBus,
+    new AccessService(new AccessRepository(app.db))
   );
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
@@ -63,6 +65,8 @@ export async function attendanceRoutes(app: FastifyInstance) {
     const body = parseWithSchema(createAttendanceBodySchema, request.body);
     const result = await attendanceService.createAttendance({
       institutionId,
+      role: request.user?.role ?? '',
+      userId: request.user?.id ?? '',
       ...body,
     });
 
@@ -77,6 +81,8 @@ export async function attendanceRoutes(app: FastifyInstance) {
     return attendanceService.updateAttendance({
       institutionId,
       attendanceId: params.attendanceId,
+      role: request.user?.role ?? '',
+      userId: request.user?.id ?? '',
       ...body,
     });
   });
@@ -87,7 +93,11 @@ export async function attendanceRoutes(app: FastifyInstance) {
 
     return attendanceService.deleteAttendance(
       institutionId,
-      params.attendanceId
+      params.attendanceId,
+      {
+        role: request.user?.role ?? '',
+        userId: request.user?.id ?? '',
+      }
     );
   });
 }

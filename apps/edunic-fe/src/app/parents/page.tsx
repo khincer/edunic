@@ -15,6 +15,10 @@ import {
 import { API_BASE_URL } from '@/lib/config';
 import { clearSession, getSession, type AdminSession } from '@/lib/auth';
 
+function formatCents(cents: number) {
+  return `Q${(cents / 100).toFixed(2)}`;
+}
+
 export default function ParentsPage() {
   const router = useRouter();
   const [session, setSession] = useState<AdminSession | null>(null);
@@ -39,17 +43,17 @@ export default function ParentsPage() {
     }
 
     if (storedSession.user.role === 'parent') {
-      void loadDashboard(storedSession.user.institutionId);
+      void loadDashboard();
     }
   }, [router]);
 
-  async function loadDashboard(institutionId: string) {
+  async function loadDashboard() {
     setError('');
 
     try {
       const result = await apiRequest<ApiSingleResponse<ParentDashboard>>(
         '/dashboard/parent',
-        { institutionId }
+        {}
       );
       setDashboard(result.data);
     } catch (err) {
@@ -69,7 +73,6 @@ export default function ParentsPage() {
     try {
       await apiRequest('/messages', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           recipientUserId,
           subject: messageSubject,
@@ -78,7 +81,7 @@ export default function ParentsPage() {
       });
       setMessageBody('');
       setNotice('Message sent.');
-      await loadDashboard(session.user.institutionId);
+      await loadDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to send message');
     } finally {
@@ -97,9 +100,8 @@ export default function ParentsPage() {
     try {
       await apiRequest(`/messages/${messageId}/read`, {
         method: 'PATCH',
-        institutionId: session.user.institutionId,
       });
-      await loadDashboard(session.user.institutionId);
+      await loadDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to mark message read');
     } finally {
@@ -118,9 +120,8 @@ export default function ParentsPage() {
     try {
       await apiRequest(`/notifications/${notificationId}/read`, {
         method: 'PATCH',
-        institutionId: session.user.institutionId,
       });
-      await loadDashboard(session.user.institutionId);
+      await loadDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to mark notification read');
     } finally {
@@ -146,7 +147,6 @@ export default function ParentsPage() {
       const response = await fetch(`${API_BASE_URL}${reportUrl}`, {
         headers: {
           Authorization: `Bearer ${session.token}`,
-          'x-institution-id': session.user.institutionId,
         },
       });
 
@@ -211,7 +211,7 @@ export default function ParentsPage() {
         <p className="eyebrow">Parent portal</p>
         <h1 className="page-title">Family academic snapshot.</h1>
         <p className="body-copy">
-          {session.user.email} is signed in for institution {session.user.institutionId}.
+          {session.user.email} is signed in.
         </p>
       </section>
 
@@ -334,6 +334,50 @@ export default function ParentsPage() {
                 )}
                 {dashboard && dashboard.upcomingAssignments.length === 0 ? (
                   <PanelState message="No upcoming homework or exams." />
+                ) : null}
+              </div>
+            </article>
+
+            <article className="card">
+              <div className="panel-header">
+                <div>
+                  <p className="eyebrow">Payments</p>
+                  <h2 className="section-title">What is owed</h2>
+                </div>
+              </div>
+              <div className="activity-list">
+                {(dashboard?.balances ?? [])
+                  .filter((balance) => balance.outstandingCents > 0)
+                  .map((balance) => (
+                    <article className="activity-row" key={balance.studentId}>
+                      <ActivityMark kind="calendar" />
+                      <span>
+                        <strong>{balance.studentName}</strong>
+                        <p className="field-help">
+                          Outstanding {formatCents(balance.outstandingCents)} -{' '}
+                          {balance.overdueCount} overdue
+                        </p>
+                      </span>
+                    </article>
+                  ))}
+                {(dashboard?.payments ?? [])
+                  .filter((payment) => payment.status === 'pending')
+                  .map((payment) => (
+                    <article className="activity-row" key={payment.id}>
+                      <ActivityMark kind="calendar" />
+                      <span>
+                        <strong>{payment.concept}</strong>
+                        <p className="field-help">
+                          {formatCents(payment.amountCents)} -{' '}
+                          {payment.dueDate
+                            ? `due ${payment.dueDate.slice(0, 10)}`
+                            : 'no due date'}
+                        </p>
+                      </span>
+                    </article>
+                  ))}
+                {dashboard && dashboard.payments.length === 0 ? (
+                  <PanelState message="No payments pending." />
                 ) : null}
               </div>
             </article>

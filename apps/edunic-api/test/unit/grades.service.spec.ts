@@ -3,19 +3,28 @@ import {
   GradesServiceError,
 } from '@edunic/source/domain/grades';
 
+// The teacher scoping check is exercised in the integration specs; here
+// the service only needs an access service that does not object.
+const access = {
+  assertTeacherOwnsEnrollment: jest.fn().mockResolvedValue(undefined),
+} as never;
+
+
 describe('GradesService', () => {
   it('returns 404 when the enrollment does not exist', async () => {
     const repository = {
       findEnrollment: jest.fn().mockResolvedValue(null),
     };
 
-    const service = new GradesService(repository as never);
+    const service = new GradesService(repository as never, undefined, access);
 
     await expect(
       service.createGrade({
         institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
         enrollmentId: 'enrollment-1',
-        subject: 'Science',
+        subjectId: 'subject-1',
         score: 90,
       })
     ).rejects.toEqual(
@@ -52,17 +61,19 @@ describe('GradesService', () => {
     const publish = jest.fn().mockResolvedValue(undefined);
     const service = new GradesService(repository as never, {
       publish,
-    } as never);
+    } as never, access);
 
     const result = await service.createGrade({
       institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
       enrollmentId: 'enrollment-1',
-      subject: 'Science',
+      subjectId: 'subject-1',
       score: 90,
     });
 
     expect(result.data).toEqual(
-      expect.objectContaining({ id: 'grade-1', subject: 'Science' })
+      expect.objectContaining({ id: 'grade-1' })
     );
     expect(repository.transaction).toHaveBeenCalledTimes(1);
     expect(repository.create).toHaveBeenCalledWith(
@@ -95,13 +106,15 @@ describe('GradesService', () => {
       .mockRejectedValue(new Error('event bus down (injected)'));
     const service = new GradesService(repository as never, {
       publish,
-    } as never);
+    } as never, access);
 
     await expect(
       service.createGrade({
         institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
         enrollmentId: 'enrollment-1',
-        subject: 'Science',
+        subjectId: 'subject-1',
         score: 90,
       })
     ).rejects.toThrow('event bus down (injected)');
@@ -113,12 +126,14 @@ describe('GradesService', () => {
   it('leaves the outbox row unpublished for the publisher when no bus is attached', async () => {
     const tx = { execute: jest.fn() };
     const repository = createRepositoryMock(tx);
-    const service = new GradesService(repository as never);
+    const service = new GradesService(repository as never, undefined, access);
 
     const result = await service.createGrade({
       institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
       enrollmentId: 'enrollment-1',
-      subject: 'Science',
+      subjectId: 'subject-1',
       score: 90,
     });
 

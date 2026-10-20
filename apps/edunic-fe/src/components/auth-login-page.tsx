@@ -5,9 +5,8 @@ import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/button';
 import { clearSession, getSession, login } from '@/lib/auth';
-import { getBrowserTenantContext, type TenantContext } from '@/lib/tenant';
 
-type AuthLoginPageProps = {
+export type AuthLoginPageProps = {
   accent: 'admin' | 'teacher' | 'parent';
   allowedRoles: string[];
   brandSubtitle: string;
@@ -16,7 +15,6 @@ type AuthLoginPageProps = {
   eyebrow: string;
   heroText: string;
   intro: string;
-  initialTenantContext: TenantContext | null;
   redirectTo: string;
   requiredRoleLabel: string;
   sectionLabel: string;
@@ -31,7 +29,6 @@ export function AuthLoginPage({
   emailPlaceholder,
   eyebrow,
   heroText,
-  initialTenantContext,
   intro,
   redirectTo,
   requiredRoleLabel,
@@ -41,18 +38,11 @@ export function AuthLoginPage({
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [tenantContext, setTenantContext] = useState<TenantContext | null>(initialTenantContext);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const tenantIsMissing = tenantContext === null;
-  const schoolBadge = tenantContext?.slug.slice(0, 2).toUpperCase() ?? (tenantIsMissing ? '--' : 'ED');
-  const canSubmit = Boolean(tenantContext && email.trim() && password);
-
-  useEffect(() => {
-    setTenantContext(initialTenantContext ?? getBrowserTenantContext());
-  }, [initialTenantContext]);
+  const canSubmit = Boolean(email.trim() && password);
 
   useEffect(() => {
     const session = getSession();
@@ -65,18 +55,12 @@ export function AuthLoginPage({
     event.preventDefault();
     setError('');
 
-    if (!tenantContext) {
-      setError('Open this login page from an institution domain such as central.localtest.me.');
-      return;
-    }
-
     setBusy(true);
 
     try {
       const session = await login({
         email,
         password,
-        institutionId: tenantContext.institutionId,
       });
 
       if (!allowedRoles.includes(session.user.role)) {
@@ -110,17 +94,6 @@ export function AuthLoginPage({
           <p className="body-copy">{intro}</p>
 
           {error ? <div className="alert alert-error">{error}</div> : null}
-          {tenantIsMissing ? (
-            <div className="alert alert-error">
-              Institution could not be resolved from this domain.
-            </div>
-          ) : null}
-          {tenantContext?.isDevelopmentFallback ? (
-            <div className="alert alert-info">
-              Using Central School for localhost. Try central.localtest.me or north.localtest.me to
-              test tenant domains locally.
-            </div>
-          ) : null}
 
           <form className="auth-form" onSubmit={handleSubmit}>
             <label className="auth-field" htmlFor="email">
@@ -139,7 +112,6 @@ export function AuthLoginPage({
                 />
               </span>
             </label>
-
             <label className="auth-field" htmlFor="password">
               <span>Password</span>
               <span className="auth-input-wrap">
@@ -176,8 +148,8 @@ export function AuthLoginPage({
       <section aria-label={`${sectionLabel} context`} className="login-hero">
         <div className="auth-image-layer" aria-hidden="true" />
         <div className="school-identity">
-          <span className="school-badge">{schoolBadge}</span>
-          <h2>{tenantContext?.name ?? (tenantIsMissing ? 'Unknown institution' : 'Resolving institution')}</h2>
+          <span className="school-badge">ED</span>
+          <h2>Your school, in one place</h2>
           <p>{heroText}</p>
         </div>
       </section>

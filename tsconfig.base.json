@@ -40,6 +40,10 @@
       "@edunic/source/domain/notifications": ["libs/domain/src/notifications/index.ts"],
       "@edunic/source/domain/reports": ["libs/domain/src/reports/index.ts"],
       "@edunic/source/domain/students": ["libs/domain/src/students/index.ts"],
+    "@edunic/source/domain/teachers": ["libs/domain/src/teachers/index.ts"],
+    "@edunic/source/domain/subjects": ["libs/domain/src/subjects/index.ts"],
+    "@edunic/source/domain/payments": ["libs/domain/src/payments/index.ts"],
+    "@edunic/source/domain/authorization": ["libs/domain/src/authorization/index.ts"],
       "@edunic/source/domain/workflows": ["libs/domain/src/workflows/index.ts"],
       "@edunic/source/events": ["libs/events/src/index.ts"],
       "@edunic/source/testing/api-helpers": ["apps/edunic-api/test/helpers/index.ts"]

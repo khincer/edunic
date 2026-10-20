@@ -99,8 +99,8 @@ export default function TeachersPage() {
       return;
     }
 
-    void loadClassrooms(session.user.institutionId);
-    void loadDashboard(session.user.institutionId);
+    void loadClassrooms();
+    void loadDashboard();
   }, [canUseTeacherTools, session]);
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function TeachersPage() {
       return;
     }
 
-    void loadRoster(session.user.institutionId, selectedClassroomId);
+    void loadRoster(selectedClassroomId);
   }, [selectedClassroomId, session]);
 
   useEffect(() => {
@@ -119,7 +119,7 @@ export default function TeachersPage() {
       return;
     }
 
-    void loadAttendanceForDate(session.user.institutionId, enrollments, attendanceDate);
+    void loadAttendanceForDate(enrollments, attendanceDate);
   }, [attendanceDate, enrollments, session]);
 
   function handleSignOut() {
@@ -133,14 +133,14 @@ export default function TeachersPage() {
     router.replace('/teachers/login');
   }
 
-  async function loadClassrooms(nextInstitutionId: string) {
+  async function loadClassrooms() {
     setLoading(true);
     setError('');
 
     try {
       const result = await apiRequest<ApiListResponse<Classroom>>(
         '/classrooms?limit=100&sortBy=gradeLevel&sortOrder=asc',
-        { institutionId: nextInstitutionId }
+        {}
       );
       setClassrooms(result.data);
       setSelectedClassroomId((current) => current || result.data[0]?.id || '');
@@ -151,7 +151,7 @@ export default function TeachersPage() {
     }
   }
 
-  async function loadRoster(nextInstitutionId: string, classroomId: string) {
+  async function loadRoster(classroomId: string) {
     setLoading(true);
     setError('');
 
@@ -165,7 +165,7 @@ export default function TeachersPage() {
       });
       const result = await apiRequest<ApiListResponse<Enrollment>>(
         `/enrollments${query}`,
-        { institutionId: nextInstitutionId }
+        {}
       );
       setEnrollments(result.data);
       setGradeScores({});
@@ -177,7 +177,6 @@ export default function TeachersPage() {
   }
 
   async function loadAttendanceForDate(
-    nextInstitutionId: string,
     roster: Enrollment[],
     date: string
   ) {
@@ -193,7 +192,7 @@ export default function TeachersPage() {
           });
           const result = await apiRequest<ApiListResponse<AttendanceRecord>>(
             `/attendance${query}`,
-            { institutionId: nextInstitutionId }
+            {}
           );
           return [enrollment.id, result.data[0] ?? null] as const;
         })
@@ -237,7 +236,6 @@ export default function TeachersPage() {
               `/attendance/${existingRecord.id}`,
               {
                 method: 'PATCH',
-                institutionId: session.user.institutionId,
                 body: { status },
               }
             );
@@ -245,7 +243,6 @@ export default function TeachersPage() {
 
           return apiRequest<ApiSingleResponse<AttendanceRecord>>('/attendance', {
             method: 'POST',
-            institutionId: session.user.institutionId,
             body: {
               enrollmentId: enrollment.id,
               date: attendanceDate,
@@ -254,7 +251,7 @@ export default function TeachersPage() {
           });
         })
       );
-      await loadAttendanceForDate(session.user.institutionId, enrollments, attendanceDate);
+      await loadAttendanceForDate(enrollments, attendanceDate);
       setNotice('Attendance saved for the selected date.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to save attendance');
@@ -289,7 +286,6 @@ export default function TeachersPage() {
         scores.map(({ enrollment, score }) =>
           apiRequest<ApiSingleResponse<Grade>>('/grades', {
             method: 'POST',
-            institutionId: session.user.institutionId,
             body: {
               enrollmentId: enrollment.id,
               subject: gradeSubject,
@@ -329,7 +325,6 @@ export default function TeachersPage() {
     try {
       await apiRequest('/assignments', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           classroomId: selectedClassroomId,
           title: workflowTitle,
@@ -339,7 +334,7 @@ export default function TeachersPage() {
         },
       });
       setNotice('Classroom work published.');
-      await loadDashboard(session.user.institutionId);
+      await loadDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to publish classroom work');
     } finally {
@@ -359,7 +354,6 @@ export default function TeachersPage() {
     try {
       await apiRequest('/school-events', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           classroomId: selectedClassroomId,
           title: eventTitle,
@@ -368,7 +362,7 @@ export default function TeachersPage() {
         },
       });
       setNotice('Classroom event scheduled.');
-      await loadDashboard(session.user.institutionId);
+      await loadDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to schedule event');
     } finally {
@@ -388,7 +382,6 @@ export default function TeachersPage() {
     try {
       await apiRequest('/messages', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           recipientUserId,
           subject: messageSubject,
@@ -397,7 +390,7 @@ export default function TeachersPage() {
       });
       setMessageBody('');
       setNotice('Message sent.');
-      await loadDashboard(session.user.institutionId);
+      await loadDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to send message');
     } finally {
@@ -416,9 +409,8 @@ export default function TeachersPage() {
     try {
       await apiRequest(`/notifications/${notificationId}/read`, {
         method: 'PATCH',
-        institutionId: session.user.institutionId,
       });
-      await loadDashboard(session.user.institutionId);
+      await loadDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to mark notification read');
     } finally {
@@ -437,9 +429,8 @@ export default function TeachersPage() {
     try {
       await apiRequest(`/messages/${messageId}/read`, {
         method: 'PATCH',
-        institutionId: session.user.institutionId,
       });
-      await loadDashboard(session.user.institutionId);
+      await loadDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to mark message read');
     } finally {
@@ -447,14 +438,14 @@ export default function TeachersPage() {
     }
   }
 
-  async function loadDashboard(nextInstitutionId: string) {
+  async function loadDashboard() {
     setDashboardError('');
     setError('');
 
     try {
       const result = await apiRequest<ApiSingleResponse<TeacherDashboard>>(
         '/dashboard/teacher',
-        { institutionId: nextInstitutionId }
+        {}
       );
       setDashboard(result.data);
     } catch (err) {

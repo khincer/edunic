@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import type { FormEvent, ReactNode } from 'react';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import type { ReactNode } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import {
   clearSession,
   getSession,
@@ -35,7 +35,7 @@ interface NavItem {
 }
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/admin/dashboard', group: 'Workspace', icon: LayoutDashboard },
-  { label: 'Institutions', href: '/admin/institutions', group: 'Workspace', icon: Building2 },
+  { label: 'School', href: '/admin/settings', group: 'Workspace', icon: Building2 },
   { label: 'Notifications', href: '/admin/notifications', group: 'Workspace', icon: Bell },
   { label: 'Students', href: '/admin/students', group: 'Roadmap', icon: UsersRound },
   { label: 'Enrollments', href: '/admin/enrollments', group: 'Roadmap', icon: ClipboardList },
@@ -51,19 +51,12 @@ export function AdminShell({ children }: AdminShellProps) {
   const router = useRouter();
   const session = useSyncExternalStore(onSessionChange, getSession, () => null);
   const ready = useSyncExternalStore(subscribeToHydration, getHydrated, getServerHydrated);
-  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (ready && !session) {
       router.replace('/admin/login');
     }
   }, [ready, router, session]);
-
-  function handleSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const value = search.trim();
-    router.push(value ? `/admin/institutions?search=${encodeURIComponent(value)}` : '/admin/institutions');
-  }
 
   function handleLogout() {
     clearSession();
@@ -97,7 +90,7 @@ export function AdminShell({ children }: AdminShellProps) {
             <span className="admin-brand-mark">E</span>
             <span>
               <strong className="admin-brand-title">Edunic Admin</strong>
-              <span className="admin-brand-subtitle">Institution console</span>
+              <span className="admin-brand-subtitle">School console</span>
             </span>
           </Link>
           <nav aria-label="Admin navigation" className="admin-nav">
@@ -131,15 +124,6 @@ export function AdminShell({ children }: AdminShellProps) {
               <span>Admin</span>
               <strong>{pageLabel}</strong>
             </div>
-            <form className="admin-search" onSubmit={handleSearch}>
-              <input
-                aria-label="Search institutions"
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search institutions"
-                value={search}
-              />
-              <button type="submit">Search</button>
-            </form>
             <div className="admin-user">
               <span>
                 <strong>{session.user.email}</strong>
@@ -170,12 +154,8 @@ function getServerHydrated() {
 }
 
 function getPageLabel(pathname: string) {
-  if (pathname.startsWith('/admin/institutions/new')) {
-    return 'New institution';
-  }
-
-  if (pathname.startsWith('/admin/institutions')) {
-    return 'Institutions';
+  if (pathname.startsWith('/admin/settings')) {
+    return 'School';
   }
 
   if (pathname.startsWith('/admin/notifications')) {

@@ -10,7 +10,6 @@ import {
   type ApiListResponse,
   type Enrollment,
 } from '@/lib/api';
-import { getSession } from '@/lib/auth';
 
 export default function AdminEnrollmentsPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -23,11 +22,7 @@ export default function AdminEnrollmentsPage() {
   }, []);
 
   async function loadEnrollments(nextStatus = status) {
-    const session = getSession();
 
-    if (!session) {
-      return;
-    }
 
     setLoading(true);
     setError('');
@@ -41,7 +36,7 @@ export default function AdminEnrollmentsPage() {
       });
       const result = await apiRequest<ApiListResponse<Enrollment>>(
         `/enrollments${query}`,
-        { institutionId: session.user.institutionId }
+        {}
       );
       setEnrollments(result.data);
     } catch (err) {

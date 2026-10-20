@@ -1,4 +1,5 @@
 import type { EventBus } from '@edunic/source/events';
+import { AccessService } from '@edunic/source/domain/authorization';
 import { createAttendanceMarkedEvent } from '@edunic/source/domain/events';
 import {
   buildCursorPage,
@@ -30,7 +31,8 @@ export class AttendanceServiceError extends Error {
 export class AttendanceService {
   constructor(
     private readonly attendanceRepository: AttendanceRepository,
-    private readonly eventBus?: EventBus
+    private readonly eventBus: EventBus | undefined,
+    private readonly access: AccessService
   ) {}
 
   async listAttendance(
@@ -81,7 +83,11 @@ export class AttendanceService {
   }
 
   async createAttendance(
-    input: CreateAttendanceBody & { institutionId: string }
+    input: CreateAttendanceBody & {
+      institutionId: string;
+      role: string;
+      userId: string;
+    }
   ) {
     const enrollment = await this.attendanceRepository.findEnrollment(
       input.institutionId,
@@ -91,6 +97,8 @@ export class AttendanceService {
     if (!enrollment) {
       throw new AttendanceServiceError('Enrollment not found', 404);
     }
+
+    await this.assertTeacherOwnsEnrollment(input, input.enrollmentId);
 
     // P2-R6 / D2: the attendance row, its outbox event and the publish
     // outcome commit together — a failed publish rolls the rows back.
@@ -146,6 +154,8 @@ export class AttendanceService {
     input: UpdateAttendanceBody & {
       institutionId: string;
       attendanceId: string;
+      role: string;
+      userId: string;
     }
   ) {
     const existingAttendance = await this.attendanceRepository.findById(
@@ -156,6 +166,11 @@ export class AttendanceService {
     if (!existingAttendance) {
       throw new AttendanceServiceError('Attendance record not found', 404);
     }
+
+    await this.assertTeacherOwnsEnrollment(
+      input,
+      existingAttendance.enrollmentId
+    );
 
     const updatedAttendance = await this.attendanceRepository.update({
       institutionId: input.institutionId,
@@ -182,7 +197,11 @@ export class AttendanceService {
     };
   }
 
-  async deleteAttendance(institutionId: string, attendanceId: string) {
+  async deleteAttendance(
+    institutionId: string,
+    attendanceId: string,
+    actor: { role: string; userId: string }
+  ) {
     const attendance = await this.attendanceRepository.findById(
       institutionId,
       attendanceId
@@ -192,6 +211,8 @@ export class AttendanceService {
       throw new AttendanceServiceError('Attendance record not found', 404);
     }
 
+    await this.assertTeacherOwnsEnrollment(actor, attendance.enrollmentId);
+
     await this.attendanceRepository.delete(institutionId, attendanceId);
 
     return {
@@ -200,6 +221,19 @@ export class AttendanceService {
         deleted: true,
       },
     };
+  }
+
+  // A teacher may only write the attendance of the classrooms they are
+  // assigned to; an admin may write any of them.
+  private async assertTeacherOwnsEnrollment(
+    actor: { role: string; userId: string },
+    enrollmentId: string
+  ) {
+    if (actor.role !== 'teacher') {
+      return;
+    }
+
+    await this.access.assertTeacherOwnsEnrollment(actor.userId, enrollmentId);
   }
 
   private toAttendanceResponse(attendance: AttendanceRecord) {

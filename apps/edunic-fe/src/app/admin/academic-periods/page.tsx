@@ -13,7 +13,6 @@ import {
   type ApiListResponse,
   type ApiSingleResponse,
 } from '@/lib/api';
-import { getSession } from '@/lib/auth';
 
 export default function AdminAcademicPeriodsPage() {
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
@@ -30,11 +29,7 @@ export default function AdminAcademicPeriodsPage() {
   }, []);
 
   async function loadPeriods() {
-    const session = getSession();
 
-    if (!session) {
-      return;
-    }
 
     setLoading(true);
     setError('');
@@ -42,7 +37,7 @@ export default function AdminAcademicPeriodsPage() {
     try {
       const result = await apiRequest<ApiListResponse<AcademicPeriod>>(
         `/academic-periods${buildQuery({ limit: 50, sortBy: 'year', sortOrder: 'desc' })}`,
-        { institutionId: session.user.institutionId }
+        {}
       );
       setPeriods(result.data);
     } catch (err) {
@@ -53,11 +48,7 @@ export default function AdminAcademicPeriodsPage() {
   }
 
   async function createPeriod() {
-    const session = getSession();
 
-    if (!session) {
-      return;
-    }
 
     setSaving(true);
     setError('');
@@ -65,7 +56,6 @@ export default function AdminAcademicPeriodsPage() {
     try {
       await apiRequest<ApiSingleResponse<AcademicPeriod>>('/academic-periods', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           year: Number(year),
           term: Number(term),

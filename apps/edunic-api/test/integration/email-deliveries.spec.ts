@@ -46,16 +46,20 @@ async function enableEmailNotifications(institutionId: string) {
 // the panel is read-only. Fastify prints a radix tree whose segments are
 // parent-relative, so locate the `/deliveries` node and keep every deeper line
 // (its subtree) to inventory the methods the panel actually exposes.
-function deliverySubtreeLines(app: FastifyInstance) {
+function notificationSubtreeLines(app: FastifyInstance) {
   const lines = app.printRoutes({ commonPrefix: false }).split('\n');
-  const index = lines.findIndex((line) => /\/deliveries(?: \(|$)/.test(line));
+
+  const indentOf = (line: string) =>
+    (/^(?:[│ ]{3})*/.exec(line)?.[0] ?? '').length;
+  // Anchor on the /notifications branch: the first "/deliveries" line
+  // in the whole tree belongs to whichever node happens to come first, and
+  // that moves as unrelated routes are added.
+  const index = lines.findIndex((line) => /\/notifications(?: \(|$)/.test(line));
 
   if (index === -1) {
     return [];
   }
 
-  const indentOf = (line: string) =>
-    (/^(?:[│ ]{3})*/.exec(line)?.[0] ?? '').length;
   const baseIndent = indentOf(lines[index]);
 
   return lines
@@ -359,21 +363,24 @@ describe('email deliveries admin panel', () => {
       institutionId: institution.id,
     });
 
-    const subtree = deliverySubtreeLines(app);
+    const subtree = notificationSubtreeLines(app);
 
-    expect(subtree[0]).toContain('/deliveries (GET, HEAD)');
+    // The deliveries node itself: read-only, GET and HEAD.
+    const deliveriesLine = subtree.find((line) =>
+      /\/deliveries(?: \(|$)/.test(line)
+    );
+    expect(deliveriesLine).toContain('/deliveries (GET, HEAD)');
+    expect([
+      ...new Set(
+        ((deliveriesLine ?? '').match(/\(([^)]*)\)/)?.[1] ?? '')
+          .split(', ')
+          .filter(Boolean)
+      ),
+    ]).toEqual(['GET', 'HEAD']);
+
     expect(subtree.some((line) => line.includes('/state (GET, HEAD)'))).toBe(
       true
     );
-    expect([
-      ...new Set(
-        subtree.flatMap((line) =>
-          (line.match(/\(([^)]*)\)/)?.[1] ?? '')
-            .split(', ')
-            .filter(Boolean)
-        )
-      ),
-    ]).toEqual(['GET', 'HEAD']);
 
     const mutationResponses = [
       await client.post('/notifications/deliveries').set(headers),

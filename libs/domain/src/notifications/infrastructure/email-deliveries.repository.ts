@@ -184,7 +184,7 @@ export class EmailDeliveriesRepository {
         student_id
       )
       values ${sql.join(values, sql`, `)}
-      on conflict (institution_id, event_id, recipient_address) do nothing
+      on conflict (event_id, recipient_address) do nothing
     `);
   }
 

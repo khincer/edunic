@@ -12,7 +12,6 @@ import {
   type AdminDashboard,
   type ApiSingleResponse,
 } from '@/lib/api';
-import { getSession } from '@/lib/auth';
 
 export default function DashboardPage() {
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
@@ -25,12 +24,7 @@ export default function DashboardPage() {
   }, []);
 
   async function loadDashboard() {
-    const session = getSession();
 
-    if (!session) {
-      setLoading(false);
-      return;
-    }
 
     setLoading(true);
     setError('');
@@ -38,7 +32,7 @@ export default function DashboardPage() {
     try {
       const result = await apiRequest<ApiSingleResponse<AdminDashboard>>(
         '/dashboard/admin',
-        { institutionId: session.user.institutionId }
+        {}
       );
       setDashboard(result.data);
     } catch (err) {
@@ -49,11 +43,7 @@ export default function DashboardPage() {
   }
 
   async function markNotificationRead(notificationId: string) {
-    const session = getSession();
 
-    if (!session) {
-      return;
-    }
 
     setSavingNotificationId(notificationId);
     setError('');
@@ -61,7 +51,6 @@ export default function DashboardPage() {
     try {
       await apiRequest(`/notifications/${notificationId}/read`, {
         method: 'PATCH',
-        institutionId: session.user.institutionId,
       });
       await loadDashboard();
     } catch (err) {
@@ -88,10 +77,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="button-row">
-          <ButtonLink href="/admin/institutions">Institutions</ButtonLink>
-          <ButtonLink href="/admin/institutions/new" variant="secondary">
-            New school
-          </ButtonLink>
+          <ButtonLink href="/admin/settings">School</ButtonLink>
         </div>
       </header>
 

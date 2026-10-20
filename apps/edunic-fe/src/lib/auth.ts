@@ -7,7 +7,6 @@ export type AdminSession = {
   user: {
     id: string;
     email: string;
-    institutionId: string;
     role: string;
   };
 };
@@ -15,7 +14,6 @@ export type AdminSession = {
 export type LoginInput = {
   email: string;
   password: string;
-  institutionId: string;
 };
 
 type LoginResponse = {

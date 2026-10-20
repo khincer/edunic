@@ -58,7 +58,6 @@ const idempotencyPluginHandler: FastifyPluginAsync = async (app) => {
     }
 
     const scopedKey = buildIdempotencyKey({
-      institutionId: actor.institutionId,
       route: request.routeOptions.url ?? request.url,
       actorId: actor.id,
       key,
@@ -165,7 +164,7 @@ async function resolveActor(request: FastifyRequest) {
 
   try {
     const payload = await verifyJwt(token, env.JWT_SECRET);
-    return { id: payload.sub, institutionId: payload.institutionId };
+    return { id: payload.sub };
   } catch {
     // Invalid tokens are rejected by route auth; idempotency just skips them.
     return null;

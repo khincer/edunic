@@ -14,6 +14,7 @@ const IDS = {
   enrollment: '44444444-0000-4000-8000-000000000004',
   otherEnrollment: '55555555-0000-4000-8000-000000000005',
   unknownId: '99999999-9999-4999-8999-999999999999',
+  subject: '66666666-0000-4000-8000-000000000006',
 };
 
 function scratchUrl() {
@@ -84,13 +85,13 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
     await scratch.end();
     await admin.query(`DROP DATABASE IF EXISTS ${SCRATCH_DB} WITH (FORCE)`);
     await admin.end();
-  });
+  }, 60_000);
 
   it('applies every migration to a fresh database', async () => {
     const migrations = await scratch.query(
       'SELECT COUNT(*)::int AS count FROM drizzle.__drizzle_migrations'
     );
-    expect(migrations.rows[0]).toEqual({ count: 10 });
+    expect(migrations.rows[0]).toEqual({ count: 13 });
 
     const tables = [
       'users',
@@ -127,11 +128,16 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
       constraint: 'enrollments_student_id_students_id_fk',
     });
 
+    await scratch.query(
+      `INSERT INTO subjects (id, name) VALUES ($1, 'Mathematics')`,
+      [IDS.subject]
+    );
+
     await expect(
       scratch.query(
-        `INSERT INTO grades (institution_id, enrollment_id, subject, score)
-         VALUES ($1, $2, 'Mathematics', 90)`,
-        [IDS.institution, IDS.unknownId]
+        `INSERT INTO grades (institution_id, enrollment_id, subject_id, score)
+         VALUES ($1, $2, $3, 90)`,
+        [IDS.institution, IDS.unknownId, IDS.subject]
       )
     ).rejects.toMatchObject({
       code: '23503',
@@ -156,13 +162,13 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
 
     await expect(
       scratch.query(
-        `INSERT INTO grades (institution_id, enrollment_id, subject, score)
+        `INSERT INTO grades (institution_id, enrollment_id, subject_id, score)
          VALUES ($1, $2, NULL, 90)`,
         [IDS.institution, IDS.enrollment]
       )
     ).rejects.toMatchObject({
       code: '23502',
-      message: expect.stringContaining('"subject"'),
+      message: expect.stringContaining('"subject_id"'),
     });
   });
 
@@ -180,9 +186,9 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
 
     await expect(
       scratch.query(
-        `INSERT INTO grades (institution_id, enrollment_id, subject, score)
-         VALUES ($1, $2, 'Mathematics', 150)`,
-        [IDS.institution, IDS.enrollment]
+        `INSERT INTO grades (institution_id, enrollment_id, subject_id, score)
+         VALUES ($1, $2, $3, 150)`,
+        [IDS.institution, IDS.enrollment, IDS.subject]
       )
     ).rejects.toMatchObject({
       code: '23514',

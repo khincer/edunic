@@ -53,7 +53,7 @@ describe('migration down runner (P4-R6, D6)', () => {
     }
     await admin.query(`DROP DATABASE IF EXISTS ${SCRATCH_DB} WITH (FORCE)`);
     await admin.end();
-  });
+  }, 60_000);
 
   async function recreateScratchDatabase() {
     if (scratch) {
@@ -106,12 +106,12 @@ describe('migration down runner (P4-R6, D6)', () => {
     return (result.rows[0] as { count: number }).count;
   }
 
-  it('up -> down -> up restores the full schema (0009 down to 0000)', async () => {
+  it('up -> down -> up restores the full schema (0012 down to 0000)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(10);
+    expect(await appliedCount()).toBe(13);
 
-    for (let step = 0; step < 10; step += 1) {
+    for (let step = 0; step < 13; step += 1) {
       await withScratchDatabaseUrl(runMigrationsDown);
     }
     expect(await appliedCount()).toBe(0);
@@ -126,7 +126,7 @@ describe('migration down runner (P4-R6, D6)', () => {
     }
 
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(10);
+    expect(await appliedCount()).toBe(13);
     for (const table of [
       'email_deliveries',
       'outbox_events',
@@ -141,9 +141,32 @@ describe('migration down runner (P4-R6, D6)', () => {
     }
   }, 60_000);
 
-  it('rolls back exactly one migration per step (0009, 0008, 0007, 0006, 0005)', async () => {
+  it('rolls back exactly one migration per step (0010, 0009, 0008, 0007, 0006, 0005)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
+
+    // 0012 down: the receipt number sequence goes.
+    await withScratchDatabaseUrl(runMigrationsDown);
+    expect(await appliedCount()).toBe(12);
+
+    // 0011 down: the materia name comes back as free text.
+    await withScratchDatabaseUrl(runMigrationsDown);
+    expect(await appliedCount()).toBe(11);
+    expect(await columnExists('grades', 'subject')).toBe(true);
+
+    // 0010 down: the merge is irreversible, but the email key goes back to
+    // the institution-scoped one. 0009's tables stay.
+    await withScratchDatabaseUrl(runMigrationsDown);
+    expect(await appliedCount()).toBe(10);
+    expect(await tableExists('user_roles')).toBe(true);
+    expect(await columnExists('grades', 'subject_id')).toBe(true);
+    const emailUnique = await db().query(
+      `select conname from pg_constraint
+        where conrelid = 'email_deliveries'::regclass and contype = 'u'`
+    );
+    expect(emailUnique.rows.map((row: { conname: string }) => row.conname)).toEqual(
+      ['email_deliveries_institution_event_recipient_unique']
+    );
 
     // 0009 down: the single-school tables go; 0008's ledger stays.
     await withScratchDatabaseUrl(runMigrationsDown);

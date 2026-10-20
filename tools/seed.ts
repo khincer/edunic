@@ -15,6 +15,7 @@ import {
   extensions,
   featureFlags,
   guardians,
+  classroomSubjects,
   grades,
   guardianUserLinks,
   institutionFeatureFlags,
@@ -28,8 +29,11 @@ import {
   studentGuardians,
   teacherClassroomAssignments,
   userInstitutionRoles,
+  userRoles,
   users,
   students,
+  subjects,
+  subjectTeachers,
 } from '../libs/db/src/schema/index.js';
 
 const ids = {
@@ -48,6 +52,12 @@ const ids = {
     centralTeacher: '71000000-0000-0000-0000-000000000002',
     centralParent: '71000000-0000-0000-0000-000000000003',
     northAdmin: '71000000-0000-0000-0000-000000000004',
+  },
+  userRoles: {
+    centralAdmin: '72000000-0000-0000-0000-000000000001',
+    centralTeacher: '72000000-0000-0000-0000-000000000002',
+    centralParent: '72000000-0000-0000-0000-000000000003',
+    northAdmin: '72000000-0000-0000-0000-000000000004',
   },
   academicPeriods: {
     centralTerm1: '10000000-0000-0000-0000-000000000001',
@@ -71,6 +81,12 @@ const ids = {
     mariaNorthT1: '40000000-0000-0000-0000-000000000003',
     johnCentralT3: '40000000-0000-0000-0000-000000000004',
     janeCentralT3: '40000000-0000-0000-0000-000000000005',
+  },
+  subjects: {
+    mathematics: '55000000-0000-4000-8000-000000000001',
+    science: '55000000-0000-4000-8000-000000000002',
+    history: '55000000-0000-4000-8000-000000000003',
+    reading: '55000000-0000-4000-8000-000000000004',
   },
   grades: {
     johnMath: '50000000-0000-0000-0000-000000000001',
@@ -203,6 +219,35 @@ export async function seedDatabase() {
         id: ids.userInstitutionRoles.northAdmin,
         userId: ids.users.northAdmin,
         institutionId: ids.institutions.north,
+        role: 'admin',
+      },
+    ])
+    .onConflictDoNothing();
+
+  // The single-school model reads the role from `user_roles` (one role per
+  // user). The legacy `user_institution_roles` rows stay until the contract
+  // migration, because the domain still resolves the institution from them.
+  await db
+    .insert(userRoles)
+    .values([
+      {
+        id: ids.userRoles.centralAdmin,
+        userId: ids.users.centralAdmin,
+        role: 'admin',
+      },
+      {
+        id: ids.userRoles.centralTeacher,
+        userId: ids.users.centralTeacher,
+        role: 'teacher',
+      },
+      {
+        id: ids.userRoles.centralParent,
+        userId: ids.users.centralParent,
+        role: 'parent',
+      },
+      {
+        id: ids.userRoles.northAdmin,
+        userId: ids.users.northAdmin,
         role: 'admin',
       },
     ])
@@ -555,6 +600,68 @@ export async function seedDatabase() {
     ])
     .onConflictDoNothing();
 
+  // The catalog of materias. A grade points at one of them.
+  await db
+    .insert(subjects)
+    .values([
+      { id: ids.subjects.mathematics, name: 'Mathematics' },
+      { id: ids.subjects.science, name: 'Science' },
+      { id: ids.subjects.history, name: 'History' },
+      { id: ids.subjects.reading, name: 'Reading' },
+    ])
+    .onConflictDoNothing();
+
+  // A materia that already exists keeps its id, so the seed reads the ids
+  // back instead of assuming its own.
+  const subjectIds = new Map(
+    (await db.select().from(subjects)).map((subject) => [
+      subject.name,
+      subject.id,
+    ])
+  );
+  const subjectId = (name: string) => subjectIds.get(name) ?? '';
+
+  // What each grade level offers, and what the teacher is responsible for.
+  await db
+    .insert(classroomSubjects)
+    .values([
+      {
+        classroomId: ids.classrooms.central5A,
+        subjectId: subjectId('Mathematics'),
+      },
+      {
+        classroomId: ids.classrooms.central5A,
+        subjectId: subjectId('Science'),
+      },
+      {
+        classroomId: ids.classrooms.central5A,
+        subjectId: subjectId('Reading'),
+      },
+      {
+        classroomId: ids.classrooms.north6A,
+        subjectId: subjectId('History'),
+      },
+    ])
+    .onConflictDoNothing();
+
+  await db
+    .insert(subjectTeachers)
+    .values([
+      {
+        subjectId: subjectId('Mathematics'),
+        teacherUserId: ids.users.centralTeacher,
+      },
+      {
+        subjectId: subjectId('Science'),
+        teacherUserId: ids.users.centralTeacher,
+      },
+      {
+        subjectId: subjectId('Reading'),
+        teacherUserId: ids.users.centralTeacher,
+      },
+    ])
+    .onConflictDoNothing();
+
   await db
     .insert(grades)
     .values([
@@ -562,49 +669,49 @@ export async function seedDatabase() {
         id: ids.grades.johnMath,
         institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.johnCentralT1,
-        subject: 'Mathematics',
+        subjectId: subjectId('Mathematics'),
         score: 88,
       },
       {
         id: ids.grades.janeScience,
         institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.janeCentralT1,
-        subject: 'Science',
+        subjectId: subjectId('Science'),
         score: 93,
       },
       {
         id: ids.grades.mariaHistory,
         institutionId: ids.institutions.north,
         enrollmentId: ids.enrollments.mariaNorthT1,
-        subject: 'History',
+        subjectId: subjectId('History'),
         score: 81,
       },
       {
         id: ids.grades.johnScience,
         institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.johnCentralT3,
-        subject: 'Science',
+        subjectId: subjectId('Science'),
         score: 91,
       },
       {
         id: ids.grades.johnReading,
         institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.johnCentralT3,
-        subject: 'Reading',
+        subjectId: subjectId('Reading'),
         score: 84,
       },
       {
         id: ids.grades.janeMath,
         institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.janeCentralT3,
-        subject: 'Mathematics',
+        subjectId: subjectId('Mathematics'),
         score: 78,
       },
       {
         id: ids.grades.janeReading,
         institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.janeCentralT3,
-        subject: 'Reading',
+        subjectId: subjectId('Reading'),
         score: 96,
       },
     ])
