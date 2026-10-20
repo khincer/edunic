@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { Button } from '@/components/button';
 import { DataTable, type DataTableColumn } from '@/components/data-table';
-import { getSession } from '@/lib/auth';
 import {
   apiRequest,
   buildQuery,
@@ -48,28 +47,20 @@ export default function EmailNotificationsPanelPage() {
 
   useEffect(() => {
     async function loadPanel() {
-      const institutionId = getSession()?.user.institutionId;
-
-      if (!institutionId) {
-        return;
-      }
-
       setLoading(true);
       setError('');
 
       try {
         const [stateResult, deliveriesResult] = await Promise.all([
           apiRequest<ApiSingleResponse<EmailDeliveryState>>(
-            '/notifications/deliveries/state',
-            { institutionId }
+            '/notifications/deliveries/state'
           ),
           apiRequest<ApiListResponse<EmailDelivery>>(
             `/notifications/deliveries${buildQuery({
               status,
               limit: PAGE_SIZE,
               offset,
-            })}`,
-            { institutionId }
+            })}`
           ),
         ]);
 

@@ -15,7 +15,6 @@ import {
   type WorkflowEvent,
   type WorkflowMessage,
 } from '@/lib/api';
-import { getSession } from '@/lib/auth';
 
 function getLocalDateTime(offsetDays = 1) {
   const value = new Date();
@@ -54,17 +53,13 @@ export default function AdminWorkflowsPage() {
   }, []);
 
   async function loadWorkflowData() {
-    const session = getSession();
 
-    if (!session) {
-      return;
-    }
 
     setLoading(true);
     setError('');
 
     try {
-      const headers = { institutionId: session.user.institutionId };
+      const headers = {};
       const [classroomResult, assignmentResult, eventResult, messageResult] =
         await Promise.all([
           apiRequest<ApiListResponse<Classroom>>(
@@ -98,9 +93,8 @@ export default function AdminWorkflowsPage() {
   }
 
   async function createAssignment() {
-    const session = getSession();
 
-    if (!session || !assignmentTitle.trim()) {
+    if (!assignmentTitle.trim()) {
       return;
     }
 
@@ -111,7 +105,6 @@ export default function AdminWorkflowsPage() {
     try {
       await apiRequest<ApiSingleResponse<WorkflowAssignment>>('/assignments', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           classroomId: assignmentClassroomId || undefined,
           title: assignmentTitle,
@@ -130,11 +123,7 @@ export default function AdminWorkflowsPage() {
   }
 
   async function updateAssignmentStatus(assignmentId: string, status: string) {
-    const session = getSession();
 
-    if (!session) {
-      return;
-    }
 
     setSaving(assignmentId);
     setError('');
@@ -143,7 +132,6 @@ export default function AdminWorkflowsPage() {
     try {
       await apiRequest<ApiSingleResponse<WorkflowAssignment>>(`/assignments/${assignmentId}`, {
         method: 'PATCH',
-        institutionId: session.user.institutionId,
         body: { status },
       });
       setNotice(`Assignment marked ${status}.`);
@@ -156,9 +144,8 @@ export default function AdminWorkflowsPage() {
   }
 
   async function createEvent() {
-    const session = getSession();
 
-    if (!session || !eventTitle.trim() || !eventStartsAt) {
+    if (!eventTitle.trim() || !eventStartsAt) {
       return;
     }
 
@@ -169,7 +156,6 @@ export default function AdminWorkflowsPage() {
     try {
       await apiRequest<ApiSingleResponse<WorkflowEvent>>('/school-events', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           classroomId: eventClassroomId || null,
           title: eventTitle,
@@ -187,9 +173,8 @@ export default function AdminWorkflowsPage() {
   }
 
   async function sendMessage() {
-    const session = getSession();
 
-    if (!session || !recipientUserId.trim() || !messageSubject.trim() || !messageBody.trim()) {
+    if (!recipientUserId.trim() || !messageSubject.trim() || !messageBody.trim()) {
       return;
     }
 
@@ -200,7 +185,6 @@ export default function AdminWorkflowsPage() {
     try {
       await apiRequest<ApiSingleResponse<WorkflowMessage>>('/messages', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           recipientUserId,
           subject: messageSubject,
@@ -218,11 +202,7 @@ export default function AdminWorkflowsPage() {
   }
 
   async function markMessageRead(messageId: string) {
-    const session = getSession();
 
-    if (!session) {
-      return;
-    }
 
     setSaving(messageId);
     setError('');
@@ -230,7 +210,6 @@ export default function AdminWorkflowsPage() {
     try {
       await apiRequest<ApiSingleResponse<WorkflowMessage>>(`/messages/${messageId}/read`, {
         method: 'PATCH',
-        institutionId: session.user.institutionId,
       });
       await loadWorkflowData();
     } catch (err) {

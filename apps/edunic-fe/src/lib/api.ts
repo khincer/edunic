@@ -352,7 +352,6 @@ export class ApiError extends Error {
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
-  institutionId?: string;
   headers?: Record<string, string>;
 };
 
@@ -372,10 +371,6 @@ export async function apiRequest<T>(
 
   if (session?.token) {
     headers.Authorization = `Bearer ${session.token}`;
-  }
-
-  if (options.institutionId) {
-    headers['x-institution-id'] = options.institutionId;
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {

@@ -39,17 +39,17 @@ export default function ParentsPage() {
     }
 
     if (storedSession.user.role === 'parent') {
-      void loadDashboard(storedSession.user.institutionId);
+      void loadDashboard();
     }
   }, [router]);
 
-  async function loadDashboard(institutionId: string) {
+  async function loadDashboard() {
     setError('');
 
     try {
       const result = await apiRequest<ApiSingleResponse<ParentDashboard>>(
         '/dashboard/parent',
-        { institutionId }
+        {}
       );
       setDashboard(result.data);
     } catch (err) {
@@ -69,7 +69,6 @@ export default function ParentsPage() {
     try {
       await apiRequest('/messages', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           recipientUserId,
           subject: messageSubject,
@@ -78,7 +77,7 @@ export default function ParentsPage() {
       });
       setMessageBody('');
       setNotice('Message sent.');
-      await loadDashboard(session.user.institutionId);
+      await loadDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to send message');
     } finally {
@@ -97,9 +96,8 @@ export default function ParentsPage() {
     try {
       await apiRequest(`/messages/${messageId}/read`, {
         method: 'PATCH',
-        institutionId: session.user.institutionId,
       });
-      await loadDashboard(session.user.institutionId);
+      await loadDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to mark message read');
     } finally {
@@ -118,9 +116,8 @@ export default function ParentsPage() {
     try {
       await apiRequest(`/notifications/${notificationId}/read`, {
         method: 'PATCH',
-        institutionId: session.user.institutionId,
       });
-      await loadDashboard(session.user.institutionId);
+      await loadDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to mark notification read');
     } finally {
@@ -146,7 +143,6 @@ export default function ParentsPage() {
       const response = await fetch(`${API_BASE_URL}${reportUrl}`, {
         headers: {
           Authorization: `Bearer ${session.token}`,
-          'x-institution-id': session.user.institutionId,
         },
       });
 
@@ -211,7 +207,7 @@ export default function ParentsPage() {
         <p className="eyebrow">Parent portal</p>
         <h1 className="page-title">Family academic snapshot.</h1>
         <p className="body-copy">
-          {session.user.email} is signed in for institution {session.user.institutionId}.
+          {session.user.email} is signed in.
         </p>
       </section>
 

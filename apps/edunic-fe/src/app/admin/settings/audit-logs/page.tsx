@@ -1,8 +1,8 @@
 'use client';
 
-import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
+import { useSchool } from '@/lib/school';
 import { Button, ButtonLink } from '@/components/button';
 import { DataTable, type DataTableColumn } from '@/components/data-table';
 import {
@@ -17,8 +17,8 @@ import {
 const PAGE_SIZE = 10;
 
 export default function InstitutionAuditLogsPage() {
-  const params = useParams<{ institutionId: string }>();
-  const institutionId = params.institutionId;
+  const { school } = useSchool();
+  const institutionId = school?.id ?? '';
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
@@ -28,6 +28,10 @@ export default function InstitutionAuditLogsPage() {
 
   useEffect(() => {
     async function loadData() {
+      if (!institutionId) {
+        return;
+      }
+
       setLoading(true);
       setError('');
 
@@ -36,7 +40,6 @@ export default function InstitutionAuditLogsPage() {
           apiRequest<ApiSingleResponse<Institution>>(`/institutions/${institutionId}`),
           apiRequest<ApiListResponse<AuditLog>>(
             `/audit-logs?limit=${PAGE_SIZE}&offset=${offset}&sortOrder=desc`,
-            { institutionId }
           ),
         ]);
         setInstitution(institutionResult.data);
@@ -93,7 +96,7 @@ export default function InstitutionAuditLogsPage() {
             Tenant-scoped create, update, and delete activity from the API audit log.
           </p>
         </div>
-        <ButtonLink href={`/admin/institutions/${institutionId}`} variant="secondary">
+        <ButtonLink href={`/admin/settings`} variant="secondary">
           Back to institution
         </ButtonLink>
       </header>

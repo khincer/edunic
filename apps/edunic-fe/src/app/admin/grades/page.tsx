@@ -13,7 +13,6 @@ import {
   type ApiSingleResponse,
   type Grade,
 } from '@/lib/api';
-import { getSession } from '@/lib/auth';
 
 export default function AdminGradesPage() {
   const [grades, setGrades] = useState<Grade[]>([]);
@@ -30,11 +29,7 @@ export default function AdminGradesPage() {
   }, []);
 
   async function loadGrades(nextSubject = subject) {
-    const session = getSession();
 
-    if (!session) {
-      return;
-    }
 
     setLoading(true);
     setError('');
@@ -47,7 +42,6 @@ export default function AdminGradesPage() {
         sortOrder: 'desc',
       });
       const result = await apiRequest<ApiListResponse<Grade>>(`/grades${query}`, {
-        institutionId: session.user.institutionId,
       });
       setGrades(result.data);
     } catch (err) {
@@ -58,9 +52,8 @@ export default function AdminGradesPage() {
   }
 
   async function createGrade() {
-    const session = getSession();
 
-    if (!session || !enrollmentId.trim() || !newSubject.trim()) {
+    if (!enrollmentId.trim() || !newSubject.trim()) {
       return;
     }
 
@@ -70,7 +63,6 @@ export default function AdminGradesPage() {
     try {
       await apiRequest<ApiSingleResponse<Grade>>('/grades', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           enrollmentId,
           subject: newSubject,

@@ -1,13 +1,13 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
+import { useSchool } from '@/lib/school';
 import { Button, ButtonLink } from '@/components/button';
 import { Card } from '@/components/card';
 import { FormField } from '@/components/form-field';
-import { getSession, onSessionChange } from '@/lib/auth';
 import {
   apiRequest,
   type ApiSingleResponse,
@@ -15,15 +15,13 @@ import {
 } from '@/lib/api';
 
 export default function EditInstitutionPage() {
-  const params = useParams<{ institutionId: string }>();
   const router = useRouter();
-  const institutionId = params.institutionId;
-  const session = useSyncExternalStore(onSessionChange, getSession, () => null);
+  const { school } = useSchool();
+  const institutionId = school?.id ?? '';
   // SI-R2: the API scopes PATCH to the caller's own institution (P2 added the
   // guard), so this page is only usable for that one. For any other school we
   // show what the read API returned and no form, instead of a form whose save
   // would always fail with 403.
-  const isOwnInstitution = session?.user.institutionId === institutionId;
   const [name, setName] = useState('');
   const [senderName, setSenderName] = useState('');
   const [replyToEmail, setReplyToEmail] = useState('');
@@ -33,6 +31,10 @@ export default function EditInstitutionPage() {
 
   useEffect(() => {
     async function loadInstitution() {
+      if (!institutionId) {
+        return;
+      }
+
       setLoading(true);
       setError('');
 
@@ -63,7 +65,7 @@ export default function EditInstitutionPage() {
         method: 'PATCH',
         body: { name, senderName, replyToEmail },
       });
-      router.push(`/admin/institutions/${institutionId}`);
+      router.push(`/admin/settings`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to update institution');
     } finally {
@@ -82,21 +84,15 @@ export default function EditInstitutionPage() {
             on the emails this school sends to families.
           </p>
         </div>
-        <ButtonLink href={`/admin/institutions/${institutionId}`} variant="secondary">
+        <ButtonLink href={`/admin/settings`} variant="secondary">
           Back to detail
         </ButtonLink>
       </header>
 
       <Card>
         {error ? <div className="alert alert-error">{error}</div> : null}
-        {loading ? <p className="body-copy">Loading institution...</p> : null}
-        {!loading && !isOwnInstitution ? (
-          <div className="alert alert-info">
-            You can only edit your own institution ({name}). Institution
-            settings are scoped to the signed-in admin&apos;s school.
-          </div>
-        ) : null}
-        {!loading && isOwnInstitution ? (
+        {loading ? <p className="body-copy">Loading school...</p> : null}
+        {!loading ? (
           <form className="form" onSubmit={handleSubmit}>
             <FormField
               autoFocus
@@ -128,7 +124,7 @@ export default function EditInstitutionPage() {
               <Button disabled={busy} type="submit">
                 {busy ? 'Saving...' : 'Save changes'}
               </Button>
-              <ButtonLink href={`/admin/institutions/${institutionId}`} variant="secondary">
+              <ButtonLink href={`/admin/settings`} variant="secondary">
                 Cancel
               </ButtonLink>
             </div>

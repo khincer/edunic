@@ -13,7 +13,6 @@ import {
   type AttendanceRecord,
   type Grade,
 } from '@/lib/api';
-import { getSession } from '@/lib/auth';
 
 export default function AdminAcademicRecordsPage() {
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
@@ -27,17 +26,13 @@ export default function AdminAcademicRecordsPage() {
   }, []);
 
   async function loadRecords() {
-    const session = getSession();
 
-    if (!session) {
-      return;
-    }
 
     setLoading(true);
     setError('');
 
     try {
-      const headers = { institutionId: session.user.institutionId };
+      const headers = {};
       const [periodResult, gradeResult, attendanceResult] = await Promise.all([
         apiRequest<ApiListResponse<AcademicPeriod>>(
           `/academic-periods${buildQuery({ limit: 20, sortBy: 'year', sortOrder: 'desc' })}`,

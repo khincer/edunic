@@ -1,8 +1,8 @@
 'use client';
 
-import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
+import { useSchool } from '@/lib/school';
 import { Button, ButtonLink } from '@/components/button';
 import { DataTable, type DataTableColumn } from '@/components/data-table';
 import {
@@ -13,8 +13,8 @@ import {
 } from '@/lib/api';
 
 export default function InstitutionFeatureFlagsPage() {
-  const params = useParams<{ institutionId: string }>();
-  const institutionId = params.institutionId;
+  const { school } = useSchool();
+  const institutionId = school?.id ?? '';
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +22,10 @@ export default function InstitutionFeatureFlagsPage() {
   const [error, setError] = useState('');
 
   const loadData = useCallback(async () => {
+    if (!institutionId) {
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -162,7 +166,7 @@ export default function InstitutionFeatureFlagsPage() {
             global defaults.
           </p>
         </div>
-        <ButtonLink href={`/admin/institutions/${institutionId}`} variant="secondary">
+        <ButtonLink href={`/admin/settings`} variant="secondary">
           Back to institution
         </ButtonLink>
       </header>

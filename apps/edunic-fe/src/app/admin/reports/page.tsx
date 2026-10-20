@@ -39,10 +39,8 @@ export default function AdminReportsPage() {
     try {
       const [studentResult, dashboardResult] = await Promise.all([
         apiRequest<ApiListResponse<Student>>('/students?limit=100&sortBy=lastName&sortOrder=asc', {
-          institutionId: session.user.institutionId,
         }),
         apiRequest<ApiSingleResponse<AdminDashboard>>('/dashboard/admin', {
-          institutionId: session.user.institutionId,
         }),
       ]);
       setStudents(studentResult.data);
@@ -71,7 +69,6 @@ export default function AdminReportsPage() {
         {
           headers: {
             Authorization: `Bearer ${session.token}`,
-            'x-institution-id': session.user.institutionId,
           },
         }
       );
