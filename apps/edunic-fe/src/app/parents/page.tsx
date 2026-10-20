@@ -15,6 +15,10 @@ import {
 import { API_BASE_URL } from '@/lib/config';
 import { clearSession, getSession, type AdminSession } from '@/lib/auth';
 
+function formatCents(cents: number) {
+  return `Q${(cents / 100).toFixed(2)}`;
+}
+
 export default function ParentsPage() {
   const router = useRouter();
   const [session, setSession] = useState<AdminSession | null>(null);
@@ -330,6 +334,50 @@ export default function ParentsPage() {
                 )}
                 {dashboard && dashboard.upcomingAssignments.length === 0 ? (
                   <PanelState message="No upcoming homework or exams." />
+                ) : null}
+              </div>
+            </article>
+
+            <article className="card">
+              <div className="panel-header">
+                <div>
+                  <p className="eyebrow">Payments</p>
+                  <h2 className="section-title">What is owed</h2>
+                </div>
+              </div>
+              <div className="activity-list">
+                {(dashboard?.balances ?? [])
+                  .filter((balance) => balance.outstandingCents > 0)
+                  .map((balance) => (
+                    <article className="activity-row" key={balance.studentId}>
+                      <ActivityMark kind="calendar" />
+                      <span>
+                        <strong>{balance.studentName}</strong>
+                        <p className="field-help">
+                          Outstanding {formatCents(balance.outstandingCents)} -{' '}
+                          {balance.overdueCount} overdue
+                        </p>
+                      </span>
+                    </article>
+                  ))}
+                {(dashboard?.payments ?? [])
+                  .filter((payment) => payment.status === 'pending')
+                  .map((payment) => (
+                    <article className="activity-row" key={payment.id}>
+                      <ActivityMark kind="calendar" />
+                      <span>
+                        <strong>{payment.concept}</strong>
+                        <p className="field-help">
+                          {formatCents(payment.amountCents)} -{' '}
+                          {payment.dueDate
+                            ? `due ${payment.dueDate.slice(0, 10)}`
+                            : 'no due date'}
+                        </p>
+                      </span>
+                    </article>
+                  ))}
+                {dashboard && dashboard.payments.length === 0 ? (
+                  <PanelState message="No payments pending." />
                 ) : null}
               </div>
             </article>

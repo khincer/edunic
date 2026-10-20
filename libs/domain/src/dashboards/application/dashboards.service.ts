@@ -1,3 +1,4 @@
+import { PaymentsRepository } from '@edunic/source/domain/payments';
 import {
   DashboardsRepository,
   type ActivePeriodRow,
@@ -18,7 +19,10 @@ export class DashboardsServiceError extends Error {
 }
 
 export class DashboardsService {
-  constructor(private readonly dashboardsRepository: DashboardsRepository) {}
+  constructor(
+    private readonly dashboardsRepository: DashboardsRepository,
+    private readonly paymentsRepository: PaymentsRepository
+  ) {}
 
   async getAdminDashboard(institutionId: string, userId: string) {
     const context = await this.getInstitutionContext(institutionId);
@@ -235,9 +239,41 @@ export class DashboardsService {
       })
     );
 
+    // The payments of the children of this parent, and what each of them
+    // still owes.
+    const studentIds = studentSummaries.map((student) => student.studentId);
+    const [payments, balances] = await Promise.all([
+      this.paymentsRepository.list({
+        studentIds,
+        limit: 50,
+        offset: 0,
+      }),
+      this.paymentsRepository.listStudentBalances(new Date()),
+    ]);
+
     return {
       data: {
         students: studentSummaries,
+        payments: payments.items.map((payment) => ({
+          id: payment.id,
+          studentId: payment.studentId,
+          concept: payment.concept,
+          amountCents: payment.amountCents,
+          dueDate: payment.dueDate,
+          status: payment.status,
+          method: payment.method,
+          receiptNumber: payment.receiptNumber,
+        })),
+        balances: balances
+          .filter((balance) => studentIds.includes(balance.studentId))
+          .map((balance) => ({
+            studentId: balance.studentId,
+            studentName: balance.studentName,
+            billedCents: balance.billedCents,
+            paidCents: balance.paidCents,
+            outstandingCents: balance.billedCents - balance.paidCents,
+            overdueCount: balance.overdueCount,
+          })),
         recentNotifications,
         upcomingAssignments,
         upcomingEvents,

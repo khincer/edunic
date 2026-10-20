@@ -323,6 +323,26 @@ export type DashboardGrade = {
   studentName: string;
 };
 
+export type DashboardPayment = {
+  id: string;
+  studentId: string;
+  concept: string;
+  amountCents: number;
+  dueDate: string | null;
+  status: string;
+  method: string;
+  receiptNumber: string;
+};
+
+export type DashboardPaymentBalance = {
+  studentId: string;
+  studentName: string;
+  billedCents: number;
+  paidCents: number;
+  outstandingCents: number;
+  overdueCount: number;
+};
+
 export type ParentDashboard = {
   students: Array<{
     studentId: string;
@@ -342,6 +362,8 @@ export type ParentDashboard = {
     recentGrades: DashboardGrade[];
     reportUrl: string;
   }>;
+  payments: DashboardPayment[];
+  balances: DashboardPaymentBalance[];
   recentNotifications: DashboardNotification[];
   upcomingAssignments: DashboardAssignment[];
   upcomingEvents: DashboardEvent[];
