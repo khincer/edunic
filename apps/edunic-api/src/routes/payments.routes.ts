@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { AccessRepository, AccessService } from '@edunic/source/domain/authorization';
 import {
+  PaymentsPdfService,
   PaymentsRepository,
   PaymentsService,
   createPaymentBodySchema,
@@ -15,6 +16,7 @@ export async function paymentRoutes(app: FastifyInstance) {
     new PaymentsRepository(app.db),
     new AccessService(new AccessRepository(app.db))
   );
+  const paymentsPdfService = new PaymentsPdfService();
   const adminOnly = {
     preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
   };
@@ -57,6 +59,26 @@ export async function paymentRoutes(app: FastifyInstance) {
       role: request.user?.role ?? '',
       userId: request.user?.id ?? '',
     });
+  });
+
+  // The receipt of a payment: an admin or the parent of that student.
+  app.get('/:paymentId/receipt', adminOrParent, async (request, reply) => {
+    const params = parseWithSchema(paymentParamsSchema, request.params);
+
+    const result = await paymentsService.getPaymentReceipt(params.paymentId, {
+      role: request.user?.role ?? '',
+      userId: request.user?.id ?? '',
+    });
+
+    const pdf = await paymentsPdfService.renderPaymentReceiptPdf(result.data);
+
+    return reply
+      .header('Content-Type', 'application/pdf')
+      .header(
+        'Content-Disposition',
+        `attachment; filename="payment-receipt-${params.paymentId}.pdf"`
+      )
+      .send(pdf);
   });
 
   app.patch('/:paymentId', adminOnly, async (request) => {

@@ -16,6 +16,24 @@ export type PaymentRecord = {
   createdAt: Date | null;
 };
 
+export type PaymentReceiptRow = {
+  id: string;
+  studentId: string;
+  concept: string;
+  amountCents: number;
+  dueDate: Date | null;
+  paidAt: Date | null;
+  method: string;
+  status: string;
+  receiptNumber: string;
+  note: string | null;
+  createdAt: Date | null;
+  studentName: string;
+  schoolName: string;
+  schoolSenderName: string | null;
+  schoolReplyToEmail: string | null;
+};
+
 export type StudentBalanceRow = {
   studentId: string;
   studentName: string;
@@ -249,6 +267,41 @@ export class PaymentsRepository {
         recorded_by_user_id as "recordedByUserId",
         note,
         created_at as "createdAt"
+    `);
+
+    return result.rows[0] ?? null;
+  }
+
+  // Everything a receipt needs: the payment, the student it belongs to and
+  // the school that issued it.
+  async findReceiptContext(paymentId: string) {
+    const result = await this.db.execute<PaymentReceiptRow>(sql`
+      select
+        p.id,
+        p.student_id as "studentId",
+        p.concept,
+        p.amount_cents as "amountCents",
+        p.due_date as "dueDate",
+        p.paid_at as "paidAt",
+        p.method,
+        p.status,
+        p.receipt_number as "receiptNumber",
+        p.note,
+        p.created_at as "createdAt",
+        concat(s.first_name, ' ', s.last_name) as "studentName",
+        school.name as "schoolName",
+        school.sender_name as "schoolSenderName",
+        school.reply_to_email as "schoolReplyToEmail"
+      from payments p
+      inner join students s on s.id = p.student_id
+      cross join lateral (
+        select name, sender_name, reply_to_email
+        from institutions
+        order by created_at asc, id asc
+        limit 1
+      ) school
+      where p.id = ${paymentId}
+      limit 1
     `);
 
     return result.rows[0] ?? null;

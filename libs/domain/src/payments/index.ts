@@ -2,6 +2,8 @@ export {
   PaymentsService,
   PaymentsServiceError,
 } from './application/payments.service.js';
+export { PaymentsPdfService } from './application/payments-pdf.service.js';
+export type { PaymentReceipt } from './application/payments-pdf.service.js';
 export { PaymentsRepository } from './infrastructure/payments.repository.js';
 export type {
   PaymentRecord,

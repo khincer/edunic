@@ -114,14 +114,17 @@ export class PaymentsService {
 
     // A payment that becomes paid gets its date; one that stops being paid
     // loses it. The database keeps the two in step.
-    const paidAt =
-      input.paidAt !== undefined
-        ? input.paidAt
-        : input.status === 'paid'
-          ? existing.paidAt ?? new Date().toISOString()
-          : input.status && input.status !== 'paid'
-            ? null
-            : undefined;
+    let paidAt: string | null | undefined;
+
+    if (input.paidAt !== undefined) {
+      paidAt = input.paidAt;
+    } else if (input.status === 'paid') {
+      paidAt = existing.paidAt
+        ? existing.paidAt.toISOString()
+        : new Date().toISOString();
+    } else if (input.status !== undefined) {
+      paidAt = null;
+    }
 
     const payment = await this.paymentsRepository.update(paymentId, {
       concept: input.concept?.trim(),
@@ -139,6 +142,45 @@ export class PaymentsService {
 
     return {
       data: this.toPaymentResponse(payment),
+    };
+  }
+
+  // The receipt of a payment: the payment, the student and the school.
+  async getPaymentReceipt(
+    paymentId: string,
+    actor: { role: string; userId: string }
+  ) {
+    const receipt = await this.paymentsRepository.findReceiptContext(paymentId);
+
+    if (!receipt) {
+      throw new PaymentsServiceError('Payment not found', 404);
+    }
+
+    if (actor.role === 'parent') {
+      await this.access.assertParentOwnsStudent(actor.userId, receipt.studentId);
+    }
+
+    return {
+      data: {
+        receiptNumber: receipt.receiptNumber,
+        concept: receipt.concept,
+        amountCents: receipt.amountCents,
+        dueDate: receipt.dueDate,
+        paidAt: receipt.paidAt,
+        method: receipt.method,
+        status: receipt.status,
+        note: receipt.note,
+        issuedAt: receipt.createdAt,
+        student: {
+          id: receipt.studentId,
+          fullName: receipt.studentName,
+        },
+        school: {
+          name: receipt.schoolName,
+          senderName: receipt.schoolSenderName,
+          replyToEmail: receipt.schoolReplyToEmail,
+        },
+      },
     };
   }
 

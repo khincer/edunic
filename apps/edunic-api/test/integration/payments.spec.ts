@@ -290,4 +290,107 @@ describe('payments routes', () => {
 
     expect(response.status).toBe(403);
   });
+  it('renders the receipt of a payment as a PDF', async () => {
+    const { student, adminHeaders } = await createSchool();
+
+    const created = await client
+      .post('/payments')
+      .set(adminHeaders)
+      .send({
+        studentId: student.id,
+        concept: 'Tuicion Marzo',
+        amountCents: 50000,
+        method: 'cash',
+        status: 'paid',
+      });
+
+    const response = await client
+      .get(`/payments/${created.body.data.id}/receipt`)
+      .set(adminHeaders);
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('application/pdf');
+    expect(response.body.subarray(0, 4).toString()).toBe('%PDF');
+  });
+
+  it('gives the parent of the student the receipt', async () => {
+    const { institution, student, adminHeaders } = await createSchool();
+
+    const created = await client
+      .post('/payments')
+      .set(adminHeaders)
+      .send({
+        studentId: student.id,
+        concept: 'Tuicion Marzo',
+        amountCents: 50000,
+        method: 'cash',
+      });
+
+    const guardian = await createGuardianFixture({
+      institutionId: institution.id,
+    });
+    await db.insert(studentGuardians).values({
+      studentId: student.id,
+      guardianId: guardian.id,
+    });
+
+    const parent = await createUserFixture({
+      institutionId: institution.id,
+      role: 'parent',
+    });
+    await db.insert(guardianUserLinks).values({
+      institutionId: institution.id,
+      guardianId: guardian.id,
+      userId: parent.id,
+    });
+    const parentHeaders = await createAuthHeaders({
+      userId: parent.id,
+      institutionId: institution.id,
+    });
+
+    const response = await client
+      .get(`/payments/${created.body.data.id}/receipt`)
+      .set(parentHeaders);
+
+    expect(response.status).toBe(200);
+    expect(response.body.subarray(0, 4).toString()).toBe('%PDF');
+  });
+
+  it('refuses a parent the receipt of another child', async () => {
+    const { institution, otherStudent, adminHeaders } = await createSchool();
+
+    const created = await client
+      .post('/payments')
+      .set(adminHeaders)
+      .send({
+        studentId: otherStudent.id,
+        concept: 'Tuicion Abril',
+        amountCents: 40000,
+        method: 'cash',
+      });
+
+    const guardian = await createGuardianFixture({
+      institutionId: institution.id,
+    });
+    const parent = await createUserFixture({
+      institutionId: institution.id,
+      role: 'parent',
+    });
+    await db.insert(guardianUserLinks).values({
+      institutionId: institution.id,
+      guardianId: guardian.id,
+      userId: parent.id,
+    });
+    const parentHeaders = await createAuthHeaders({
+      userId: parent.id,
+      institutionId: institution.id,
+    });
+
+    const response = await client
+      .get(`/payments/${created.body.data.id}/receipt`)
+      .set(parentHeaders);
+
+    expect(response.status).toBe(403);
+  });
+
 });
