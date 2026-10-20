@@ -4,6 +4,7 @@ import {
   getInstitutionId,
   parseFilterSort,
 } from '@edunic/source/domain/shared';
+import { AccessRepository, AccessService } from '@edunic/source/domain/authorization';
 import {
   GradesService,
   GradesServiceError,
@@ -22,7 +23,8 @@ const GRADE_FILTER_SORT_OPTIONS = {
 export async function gradeRoutes(app: FastifyInstance) {
   const gradesService = new GradesService(
     new GradesRepository(app.db),
-    app.eventBus
+    app.eventBus,
+    new AccessService(new AccessRepository(app.db))
   );
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
@@ -63,6 +65,8 @@ export async function gradeRoutes(app: FastifyInstance) {
     const body = parseWithSchema(createGradeBodySchema, request.body);
     const result = await gradesService.createGrade({
       institutionId,
+      role: request.user?.role ?? '',
+      userId: request.user?.id ?? '',
       ...body,
     });
 
@@ -77,6 +81,8 @@ export async function gradeRoutes(app: FastifyInstance) {
     return gradesService.updateGrade({
       institutionId,
       gradeId: params.gradeId,
+      role: request.user?.role ?? '',
+      userId: request.user?.id ?? '',
       ...body,
     });
   });
@@ -85,6 +91,9 @@ export async function gradeRoutes(app: FastifyInstance) {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(gradeParamsSchema, request.params);
 
-    return gradesService.deleteGrade(institutionId, params.gradeId);
+    return gradesService.deleteGrade(institutionId, params.gradeId, {
+      role: request.user?.role ?? '',
+      userId: request.user?.id ?? '',
+    });
   });
 }

@@ -3,9 +3,11 @@ import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
   createAcademicPeriodFixture,
+  createClassroomFixture,
   createEnrollmentFixture,
   createInstitutionFixture,
   createStudentFixture,
+  createTeacherClassroomAssignmentFixture,
   createUserFixture,
 } from '../helpers/fixtures.js';
 
@@ -32,12 +34,21 @@ describe('grades routes', () => {
       institutionId: institution.id,
       role: 'teacher',
     });
+    const classroom = await createClassroomFixture({
+      institutionId: institution.id,
+    });
+    await createTeacherClassroomAssignmentFixture({
+      institutionId: institution.id,
+      teacherUserId: teacherUser.id,
+      classroomId: classroom.id,
+    });
     const student = await createStudentFixture({ institutionId: institution.id });
     const period = await createAcademicPeriodFixture({ institutionId: institution.id });
     const enrollment = await createEnrollmentFixture({
       institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
+      classroomId: classroom.id,
     });
     const headers = await createAuthHeaders({
       userId: teacherUser.id,

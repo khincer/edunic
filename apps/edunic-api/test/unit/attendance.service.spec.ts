@@ -3,17 +3,25 @@ import {
   AttendanceServiceError,
 } from '@edunic/source/domain/attendance';
 
+// The teacher scoping check is exercised in the integration specs; here the
+// service only needs an access service that does not object.
+const access = {
+  assertTeacherOwnsEnrollment: jest.fn().mockResolvedValue(undefined),
+} as never;
+
 describe('AttendanceService', () => {
   it('returns 404 when the enrollment does not exist', async () => {
     const repository = {
       findEnrollment: jest.fn().mockResolvedValue(null),
     };
 
-    const service = new AttendanceService(repository as never);
+    const service = new AttendanceService(repository as never, undefined, access);
 
     await expect(
       service.createAttendance({
         institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
         enrollmentId: 'enrollment-1',
         date: '2026-02-01T08:00:00.000Z',
         status: 'present',
@@ -56,6 +64,8 @@ describe('AttendanceService', () => {
 
     const result = await service.createAttendance({
       institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
       enrollmentId: 'enrollment-1',
       date: '2026-02-01T08:00:00.000Z',
       status: 'present',
@@ -104,6 +114,8 @@ describe('AttendanceService', () => {
     await expect(
       service.createAttendance({
         institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
         enrollmentId: 'enrollment-1',
         date: '2026-02-01T08:00:00.000Z',
         status: 'present',
@@ -117,10 +129,12 @@ describe('AttendanceService', () => {
   it('leaves the outbox row unpublished for the publisher when no bus is attached', async () => {
     const tx = { execute: jest.fn() };
     const repository = createRepositoryMock(tx);
-    const service = new AttendanceService(repository as never);
+    const service = new AttendanceService(repository as never, undefined, access);
 
     const result = await service.createAttendance({
       institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
       enrollmentId: 'enrollment-1',
       date: '2026-02-01T08:00:00.000Z',
       status: 'present',

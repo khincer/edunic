@@ -3,17 +3,26 @@ import {
   GradesServiceError,
 } from '@edunic/source/domain/grades';
 
+// The teacher scoping check is exercised in the integration specs; here
+// the service only needs an access service that does not object.
+const access = {
+  assertTeacherOwnsEnrollment: jest.fn().mockResolvedValue(undefined),
+} as never;
+
+
 describe('GradesService', () => {
   it('returns 404 when the enrollment does not exist', async () => {
     const repository = {
       findEnrollment: jest.fn().mockResolvedValue(null),
     };
 
-    const service = new GradesService(repository as never);
+    const service = new GradesService(repository as never, undefined, access);
 
     await expect(
       service.createGrade({
         institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
         enrollmentId: 'enrollment-1',
         subject: 'Science',
         score: 90,
@@ -56,6 +65,8 @@ describe('GradesService', () => {
 
     const result = await service.createGrade({
       institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
       enrollmentId: 'enrollment-1',
       subject: 'Science',
       score: 90,
@@ -100,6 +111,8 @@ describe('GradesService', () => {
     await expect(
       service.createGrade({
         institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
         enrollmentId: 'enrollment-1',
         subject: 'Science',
         score: 90,
@@ -113,10 +126,12 @@ describe('GradesService', () => {
   it('leaves the outbox row unpublished for the publisher when no bus is attached', async () => {
     const tx = { execute: jest.fn() };
     const repository = createRepositoryMock(tx);
-    const service = new GradesService(repository as never);
+    const service = new GradesService(repository as never, undefined, access);
 
     const result = await service.createGrade({
       institutionId: 'inst-1',
+      role: 'admin',
+      userId: 'user-1',
       enrollmentId: 'enrollment-1',
       subject: 'Science',
       score: 90,
