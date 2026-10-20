@@ -35,12 +35,13 @@ export class AcademicAveragesRepository {
   ) {
     const result = await this.db.execute<StudentGradeRow>(sql`
       select
-        g.subject,
+        subjects.name as subject,
         g.score,
         ap.id as "academicPeriodId",
         ap.year,
         ap.term
       from grades g
+      inner join subjects on subjects.id = g.subject_id
       inner join enrollments e
         on e.id = g.enrollment_id
        and e.institution_id = g.institution_id
@@ -50,7 +51,7 @@ export class AcademicAveragesRepository {
       where g.institution_id = ${institutionId}
         and e.student_id = ${studentId}
         and ap.year = ${year}
-      order by ap.term asc, g.subject asc, g.created_at asc
+      order by ap.term asc, subjects.name asc, g.created_at asc
     `);
 
     return result.rows;

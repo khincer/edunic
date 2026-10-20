@@ -37,32 +37,16 @@ const authPluginHandler: FastifyPluginAsync = async (app) => {
         throw new ErrorWithStatus(message, 401);
       }
 
-      const userRole = await authRepository.findUserRole(
-        payload.sub,
-        payload.institutionId
-      );
+      const authContext = await authRepository.findAuthContext(payload.sub);
 
-      if (!userRole) {
-        throw new ErrorWithStatus(
-          'User role for this institution was not found',
-          403
-        );
-      }
-
-      if (
-        typeof request.headers['x-institution-id'] === 'string' &&
-        request.headers['x-institution-id'] !== userRole.institutionId
-      ) {
-        throw new ErrorWithStatus(
-          'Authenticated institution does not match x-institution-id',
-          403
-        );
+      if (!authContext) {
+        throw new ErrorWithStatus('User role was not found', 403);
       }
 
       request.user = {
         id: payload.sub,
-        institutionId: userRole.institutionId,
-        role: userRole.role,
+        institutionId: authContext.institutionId,
+        role: authContext.role,
       };
     }) satisfies preHandlerHookHandler
   );

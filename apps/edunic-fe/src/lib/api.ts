@@ -111,10 +111,21 @@ export type AttendanceRecord = {
   createdAt: string | null;
 };
 
+export type Subject = {
+  id: string;
+  name: string;
+  code: string | null;
+  description: string | null;
+  active: boolean;
+  createdAt: string;
+};
+
 export type Grade = {
   id: string;
   institutionId: string;
   enrollmentId: string;
+  subjectId: string;
+  topicId: string | null;
   subject: string;
   score: number;
   createdAt: string | null;
@@ -312,6 +323,26 @@ export type DashboardGrade = {
   studentName: string;
 };
 
+export type DashboardPayment = {
+  id: string;
+  studentId: string;
+  concept: string;
+  amountCents: number;
+  dueDate: string | null;
+  status: string;
+  method: string;
+  receiptNumber: string;
+};
+
+export type DashboardPaymentBalance = {
+  studentId: string;
+  studentName: string;
+  billedCents: number;
+  paidCents: number;
+  outstandingCents: number;
+  overdueCount: number;
+};
+
 export type ParentDashboard = {
   students: Array<{
     studentId: string;
@@ -331,6 +362,8 @@ export type ParentDashboard = {
     recentGrades: DashboardGrade[];
     reportUrl: string;
   }>;
+  payments: DashboardPayment[];
+  balances: DashboardPaymentBalance[];
   recentNotifications: DashboardNotification[];
   upcomingAssignments: DashboardAssignment[];
   upcomingEvents: DashboardEvent[];
@@ -352,7 +385,6 @@ export class ApiError extends Error {
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
-  institutionId?: string;
   headers?: Record<string, string>;
 };
 
@@ -372,10 +404,6 @@ export async function apiRequest<T>(
 
   if (session?.token) {
     headers.Authorization = `Bearer ${session.token}`;
-  }
-
-  if (options.institutionId) {
-    headers['x-institution-id'] = options.institutionId;
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {

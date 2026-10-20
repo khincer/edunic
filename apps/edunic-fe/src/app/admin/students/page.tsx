@@ -13,7 +13,6 @@ import {
   type ApiSingleResponse,
   type Student,
 } from '@/lib/api';
-import { getSession } from '@/lib/auth';
 
 export default function AdminStudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -30,11 +29,7 @@ export default function AdminStudentsPage() {
   }, []);
 
   async function loadStudents(nextSearch = search) {
-    const session = getSession();
 
-    if (!session) {
-      return;
-    }
 
     setLoading(true);
     setError('');
@@ -47,7 +42,6 @@ export default function AdminStudentsPage() {
         sortOrder: 'asc',
       });
       const result = await apiRequest<ApiListResponse<Student>>(`/students${query}`, {
-        institutionId: session.user.institutionId,
       });
       setStudents(result.data);
     } catch (err) {
@@ -58,9 +52,8 @@ export default function AdminStudentsPage() {
   }
 
   async function createStudent() {
-    const session = getSession();
 
-    if (!session || !firstName.trim() || !lastName.trim()) {
+    if (!firstName.trim() || !lastName.trim()) {
       return;
     }
 
@@ -70,7 +63,6 @@ export default function AdminStudentsPage() {
     try {
       await apiRequest<ApiSingleResponse<Student>>('/students', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           firstName,
           lastName,

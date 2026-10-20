@@ -14,6 +14,9 @@ export const assignmentParamsSchema = z.object({
 
 export const createAssignmentBodySchema = z.object({
   classroomId: uuidSchema.optional(),
+  // An assignment may target a materia and optionally one of its temas.
+  subjectId: uuidSchema.optional(),
+  topicId: uuidSchema.optional(),
   title: z.string().trim().min(1).max(160),
   type: z.enum(['homework', 'exam', 'assignment']).default('assignment'),
   status: z.enum(['draft', 'published', 'reviewed']).default('published'),

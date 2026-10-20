@@ -1,15 +1,3 @@
-const institutionIdHeaderSchema = {
-  name: 'x-institution-id',
-  in: 'header',
-  required: true,
-  description: 'Tenant identifier used to scope all student operations.',
-  schema: {
-    type: 'string',
-    format: 'uuid',
-    example: '00000000-0000-0000-0000-000000000001',
-  },
-};
-
 const studentSchema = {
   type: 'object',
   required: ['id', 'institutionId', 'firstName', 'lastName', 'fullName'],
@@ -800,6 +788,7 @@ export function buildOpenApiDocument() {
       { name: 'Guardians', description: 'Guardian CRUD and student-link endpoints' },
       { name: 'Health', description: 'Service health endpoints' },
       { name: 'Institutions', description: 'Institution CRUD endpoints' },
+      { name: 'School', description: 'The school profile' },
       { name: 'Students', description: 'Student CRUD endpoints' },
     ],
     paths: {
@@ -807,7 +796,6 @@ export function buildOpenApiDocument() {
         get: {
           tags: ['Dashboards'],
           summary: 'Get the admin home dashboard aggregate',
-          parameters: [institutionIdHeaderSchema],
           responses: {
             200: {
               description: 'Admin dashboard aggregate',
@@ -826,7 +814,6 @@ export function buildOpenApiDocument() {
         get: {
           tags: ['Dashboards'],
           summary: 'Get the teacher home dashboard aggregate',
-          parameters: [institutionIdHeaderSchema],
           responses: {
             200: {
               description: 'Teacher dashboard aggregate',
@@ -845,7 +832,6 @@ export function buildOpenApiDocument() {
         get: {
           tags: ['Dashboards'],
           summary: 'Get the parent home dashboard aggregate',
-          parameters: [institutionIdHeaderSchema],
           responses: {
             200: {
               description: 'Parent dashboard aggregate',
@@ -866,7 +852,6 @@ export function buildOpenApiDocument() {
           summary: 'List role-scoped assignments and evaluations',
           description:
             'Admins see all tenant assignments, teachers see assigned classrooms, and parents see assignments for linked students.',
-          parameters: [institutionIdHeaderSchema],
           responses: {
             200: {
               description: 'Assignments visible to the authenticated role',
@@ -885,7 +870,6 @@ export function buildOpenApiDocument() {
           summary: 'Create an assignment or exam',
           description:
             'Used by the admin workflow console and teacher workspace to publish homework, assignments, or exams. Teacher requests must target an assigned classroom.',
-          parameters: [institutionIdHeaderSchema],
           requestBody: {
             required: true,
             content: {
@@ -937,7 +921,6 @@ export function buildOpenApiDocument() {
           description:
             'Supports workflow UI actions such as marking an assignment reviewed while preserving tenant and teacher-classroom scoping.',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'assignmentId',
               in: 'path',
@@ -990,7 +973,6 @@ export function buildOpenApiDocument() {
           summary: 'List role-scoped school and classroom calendar events',
           description:
             'Admins see all tenant events, teachers see school-wide and assigned-classroom events, and parents see school-wide plus linked-student classroom events.',
-          parameters: [institutionIdHeaderSchema],
           responses: {
             200: {
               description: 'Events visible to the authenticated role',
@@ -1009,7 +991,6 @@ export function buildOpenApiDocument() {
           summary: 'Create a school or classroom event',
           description:
             'Used by admin and teacher workflow UIs. Teachers must target an assigned classroom.',
-          parameters: [institutionIdHeaderSchema],
           requestBody: {
             required: true,
             content: {
@@ -1052,7 +1033,6 @@ export function buildOpenApiDocument() {
           summary: 'List sent and received messages for the authenticated user',
           description:
             'Returns the authenticated user inbox/sent-message stream for admin, teacher, and parent workflow UIs.',
-          parameters: [institutionIdHeaderSchema],
           responses: {
             200: {
               description: 'Role-scoped inbox messages',
@@ -1071,7 +1051,6 @@ export function buildOpenApiDocument() {
           summary: 'Send a message to another user in the institution',
           description:
             'Creates a simple message thread and emits a recipient-scoped notification.',
-          parameters: [institutionIdHeaderSchema],
           requestBody: {
             required: true,
             content: {
@@ -1113,7 +1092,6 @@ export function buildOpenApiDocument() {
           description:
             'Only the authenticated recipient can mark a message read.',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'messageId',
               in: 'path',
@@ -1487,7 +1465,6 @@ export function buildOpenApiDocument() {
           tags: ['Custom Fields'],
           summary: 'List custom fields',
           parameters: [
-            institutionIdHeaderSchema,
             { name: 'entity', in: 'query', schema: { type: 'string' } },
           ],
           responses: {
@@ -1510,7 +1487,6 @@ export function buildOpenApiDocument() {
         post: {
           tags: ['Custom Fields'],
           summary: 'Create a custom field',
-          parameters: [institutionIdHeaderSchema],
           requestBody: {
             required: true,
             content: {
@@ -1550,7 +1526,6 @@ export function buildOpenApiDocument() {
           tags: ['Custom Fields'],
           summary: 'Update a custom field',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'customFieldId',
               in: 'path',
@@ -1567,7 +1542,6 @@ export function buildOpenApiDocument() {
           tags: ['Custom Fields'],
           summary: 'Delete a custom field',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'customFieldId',
               in: 'path',
@@ -1586,7 +1560,6 @@ export function buildOpenApiDocument() {
           tags: ['Custom Fields'],
           summary: 'List custom field values for an entity record',
           parameters: [
-            institutionIdHeaderSchema,
             { name: 'entity', in: 'path', required: true, schema: { type: 'string' } },
             { name: 'entityId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
           ],
@@ -1610,7 +1583,6 @@ export function buildOpenApiDocument() {
           tags: ['Custom Fields'],
           summary: 'Upsert custom field values for an entity record',
           parameters: [
-            institutionIdHeaderSchema,
             { name: 'entity', in: 'path', required: true, schema: { type: 'string' } },
             { name: 'entityId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
           ],
@@ -1627,7 +1599,6 @@ export function buildOpenApiDocument() {
           description:
             'Returns notifications visible to the authenticated admin, teacher, or parent. Audience metadata plus linked-student/classroom filters are applied server-side.',
           parameters: [
-            institutionIdHeaderSchema,
             { name: 'unreadOnly', in: 'query', schema: { type: 'boolean' } },
             { name: 'eventName', in: 'query', schema: { type: 'string' } },
           ],
@@ -1656,7 +1627,6 @@ export function buildOpenApiDocument() {
           description:
             'Marks a notification read only when it is visible to the authenticated user role and tenant.',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'notificationId',
               in: 'path',
@@ -1688,7 +1658,6 @@ export function buildOpenApiDocument() {
           description:
             'Returns audit trail records for successful mutating requests within the authenticated institution. Admin role required.',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'entity',
               in: 'query',
@@ -1828,7 +1797,6 @@ export function buildOpenApiDocument() {
           description:
             'Returns a reporting-friendly academic summary for the selected student and year, including averages, per-term breakdowns, and enrollment promotion statuses.',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'studentId',
               in: 'path',
@@ -1868,7 +1836,6 @@ export function buildOpenApiDocument() {
           description:
             'Generates a PDF export for the student academic summary report for the selected year.',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'studentId',
               in: 'path',
@@ -1906,7 +1873,6 @@ export function buildOpenApiDocument() {
           description:
             'Computes annual averages for the selected year and uses academic period term as the current bimestral bucket.',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'studentId',
               in: 'path',
@@ -1997,7 +1963,6 @@ export function buildOpenApiDocument() {
           tags: ['Academic Periods'],
           summary: 'List academic periods',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'year',
               in: 'query',
@@ -2073,7 +2038,6 @@ export function buildOpenApiDocument() {
         post: {
           tags: ['Academic Periods'],
           summary: 'Create an academic period',
-          parameters: [institutionIdHeaderSchema],
           requestBody: {
             required: true,
             content: {
@@ -2121,7 +2085,6 @@ export function buildOpenApiDocument() {
           tags: ['Academic Periods'],
           summary: 'Get an academic period by id',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'academicPeriodId',
               in: 'path',
@@ -2150,7 +2113,6 @@ export function buildOpenApiDocument() {
           tags: ['Academic Periods'],
           summary: 'Update an academic period',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'academicPeriodId',
               in: 'path',
@@ -2205,7 +2167,6 @@ export function buildOpenApiDocument() {
           tags: ['Academic Periods'],
           summary: 'Delete an academic period',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'academicPeriodId',
               in: 'path',
@@ -2243,7 +2204,6 @@ export function buildOpenApiDocument() {
           tags: ['Classrooms'],
           summary: 'List classrooms',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'gradeLevel',
               in: 'query',
@@ -2319,7 +2279,6 @@ export function buildOpenApiDocument() {
         post: {
           tags: ['Classrooms'],
           summary: 'Create a classroom',
-          parameters: [institutionIdHeaderSchema],
           requestBody: {
             required: true,
             content: {
@@ -2364,7 +2323,6 @@ export function buildOpenApiDocument() {
           tags: ['Classrooms'],
           summary: 'Get a classroom by id',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'classroomId',
               in: 'path',
@@ -2393,7 +2351,6 @@ export function buildOpenApiDocument() {
           tags: ['Classrooms'],
           summary: 'Update a classroom',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'classroomId',
               in: 'path',
@@ -2442,7 +2399,6 @@ export function buildOpenApiDocument() {
           tags: ['Classrooms'],
           summary: 'Delete a classroom',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'classroomId',
               in: 'path',
@@ -2480,7 +2436,6 @@ export function buildOpenApiDocument() {
           tags: ['Attendance'],
           summary: 'List attendance records',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'enrollmentId',
               in: 'query',
@@ -2564,7 +2519,6 @@ export function buildOpenApiDocument() {
         post: {
           tags: ['Attendance'],
           summary: 'Create an attendance record',
-          parameters: [institutionIdHeaderSchema],
           requestBody: {
             required: true,
             content: {
@@ -2611,7 +2565,6 @@ export function buildOpenApiDocument() {
           tags: ['Attendance'],
           summary: 'Get an attendance record by id',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'attendanceId',
               in: 'path',
@@ -2640,7 +2593,6 @@ export function buildOpenApiDocument() {
           tags: ['Attendance'],
           summary: 'Update an attendance record',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'attendanceId',
               in: 'path',
@@ -2690,7 +2642,6 @@ export function buildOpenApiDocument() {
           tags: ['Attendance'],
           summary: 'Delete an attendance record',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'attendanceId',
               in: 'path',
@@ -2727,7 +2678,6 @@ export function buildOpenApiDocument() {
           tags: ['Grades'],
           summary: 'List grades',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'search',
               in: 'query',
@@ -2808,7 +2758,6 @@ export function buildOpenApiDocument() {
         post: {
           tags: ['Grades'],
           summary: 'Create a grade',
-          parameters: [institutionIdHeaderSchema],
           requestBody: {
             required: true,
             content: {
@@ -2854,7 +2803,6 @@ export function buildOpenApiDocument() {
           tags: ['Grades'],
           summary: 'Get a grade by id',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'gradeId',
               in: 'path',
@@ -2883,7 +2831,6 @@ export function buildOpenApiDocument() {
           tags: ['Grades'],
           summary: 'Update a grade',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'gradeId',
               in: 'path',
@@ -2931,7 +2878,6 @@ export function buildOpenApiDocument() {
           tags: ['Grades'],
           summary: 'Delete a grade',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'gradeId',
               in: 'path',
@@ -2968,7 +2914,6 @@ export function buildOpenApiDocument() {
           tags: ['Enrollments'],
           summary: 'List enrollments',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'search',
               in: 'query',
@@ -3062,7 +3007,6 @@ export function buildOpenApiDocument() {
         post: {
           tags: ['Enrollments'],
           summary: 'Create an enrollment',
-          parameters: [institutionIdHeaderSchema],
           requestBody: {
             required: true,
             content: {
@@ -3117,7 +3061,6 @@ export function buildOpenApiDocument() {
           tags: ['Enrollments'],
           summary: 'Get an enrollment by id',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'enrollmentId',
               in: 'path',
@@ -3146,7 +3089,6 @@ export function buildOpenApiDocument() {
           tags: ['Enrollments'],
           summary: 'Update an enrollment',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'enrollmentId',
               in: 'path',
@@ -3201,7 +3143,6 @@ export function buildOpenApiDocument() {
           tags: ['Enrollments'],
           summary: 'Delete an enrollment',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'enrollmentId',
               in: 'path',
@@ -3241,7 +3182,6 @@ export function buildOpenApiDocument() {
           description:
             'Computes the enrollment grade average, applies the default passing threshold of 60, and persists promotionStatus as promoted, retained, or pending when no grades exist.',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'enrollmentId',
               in: 'path',
@@ -3268,110 +3208,92 @@ export function buildOpenApiDocument() {
           },
         },
       },
-      '/institutions': {
+      '/school-profile': {
         get: {
-          tags: ['Institutions'],
-          summary: 'List institutions',
-          parameters: [
-            {
-              name: 'search',
-              in: 'query',
-              schema: { type: 'string' },
-            },
-            {
-              name: 'limit',
-              in: 'query',
-              schema: {
-                type: 'integer',
-                minimum: 1,
-                maximum: 100,
-                default: 25,
-              },
-            },
-            {
-              name: 'offset',
-              in: 'query',
-              schema: { type: 'integer', minimum: 0, default: 0 },
-            },
-            {
-              name: 'sortBy',
-              in: 'query',
-              schema: {
-                type: 'string',
-                enum: ['createdAt', 'name'],
-                default: 'createdAt',
-              },
-            },
-            {
-              name: 'sortOrder',
-              in: 'query',
-              schema: {
-                type: 'string',
-                enum: ['asc', 'desc'],
-                default: 'desc',
-              },
-            },
-          ],
+          tags: ['School'],
+          summary: 'Get the school profile',
           responses: {
             200: {
-              description: 'Institutions page',
+              description: 'The school profile',
               content: {
                 'application/json': {
                   schema: {
                     type: 'object',
                     properties: {
                       data: {
-                        type: 'array',
-                        items: institutionSchema,
+                    type: 'object',
+                    required: ['id', 'name'],
+                    properties: {
+                      id: { type: 'string', format: 'uuid' },
+                      name: { type: 'string', example: 'Colegio Central' },
+                      senderName: { type: 'string', nullable: true },
+                      replyToEmail: { type: 'string', nullable: true },
+                      createdAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        nullable: true,
                       },
-                      meta: {
-                        type: 'object',
-                        properties: {
-                          total: { type: 'integer' },
-                          limit: { type: 'integer' },
-                          offset: { type: 'integer' },
-                        },
-                      },
+                    },
+                  },
                     },
                   },
                 },
               },
             },
-            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
           },
         },
-        post: {
-          tags: ['Institutions'],
-          summary: 'Create an institution',
+        patch: {
+          tags: ['School'],
+          summary: 'Update the school profile',
           requestBody: {
             required: true,
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['name'],
                   properties: {
-                    name: { type: 'string', example: 'Colegio Central' },
+                    name: { type: 'string' },
+                    senderName: { type: 'string', nullable: true },
+                    replyToEmail: { type: 'string', nullable: true },
                   },
                 },
               },
             },
           },
           responses: {
-            201: {
-              description: 'Institution created',
+            200: {
+              description: 'The updated school profile',
               content: {
                 'application/json': {
                   schema: {
                     type: 'object',
                     properties: {
-                      data: institutionSchema,
+                      data: {
+                    type: 'object',
+                    required: ['id', 'name'],
+                    properties: {
+                      id: { type: 'string', format: 'uuid' },
+                      name: { type: 'string', example: 'Colegio Central' },
+                      senderName: { type: 'string', nullable: true },
+                      replyToEmail: { type: 'string', nullable: true },
+                      createdAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        nullable: true,
+                      },
+                    },
+                  },
                     },
                   },
                 },
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/NotFound' },
           },
         },
       },
@@ -3487,7 +3409,6 @@ export function buildOpenApiDocument() {
           tags: ['Guardians'],
           summary: 'List guardians',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'search',
               in: 'query',
@@ -3553,7 +3474,6 @@ export function buildOpenApiDocument() {
         post: {
           tags: ['Guardians'],
           summary: 'Create a guardian',
-          parameters: [institutionIdHeaderSchema],
           requestBody: {
             required: true,
             content: {
@@ -3592,7 +3512,6 @@ export function buildOpenApiDocument() {
           tags: ['Guardians'],
           summary: 'Get a guardian by id',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'guardianId',
               in: 'path',
@@ -3621,7 +3540,6 @@ export function buildOpenApiDocument() {
           tags: ['Guardians'],
           summary: 'Update a guardian',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'guardianId',
               in: 'path',
@@ -3665,7 +3583,6 @@ export function buildOpenApiDocument() {
           tags: ['Guardians'],
           summary: 'Delete a guardian',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'guardianId',
               in: 'path',
@@ -3703,7 +3620,6 @@ export function buildOpenApiDocument() {
           tags: ['Guardians'],
           summary: 'List guardians linked to a student',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'studentId',
               in: 'path',
@@ -3738,7 +3654,6 @@ export function buildOpenApiDocument() {
           tags: ['Guardians'],
           summary: 'Link a guardian to a student',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'studentId',
               in: 'path',
@@ -3781,7 +3696,6 @@ export function buildOpenApiDocument() {
           tags: ['Guardians'],
           summary: 'Unlink a guardian from a student',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'studentId',
               in: 'path',
@@ -3826,7 +3740,6 @@ export function buildOpenApiDocument() {
           tags: ['Students'],
           summary: 'List students',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'search',
               in: 'query',
@@ -3892,7 +3805,6 @@ export function buildOpenApiDocument() {
         post: {
           tags: ['Students'],
           summary: 'Create a student',
-          parameters: [institutionIdHeaderSchema],
           requestBody: {
             required: true,
             content: {
@@ -3935,7 +3847,6 @@ export function buildOpenApiDocument() {
           tags: ['Students'],
           summary: 'Get a student by id',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'studentId',
               in: 'path',
@@ -3964,7 +3875,6 @@ export function buildOpenApiDocument() {
           tags: ['Students'],
           summary: 'Update a student',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'studentId',
               in: 'path',
@@ -4009,7 +3919,6 @@ export function buildOpenApiDocument() {
           tags: ['Students'],
           summary: 'Delete a student',
           parameters: [
-            institutionIdHeaderSchema,
             {
               name: 'studentId',
               in: 'path',

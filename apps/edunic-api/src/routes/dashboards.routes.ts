@@ -4,6 +4,7 @@ import {
   DashboardsServiceError,
   DashboardsRepository,
 } from '@edunic/source/domain/dashboards';
+import { PaymentsRepository } from '@edunic/source/domain/payments';
 import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 
 function getAuthenticatedUser(request: FastifyRequest) {
@@ -16,7 +17,8 @@ function getAuthenticatedUser(request: FastifyRequest) {
 
 export async function dashboardRoutes(app: FastifyInstance) {
   const dashboardsService = new DashboardsService(
-    new DashboardsRepository(app.db)
+    new DashboardsRepository(app.db),
+    new PaymentsRepository(app.db)
   );
 
   app.get(

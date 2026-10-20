@@ -51,6 +51,10 @@ export type AssignmentRecord = {
   institutionId: string;
   classroomId: string | null;
   classroomName: string | null;
+  subjectId: string | null;
+  topicId: string | null;
+  // The name of the materia, so the response still reads like an assignment.
+  subject: string | null;
   createdByUserId: string | null;
   title: string;
   type: string;
@@ -118,12 +122,16 @@ export class WorkflowsRepository {
         w.classroom_id as "classroomId",
         concat('Grade ', classrooms.grade_level, coalesce(' ' || classrooms.section, '')) as "classroomName",
         w.created_by_user_id as "createdByUserId",
+        w.subject_id as "subjectId",
+        w.topic_id as "topicId",
+        subjects.name as subject,
         w.title,
         w.type,
         w.status,
         w.due_date as "dueDate",
         w.created_at as "createdAt"
       from assignments w
+      left join subjects on subjects.id = w.subject_id
       left join classrooms
         on classrooms.id = w.classroom_id
        and classrooms.institution_id = w.institution_id
@@ -163,6 +171,8 @@ export class WorkflowsRepository {
         institution_id,
         classroom_id,
         created_by_user_id,
+        subject_id,
+        topic_id,
         title,
         type,
         status,
@@ -172,6 +182,8 @@ export class WorkflowsRepository {
         ${input.institutionId},
         ${input.classroomId ?? null},
         ${input.userId},
+        ${input.subjectId ?? null},
+        ${input.topicId ?? null},
         ${input.title},
         ${input.type},
         ${input.status},
@@ -191,6 +203,14 @@ export class WorkflowsRepository {
 
     if (input.classroomId !== undefined) {
       assignmentsToSet.push(sql`classroom_id = ${input.classroomId}`);
+    }
+
+    if (input.subjectId !== undefined) {
+      assignmentsToSet.push(sql`subject_id = ${input.subjectId}`);
+    }
+
+    if (input.topicId !== undefined) {
+      assignmentsToSet.push(sql`topic_id = ${input.topicId}`);
     }
 
     if (input.title !== undefined) {
@@ -228,12 +248,16 @@ export class WorkflowsRepository {
         assignments.classroom_id as "classroomId",
         concat('Grade ', classrooms.grade_level, coalesce(' ' || classrooms.section, '')) as "classroomName",
         assignments.created_by_user_id as "createdByUserId",
+        assignments.subject_id as "subjectId",
+        assignments.topic_id as "topicId",
+        subjects.name as subject,
         assignments.title,
         assignments.type,
         assignments.status,
         assignments.due_date as "dueDate",
         assignments.created_at as "createdAt"
       from assignments
+      left join subjects on subjects.id = assignments.subject_id
       left join classrooms
         on classrooms.id = assignments.classroom_id
        and classrooms.institution_id = assignments.institution_id

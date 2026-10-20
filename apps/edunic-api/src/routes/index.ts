@@ -15,10 +15,13 @@ import { featureFlagRoutes } from './feature-flags.routes.js';
 import { guardianRoutes } from './guardians.routes.js';
 import { gradeRoutes } from './grades.routes.js';
 import { healthRoutes, readyRoutes } from './health.routes.js';
-import { institutionRoutes } from './institutions.routes.js';
 import { notificationRoutes } from './notifications.routes.js';
+import { paymentRoutes } from './payments.routes.js';
 import { reportRoutes } from './reports.routes.js';
+import { schoolProfileRoutes } from './school-profile.routes.js';
 import { studentRoutes } from './students.routes.js';
+import { subjectRoutes } from './subjects.routes.js';
+import { teacherRoutes } from './teachers.routes.js';
 import { workflowRoutes } from './workflows.routes.js';
 
 export async function registerRoutes(app: FastifyInstance) {
@@ -39,9 +42,12 @@ export async function registerRoutes(app: FastifyInstance) {
   app.register(gradeRoutes, { prefix: '/grades' });
   app.register(healthRoutes, { prefix: '/health' });
   app.register(readyRoutes);
-  app.register(institutionRoutes, { prefix: '/institutions' });
   app.register(notificationRoutes);
+  app.register(paymentRoutes, { prefix: '/payments' });
   app.register(reportRoutes, { prefix: '/reports' });
+  app.register(schoolProfileRoutes, { prefix: '/school-profile' });
   app.register(studentRoutes, { prefix: '/students' });
+  app.register(subjectRoutes, { prefix: '/subjects' });
+  app.register(teacherRoutes, { prefix: '/teachers' });
   app.register(workflowRoutes);
 }

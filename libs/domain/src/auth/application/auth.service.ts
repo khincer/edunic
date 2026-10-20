@@ -23,22 +23,13 @@ export class AuthService {
       throw new AuthServiceError('Invalid credentials', 401);
     }
 
-    const userRole = await this.authRepository.findUserRole(
-      user.id,
-      input.institutionId
-    );
+    const authContext = await this.authRepository.findAuthContext(user.id);
 
-    if (!userRole) {
+    if (!authContext) {
       throw new AuthServiceError('Invalid credentials', 401);
     }
 
-    const token = await signJwt(
-      {
-        sub: user.id,
-        institutionId: input.institutionId,
-      },
-      jwtSecret
-    );
+    const token = await signJwt({ sub: user.id }, jwtSecret);
 
     return {
       data: {
@@ -46,8 +37,7 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
-          institutionId: userRole.institutionId,
-          role: userRole.role,
+          role: authContext.role,
         },
       },
     };

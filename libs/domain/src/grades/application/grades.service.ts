@@ -1,4 +1,5 @@
 import type { EventBus } from '@edunic/source/events';
+import { AccessService } from '@edunic/source/domain/authorization';
 import { createGradeSubmittedEvent } from '@edunic/source/domain/events';
 import {
   buildCursorPage,
@@ -30,7 +31,8 @@ export class GradesServiceError extends Error {
 export class GradesService {
   constructor(
     private readonly gradesRepository: GradesRepository,
-    private readonly eventBus?: EventBus
+    private readonly eventBus: EventBus | undefined,
+    private readonly access: AccessService
   ) {}
 
   async listGrades(
@@ -43,7 +45,7 @@ export class GradesService {
     const result = await this.gradesRepository.list({
       ...input,
       search: input.search?.trim() || undefined,
-      subject: input.subject?.trim() || undefined,
+      subjectId: input.subjectId,
     });
 
     const page = buildCursorPage(
@@ -77,7 +79,13 @@ export class GradesService {
     };
   }
 
-  async createGrade(input: CreateGradeBody & { institutionId: string }) {
+  async createGrade(
+    input: CreateGradeBody & {
+      institutionId: string;
+      role: string;
+      userId: string;
+    }
+  ) {
     const enrollment = await this.gradesRepository.findEnrollment(
       input.institutionId,
       input.enrollmentId
@@ -87,6 +95,9 @@ export class GradesService {
       throw new GradesServiceError('Enrollment not found', 404);
     }
 
+    await this.assertTeacherOwnsEnrollment(input, input.enrollmentId);
+    await this.assertTeacherOwnsSubject(input, input.subjectId);
+
     // P2-R6 / D2: the grade row, its outbox event and the publish outcome
     // commit together — a failed publish rolls the rows back.
     const grade = await this.gradesRepository.transaction(async (tx) => {
@@ -94,7 +105,8 @@ export class GradesService {
         {
           institutionId: input.institutionId,
           enrollmentId: input.enrollmentId,
-          subject: input.subject.trim(),
+          subjectId: input.subjectId,
+          topicId: input.topicId ?? null,
           score: input.score,
         },
         tx
@@ -138,6 +150,8 @@ export class GradesService {
   async updateGrade(input: UpdateGradeBody & {
     institutionId: string;
     gradeId: string;
+    role: string;
+    userId: string;
   }) {
     const existingGrade = await this.gradesRepository.findById(
       input.institutionId,
@@ -148,10 +162,27 @@ export class GradesService {
       throw new GradesServiceError('Grade not found', 404);
     }
 
+    await this.assertTeacherOwnsEnrollment(input, existingGrade.enrollmentId);
+
+    // The materia of the grade: the one given, or the one the tema belongs
+    // to, or the one the grade already has.
+    const subjectId = await this.resolveSubjectId(input, existingGrade);
+    await this.assertTeacherOwnsSubject(input, subjectId);
+
+    // A grade whose materia changes loses its tema: a tema of the old materia
+    // would point at two subjects at once.
+    const subjectChanged = subjectId !== existingGrade.subjectId;
+    const topicId = subjectChanged
+      ? input.topicId ?? null
+      : input.topicId === undefined
+        ? undefined
+        : input.topicId;
+
     const updatedGrade = await this.gradesRepository.update({
       institutionId: input.institutionId,
       gradeId: input.gradeId,
-      subject: input.subject?.trim(),
+      subjectId,
+      topicId,
       score: input.score,
     });
 
@@ -173,12 +204,18 @@ export class GradesService {
     };
   }
 
-  async deleteGrade(institutionId: string, gradeId: string) {
+  async deleteGrade(
+    institutionId: string,
+    gradeId: string,
+    actor: { role: string; userId: string }
+  ) {
     const grade = await this.gradesRepository.findById(institutionId, gradeId);
 
     if (!grade) {
       throw new GradesServiceError('Grade not found', 404);
     }
+
+    await this.assertTeacherOwnsEnrollment(actor, grade.enrollmentId);
 
     await this.gradesRepository.delete(institutionId, gradeId);
 
@@ -190,11 +227,60 @@ export class GradesService {
     };
   }
 
+  private async resolveSubjectId(
+    input: { subjectId?: string; topicId?: string | null },
+    existingGrade: { subjectId: string }
+  ) {
+    if (input.subjectId) {
+      return input.subjectId;
+    }
+
+    if (input.topicId) {
+      const topicSubjectId =
+        await this.gradesRepository.findTopicSubjectId(input.topicId);
+
+      if (!topicSubjectId) {
+        throw new GradesServiceError('Topic not found', 404);
+      }
+
+      return topicSubjectId;
+    }
+
+    return existingGrade.subjectId;
+  }
+
+  // A teacher may only write the grades of the classrooms they are assigned
+  // to; an admin may write any of them.
+  private async assertTeacherOwnsEnrollment(
+    actor: { role: string; userId: string },
+    enrollmentId: string
+  ) {
+    if (actor.role !== 'teacher') {
+      return;
+    }
+
+    await this.access.assertTeacherOwnsEnrollment(actor.userId, enrollmentId);
+  }
+
+  // A teacher may only grade the materias they teach; an admin may grade any.
+  private async assertTeacherOwnsSubject(
+    actor: { role: string; userId: string },
+    subjectId: string
+  ) {
+    if (actor.role !== 'teacher') {
+      return;
+    }
+
+    await this.access.assertTeacherOwnsSubject(actor.userId, subjectId);
+  }
+
   private toGradeResponse(grade: GradeRecord) {
     return {
       id: grade.id,
       institutionId: grade.institutionId,
       enrollmentId: grade.enrollmentId,
+      subjectId: grade.subjectId,
+      topicId: grade.topicId,
       subject: grade.subject,
       score: grade.score,
       createdAt: grade.createdAt,

@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { db } from '@edunic/source/db';
 import { hashPassword } from '@edunic/source/domain/auth';
 import {
@@ -15,8 +16,11 @@ import {
   notifications,
   schoolEvents,
   students,
+  classroomSubjects,
+  subjects,
   teacherClassroomAssignments,
   userInstitutionRoles,
+  userRoles,
   users,
 } from '@edunic/source/db/schema';
 
@@ -100,6 +104,15 @@ export async function createUserFixture(input: {
     id: nextId('16000000'),
     userId: user.id,
     institutionId: input.institutionId,
+    role: input.role,
+  });
+
+  // The single-school model reads the role from `user_roles` (one role per
+  // user). The legacy `user_institution_roles` row stays until the contract
+  // migration, because the domain still resolves the institution from it.
+  await db.insert(userRoles).values({
+    id: nextId('17000000'),
+    userId: user.id,
     role: input.role,
   });
 
@@ -193,19 +206,55 @@ export async function createEnrollmentFixture(input: {
   return result[0];
 }
 
+// A materia of the catalog, created the first time it is asked for.
+export async function createSubjectFixture(name = 'Mathematics') {
+  const existing = await db
+    .select()
+    .from(subjects)
+    .where(eq(subjects.name, name))
+    .limit(1);
+
+  if (existing[0]) {
+    return existing[0];
+  }
+
+  const created = await db
+    .insert(subjects)
+    .values({ id: nextId('65000000'), name })
+    .returning();
+
+  return created[0];
+}
+
+// A materia offered in a grade level.
+export async function createClassroomSubjectFixture(
+  classroomId: string,
+  subjectId: string
+) {
+  const result = await db
+    .insert(classroomSubjects)
+    .values({ classroomId, subjectId })
+    .onConflictDoNothing()
+    .returning();
+
+  return result[0];
+}
+
 export async function createGradeFixture(input: {
   institutionId: string;
   enrollmentId: string;
   subject?: string;
   score?: number;
 }) {
+  const subject = await createSubjectFixture(input.subject ?? 'Mathematics');
+
   const result = await db
     .insert(grades)
     .values({
       id: nextId('60000000'),
       institutionId: input.institutionId,
       enrollmentId: input.enrollmentId,
-      subject: input.subject ?? 'Mathematics',
+      subjectId: subject.id,
       score: input.score ?? 90,
     })
     .returning();

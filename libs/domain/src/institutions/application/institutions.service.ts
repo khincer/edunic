@@ -1,11 +1,5 @@
-import {
-  buildCursorPage,
-  type FilterSpec,
-  type SortSpec,
-} from '@edunic/source/domain/shared';
 import type {
   CreateInstitutionBody,
-  ListInstitutionsQuery,
   UpdateInstitutionBody,
 } from '../schemas/institution.schemas.js';
 import {
@@ -28,37 +22,6 @@ export class InstitutionsService {
     private readonly institutionsRepository: InstitutionsRepository
   ) {}
 
-  async listInstitutions(
-    input: ListInstitutionsQuery & {
-      filters?: FilterSpec[];
-      sort?: SortSpec | null;
-    }
-  ) {
-    const result = await this.institutionsRepository.list({
-      ...input,
-      search: input.search?.trim() || undefined,
-    });
-
-    const page = buildCursorPage(
-      result.items,
-      input,
-      {
-        sortKey: (institution) => institution.name,
-        id: (institution) => institution.id,
-      },
-      result.total
-    );
-
-    return {
-      data: page.data.map((institution) =>
-        this.toInstitutionResponse(institution)
-      ),
-      hasMore: page.hasMore,
-      ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
-      ...(page.meta !== undefined ? { meta: page.meta } : {}),
-    };
-  }
-
   async getInstitution(institutionId: string) {
     const institution = await this.institutionsRepository.findById(institutionId);
 
@@ -68,6 +31,42 @@ export class InstitutionsService {
 
     return {
       data: this.toInstitutionResponse(institution),
+    };
+  }
+
+  // The single-school model: the school is one record, not a list.
+  async getSchoolProfile() {
+    const institution = await this.institutionsRepository.findSingle();
+
+    if (!institution) {
+      throw new InstitutionsServiceError('School profile not found', 404);
+    }
+
+    return {
+      data: this.toInstitutionResponse(institution),
+    };
+  }
+
+  async updateSchoolProfile(input: UpdateInstitutionBody) {
+    const institution = await this.institutionsRepository.findSingle();
+
+    if (!institution) {
+      throw new InstitutionsServiceError('School profile not found', 404);
+    }
+
+    const updatedInstitution = await this.institutionsRepository.update({
+      institutionId: institution.id,
+      name: input.name?.trim(),
+      senderName: input.senderName,
+      replyToEmail: input.replyToEmail,
+    });
+
+    if (!updatedInstitution) {
+      throw new InstitutionsServiceError('School profile not found', 404);
+    }
+
+    return {
+      data: this.toInstitutionResponse(updatedInstitution),
     };
   }
 
@@ -105,37 +104,6 @@ export class InstitutionsService {
 
     return {
       data: this.toInstitutionResponse(updatedInstitution),
-    };
-  }
-
-  async deleteInstitution(institutionId: string) {
-    const institution = await this.institutionsRepository.findById(institutionId);
-
-    if (!institution) {
-      throw new InstitutionsServiceError('Institution not found', 404);
-    }
-
-    const dependencies =
-      await this.institutionsRepository.countDependencies(institutionId);
-
-    if (
-      dependencies.students > 0 ||
-      dependencies.classrooms > 0 ||
-      dependencies.enrollments > 0
-    ) {
-      throw new InstitutionsServiceError(
-        'Institution cannot be deleted while dependent academic records exist',
-        409
-      );
-    }
-
-    await this.institutionsRepository.delete(institutionId);
-
-    return {
-      data: {
-        id: institutionId,
-        deleted: true,
-      },
     };
   }
 

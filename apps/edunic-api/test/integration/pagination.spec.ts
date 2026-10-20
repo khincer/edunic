@@ -422,26 +422,6 @@ describe('cursor pagination for the remaining list modules', () => {
       filter: { query: 'filter=name:eq:Charlie', expectedCount: 1 },
     },
     {
-      label: 'institutions',
-      path: '/institutions',
-      // Institutions are global (not tenant-scoped), so the suite's own
-      // institution stays in the result set and sorts last by name.
-      seed: async () => {
-        const created = [];
-
-        // Seeded in name order: the stable order is name asc, id asc.
-        for (const name of ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Echo']) {
-          created.push(await createInstitutionFixture(name));
-        }
-
-        return {
-          count: 6,
-          stableOrderIds: [...created.map((row) => row.id), institutionId],
-        };
-      },
-      filter: { query: 'filter=name:eq:Charlie', expectedCount: 1 },
-    },
-    {
       label: 'notifications',
       path: '/notifications',
       seed: async () => {

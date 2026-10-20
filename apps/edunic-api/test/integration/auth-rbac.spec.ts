@@ -1,3 +1,6 @@
+import { eq } from 'drizzle-orm';
+import { db } from '@edunic/source/db';
+import { userRoles } from '@edunic/source/db/schema';
 import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
@@ -61,20 +64,22 @@ describe('auth and RBAC routes', () => {
     expect(response.status).toBe(401);
   });
 
-  it('does not reveal whether valid credentials lack a tenant role', async () => {
-    const assignedInstitution = await createInstitutionFixture('Assigned Institution');
-    const otherInstitution = await createInstitutionFixture('Other Institution');
+  it('does not reveal whether valid credentials lack a role', async () => {
+    const institution = await createInstitutionFixture();
     const user = await createUserFixture({
-      institutionId: assignedInstitution.id,
+      institutionId: institution.id,
       role: 'admin',
       email: 'tenant-admin@example.com',
       password: 'admin1234',
     });
 
+    // A user with no role at all cannot log in, and the answer is the same
+    // generic one as for wrong credentials.
+    await db.delete(userRoles).where(eq(userRoles.userId, user.id));
+
     const response = await client.post('/auth/login').send({
       email: user.email,
       password: user.password,
-      institutionId: otherInstitution.id,
     });
 
     expect(response.status).toBe(401);
@@ -116,7 +121,7 @@ describe('auth and RBAC routes', () => {
       role: 'admin',
     });
 
-    const response = await client.get('/institutions').set({
+    const response = await client.get('/school-profile').set({
       authorization: (await createAuthHeaders({
         userId: adminUser.id,
         institutionId: institution.id,
@@ -160,7 +165,7 @@ describe('auth and RBAC routes', () => {
     });
 
     const response = await client
-      .get('/institutions')
+      .get('/school-profile')
       .set({
         authorization: (await createAuthHeaders({
           userId: teacherUser.id,

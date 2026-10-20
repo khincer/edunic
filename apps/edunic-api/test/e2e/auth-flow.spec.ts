@@ -51,7 +51,7 @@ describe('E2E flow: auth', () => {
     return app.inject({
       method: 'POST',
       url: '/auth/login',
-      payload: { email, password, institutionId },
+      payload: { email, password },
     });
   }
 
@@ -74,9 +74,11 @@ describe('E2E flow: auth', () => {
     expect(typeof session.token).toBe('string');
     expect(session.user).toMatchObject({
       email: adminEmail,
-      institutionId,
       role: 'admin',
     });
+    // The session no longer carries an institution: the school comes from
+    // the user's own record, never from the client.
+    expect(session.user).not.toHaveProperty('institutionId');
 
     const headers = {
       authorization: `Bearer ${session.token}`,

@@ -18,17 +18,17 @@ type GradeSortColumn = ListGradesQuery['sortBy'];
 
 // Stable keyset order for cursor pagination (P2-R4): created_at, id.
 export const GRADE_CURSOR_ORDER: CursorOrderSpec = {
-  columns: ['created_at', 'id'],
+  columns: ['g.created_at', 'g.id'],
   direction: 'desc',
 };
 
 // Whitelisted columns for the uniform filter/sort convention. Constant
 // literals — never derived from user input.
 export const GRADE_LIST_COLUMNS = {
-  subject: 'subject',
-  score: 'score',
-  enrollmentId: 'enrollment_id',
-  createdAt: 'created_at',
+  subject: 's.name',
+  score: 'g.score',
+  enrollmentId: 'g.enrollment_id',
+  createdAt: 'g.created_at',
 } as const;
 
 type CountRow = {
@@ -43,6 +43,9 @@ export type GradeRecord = {
   id: string;
   institutionId: string;
   enrollmentId: string;
+  subjectId: string;
+  topicId: string | null;
+  // The name of the materia, so the response still reads like a grade.
   subject: string;
   score: number;
   createdAt: Date | null;
@@ -51,14 +54,16 @@ export type GradeRecord = {
 export type CreateGradeInput = {
   institutionId: string;
   enrollmentId: string;
-  subject: string;
+  subjectId: string;
+  topicId?: string | null;
   score: number;
 };
 
 export type UpdateGradeInput = {
   institutionId: string;
   gradeId: string;
-  subject?: string;
+  subjectId?: string;
+  topicId?: string | null;
   score?: number;
 };
 
@@ -83,18 +88,18 @@ export class GradesRepository {
   }
 
   async list(input: ListGradesInput): Promise<ListGradesResult> {
-    const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+    const filters: SQL[] = [sql`g.institution_id = ${input.institutionId}`];
 
     if (input.search) {
-      filters.push(sql`subject ilike ${`%${input.search}%`}`);
+      filters.push(sql`s.name ilike ${`%${input.search}%`}`);
     }
 
     if (input.enrollmentId) {
-      filters.push(sql`enrollment_id = ${input.enrollmentId}`);
+      filters.push(sql`g.enrollment_id = ${input.enrollmentId}`);
     }
 
-    if (input.subject) {
-      filters.push(sql`subject ilike ${`%${input.subject}%`}`);
+    if (input.subjectId) {
+      filters.push(sql`g.subject_id = ${input.subjectId}`);
     }
 
     filters.push(
@@ -114,13 +119,16 @@ export class GradesRepository {
 
     const itemsQuery = sql`
       select
-        id,
-        institution_id as "institutionId",
-        enrollment_id as "enrollmentId",
-        subject,
-        score,
-        created_at as "createdAt"
-      from grades
+        g.id,
+        g.institution_id as "institutionId",
+        g.enrollment_id as "enrollmentId",
+        g.subject_id as "subjectId",
+        g.topic_id as "topicId",
+        s.name as subject,
+        g.score,
+        g.created_at as "createdAt"
+      from grades g
+      join subjects s on s.id = g.subject_id
       ${whereClause}
       order by ${orderBy}
       limit ${plan.fetchLimit}
@@ -136,7 +144,8 @@ export class GradesRepository {
       this.db.execute<GradeRecord>(itemsQuery),
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
-        from grades
+        from grades g
+        join subjects s on s.id = g.subject_id
         ${whereClause}
       `),
     ]);
@@ -147,6 +156,19 @@ export class GradesRepository {
     };
   }
 
+  // The materia a tema belongs to: a grade that names a topic without its
+  // materia would point at two different subjects.
+  async findTopicSubjectId(topicId: string) {
+    const result = await this.db.execute<{ subjectId: string }>(sql`
+      select subject_id as "subjectId"
+      from topics
+      where id = ${topicId}
+      limit 1
+    `);
+
+    return result.rows[0]?.subjectId ?? null;
+  }
+
   async findById(
     institutionId: string,
     gradeId: string,
@@ -154,15 +176,18 @@ export class GradesRepository {
   ) {
     const result = await executor.execute<GradeRecord>(sql`
       select
-        id,
-        institution_id as "institutionId",
-        enrollment_id as "enrollmentId",
-        subject,
-        score,
-        created_at as "createdAt"
-      from grades
-      where id = ${gradeId}
-        and institution_id = ${institutionId}
+        g.id,
+        g.institution_id as "institutionId",
+        g.enrollment_id as "enrollmentId",
+        g.subject_id as "subjectId",
+        g.topic_id as "topicId",
+        s.name as subject,
+        g.score,
+        g.created_at as "createdAt"
+      from grades g
+      join subjects s on s.id = g.subject_id
+      where g.id = ${gradeId}
+        and g.institution_id = ${institutionId}
       limit 1
     `);
 
@@ -174,13 +199,15 @@ export class GradesRepository {
       insert into grades (
         institution_id,
         enrollment_id,
-        subject,
+        subject_id,
+        topic_id,
         score
       )
       values (
         ${input.institutionId},
         ${input.enrollmentId},
-        ${input.subject},
+        ${input.subjectId},
+        ${input.topicId ?? null},
         ${input.score}
       )
       returning id
@@ -192,8 +219,12 @@ export class GradesRepository {
   async update(input: UpdateGradeInput) {
     const assignments: SQL[] = [];
 
-    if (input.subject !== undefined) {
-      assignments.push(sql`subject = ${input.subject}`);
+    if (input.subjectId !== undefined) {
+      assignments.push(sql`subject_id = ${input.subjectId}`);
+    }
+
+    if (input.topicId !== undefined) {
+      assignments.push(sql`topic_id = ${input.topicId}`);
     }
 
     if (input.score !== undefined) {
@@ -241,11 +272,11 @@ export class GradesRepository {
   private getSortColumn(sortBy: GradeSortColumn) {
     switch (sortBy) {
       case 'subject':
-        return sql.raw('subject');
+        return sql.raw('s.name');
       case 'score':
-        return sql.raw('score');
+        return sql.raw('g.score');
       default:
-        return sql.raw('created_at');
+        return sql.raw('g.created_at');
     }
   }
 

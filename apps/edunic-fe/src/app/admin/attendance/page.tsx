@@ -14,7 +14,6 @@ import {
   type AttendanceRecord,
   type AttendanceStatus,
 } from '@/lib/api';
-import { getSession } from '@/lib/auth';
 
 export default function AdminAttendancePage() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -31,11 +30,7 @@ export default function AdminAttendancePage() {
   }, []);
 
   async function loadAttendance(nextStatus = status) {
-    const session = getSession();
 
-    if (!session) {
-      return;
-    }
 
     setLoading(true);
     setError('');
@@ -49,7 +44,7 @@ export default function AdminAttendancePage() {
       });
       const result = await apiRequest<ApiListResponse<AttendanceRecord>>(
         `/attendance${query}`,
-        { institutionId: session.user.institutionId }
+        {}
       );
       setRecords(result.data);
     } catch (err) {
@@ -60,9 +55,8 @@ export default function AdminAttendancePage() {
   }
 
   async function createAttendance() {
-    const session = getSession();
 
-    if (!session || !enrollmentId.trim()) {
+    if (!enrollmentId.trim()) {
       return;
     }
 
@@ -72,7 +66,6 @@ export default function AdminAttendancePage() {
     try {
       await apiRequest<ApiSingleResponse<AttendanceRecord>>('/attendance', {
         method: 'POST',
-        institutionId: session.user.institutionId,
         body: {
           enrollmentId,
           date,

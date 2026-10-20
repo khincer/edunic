@@ -3,9 +3,13 @@ import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
   createAcademicPeriodFixture,
+  createClassroomFixture,
   createEnrollmentFixture,
   createInstitutionFixture,
   createStudentFixture,
+  createClassroomSubjectFixture,
+  createSubjectFixture,
+  createTeacherClassroomAssignmentFixture,
   createUserFixture,
 } from '../helpers/fixtures.js';
 
@@ -32,21 +36,34 @@ describe('grades routes', () => {
       institutionId: institution.id,
       role: 'teacher',
     });
+    const classroom = await createClassroomFixture({
+      institutionId: institution.id,
+    });
+    await createTeacherClassroomAssignmentFixture({
+      institutionId: institution.id,
+      teacherUserId: teacherUser.id,
+      classroomId: classroom.id,
+    });
     const student = await createStudentFixture({ institutionId: institution.id });
     const period = await createAcademicPeriodFixture({ institutionId: institution.id });
     const enrollment = await createEnrollmentFixture({
       institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
+      classroomId: classroom.id,
     });
     const headers = await createAuthHeaders({
       userId: teacherUser.id,
       institutionId: institution.id,
     });
 
+    // The teacher owns the materia of their classroom.
+    const subject = await createSubjectFixture('Mathematics');
+    await createClassroomSubjectFixture(classroom.id, subject.id);
+
     const createResponse = await client.post('/grades').set(headers).send({
       enrollmentId: enrollment.id,
-      subject: 'Mathematics',
+      subjectId: subject.id,
       score: 88,
     });
 
@@ -95,7 +112,7 @@ describe('grades routes', () => {
       )
       .send({
         enrollmentId: enrollment.id,
-        subject: 'Science',
+        subjectId: (await createSubjectFixture('Science')).id,
         score: 95,
       });
 
