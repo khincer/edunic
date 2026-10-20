@@ -30,6 +30,28 @@ export class AccessService {
     }
   }
 
+  // The students a parent account may read.
+  async listParentStudentIds(parentUserId: string): Promise<string[]> {
+    return this.accessRepository.listParentStudentIds(parentUserId);
+  }
+
+  async assertParentOwnsStudent(
+    parentUserId: string,
+    studentId: string
+  ): Promise<void> {
+    const owns = await this.accessRepository.isParentOwnsStudent(
+      parentUserId,
+      studentId
+    );
+
+    if (!owns) {
+      throw new AppError(
+        'This student is not linked to your account',
+        403
+      );
+    }
+  }
+
   async assertTeacherOwnsSubject(
     teacherUserId: string,
     subjectId: string

@@ -39,6 +39,31 @@ export class AccessRepository {
     return result.rows.length > 0;
   }
 
+  // The students a parent account is linked to.
+  async listParentStudentIds(parentUserId: string) {
+    const result = await this.db.execute<{ studentId: string }>(sql`
+      select distinct sg.student_id as "studentId"
+      from guardian_user_links gul
+      inner join student_guardians sg on sg.guardian_id = gul.guardian_id
+      where gul.user_id = ${parentUserId}
+    `);
+
+    return result.rows.map((row) => row.studentId);
+  }
+
+  async isParentOwnsStudent(parentUserId: string, studentId: string) {
+    const result = await this.db.execute(sql`
+      select 1
+      from guardian_user_links gul
+      inner join student_guardians sg on sg.guardian_id = gul.guardian_id
+      where gul.user_id = ${parentUserId}
+        and sg.student_id = ${studentId}
+      limit 1
+    `);
+
+    return result.rows.length > 0;
+  }
+
   // The classroom an enrollment belongs to. NULL means the student is not in
   // a classroom, so no teacher owns that record.
   async findEnrollmentClassroomId(enrollmentId: string) {

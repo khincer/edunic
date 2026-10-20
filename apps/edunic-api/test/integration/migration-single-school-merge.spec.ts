@@ -55,7 +55,8 @@ describe('migration 0010 single school merge', () => {
     // Migrate up, then roll the merge back so the seed data below lands on
     // the pre-merge schema.
     await withScratchDatabaseUrl(runMigrations);
-    // 0011 (the materia reference) comes off first, then the merge.
+    // 0012, 0011 and the merge come off in order.
+    await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
   }, 120_000);

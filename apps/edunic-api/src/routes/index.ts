@@ -16,6 +16,7 @@ import { guardianRoutes } from './guardians.routes.js';
 import { gradeRoutes } from './grades.routes.js';
 import { healthRoutes, readyRoutes } from './health.routes.js';
 import { notificationRoutes } from './notifications.routes.js';
+import { paymentRoutes } from './payments.routes.js';
 import { reportRoutes } from './reports.routes.js';
 import { schoolProfileRoutes } from './school-profile.routes.js';
 import { studentRoutes } from './students.routes.js';
@@ -42,6 +43,7 @@ export async function registerRoutes(app: FastifyInstance) {
   app.register(healthRoutes, { prefix: '/health' });
   app.register(readyRoutes);
   app.register(notificationRoutes);
+  app.register(paymentRoutes, { prefix: '/payments' });
   app.register(reportRoutes, { prefix: '/reports' });
   app.register(schoolProfileRoutes, { prefix: '/school-profile' });
   app.register(studentRoutes, { prefix: '/students' });
