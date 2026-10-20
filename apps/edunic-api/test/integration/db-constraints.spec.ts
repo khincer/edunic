@@ -84,13 +84,13 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
     await scratch.end();
     await admin.query(`DROP DATABASE IF EXISTS ${SCRATCH_DB} WITH (FORCE)`);
     await admin.end();
-  });
+  }, 60_000);
 
   it('applies every migration to a fresh database', async () => {
     const migrations = await scratch.query(
       'SELECT COUNT(*)::int AS count FROM drizzle.__drizzle_migrations'
     );
-    expect(migrations.rows[0]).toEqual({ count: 10 });
+    expect(migrations.rows[0]).toEqual({ count: 11 });
 
     const tables = [
       'users',

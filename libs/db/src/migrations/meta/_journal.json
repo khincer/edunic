@@ -71,6 +71,13 @@
       "when": 1792456300000,
       "tag": "0009_single_school_expand",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792456400000,
+      "tag": "0010_single_school_merge",
+      "breakpoints": true
     }
   ]
 }

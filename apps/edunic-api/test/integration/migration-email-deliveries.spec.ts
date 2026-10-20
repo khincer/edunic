@@ -138,7 +138,8 @@ describe('migration 0008 email_deliveries (D4)', () => {
         'email_deliveries_pkey',
         'email_deliveries_inflight_idx',
         'email_deliveries_institution_created_idx',
-        'email_deliveries_institution_event_recipient_unique',
+        // The institution-free idempotency key, installed by migration 0010.
+        'email_deliveries_event_id_recipient_address_unique',
       ].sort()
     );
 
@@ -238,6 +239,22 @@ describe('migration 0008 email_deliveries (D4)', () => {
     await db.execute(
       sql.raw(readFileSync(`${MIGRATIONS_DIR}/0008_email_deliveries.sql`, 'utf8'))
     );
+
+    // 0009 and 0010 come after 0008 in the chain. 0008's up recreates the
+    // ledger with its institution-scoped unique key, so the later migrations
+    // are re-applied here — otherwise the database would end up disagreeing
+    // with the applied migration list.
+    await db.execute(
+      sql.raw(
+        readFileSync(`${MIGRATIONS_DIR}/0009_single_school_expand.sql`, 'utf8')
+      )
+    );
+    await db.execute(
+      sql.raw(
+        readFileSync(`${MIGRATIONS_DIR}/0010_single_school_merge.sql`, 'utf8')
+      )
+    );
+
     expect(await tableName('email_deliveries')).toBe('email_deliveries');
     expect(await columnExists('guardians', 'email')).toBe(true);
     expect(await emailFlagDefault()).toBe(false);

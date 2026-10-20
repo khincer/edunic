@@ -663,8 +663,8 @@ export const emailDeliveries = pgTable(
   },
   (t) => ({
     uniqueEventRecipient: unique(
-      'email_deliveries_institution_event_recipient_unique'
-    ).on(t.institutionId, t.eventId, t.recipientAddress),
+      'email_deliveries_event_id_recipient_address_unique'
+    ).on(t.eventId, t.recipientAddress),
     validRecipientSource: check(
       'email_deliveries_recipient_source_check',
       sql`${t.recipientSource} in ('guardian', 'user')`

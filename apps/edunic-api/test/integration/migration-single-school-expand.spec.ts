@@ -253,6 +253,14 @@ describe('migration 0009 single school expand', () => {
     expect(await tableName('payments')).toBe('payments');
     expect(await columnExists('grades', 'subject_id')).toBe(true);
 
+    // 0009's up recreated these tables empty, so the backfill that populates
+    // them (0010) is re-applied to leave the database consistent.
+    await db.execute(
+      sql.raw(
+        readFileSync(`${MIGRATIONS_DIR}/0010_single_school_merge.sql`, 'utf8')
+      )
+    );
+
     // The migrator journal stays consistent: a re-run is a no-op, not an error.
     await expect(runMigrations()).resolves.toBeUndefined();
   }, 60_000);
