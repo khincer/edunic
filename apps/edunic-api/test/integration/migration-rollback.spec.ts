@@ -106,12 +106,12 @@ describe('migration down runner (P4-R6, D6)', () => {
     return (result.rows[0] as { count: number }).count;
   }
 
-  it('up -> down -> up restores the full schema (0008 down to 0000)', async () => {
+  it('up -> down -> up restores the full schema (0009 down to 0000)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(9);
+    expect(await appliedCount()).toBe(10);
 
-    for (let step = 0; step < 9; step += 1) {
+    for (let step = 0; step < 10; step += 1) {
       await withScratchDatabaseUrl(runMigrationsDown);
     }
     expect(await appliedCount()).toBe(0);
@@ -126,21 +126,33 @@ describe('migration down runner (P4-R6, D6)', () => {
     }
 
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(9);
+    expect(await appliedCount()).toBe(10);
     for (const table of [
       'email_deliveries',
       'outbox_events',
       'report_history',
       'users',
       'students',
+      'user_roles',
+      'subjects',
+      'payments',
     ]) {
       expect(await tableExists(table)).toBe(true);
     }
   }, 60_000);
 
-  it('rolls back exactly one migration per step (0008, 0007, 0006, 0005)', async () => {
+  it('rolls back exactly one migration per step (0009, 0008, 0007, 0006, 0005)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
+
+    // 0009 down: the single-school tables go; 0008's ledger stays.
+    await withScratchDatabaseUrl(runMigrationsDown);
+    expect(await appliedCount()).toBe(9);
+    expect(await tableExists('user_roles')).toBe(false);
+    expect(await tableExists('subjects')).toBe(false);
+    expect(await tableExists('payments')).toBe(false);
+    expect(await columnExists('grades', 'subject_id')).toBe(false);
+    expect(await tableExists('email_deliveries')).toBe(true);
 
     // 0008 down: only the email ledger goes; 0007's columns stay.
     await withScratchDatabaseUrl(runMigrationsDown);

@@ -69,6 +69,26 @@ export const userInstitutionRoles = pgTable(
   })
 );
 
+// Single-school model: one role per user, no institution dimension. Replaces
+// `user_institution_roles` once the auth contract drops the institution.
+// The unique constraint is the ROLE-05 guarantee: a user holds exactly one
+// role, so the same person cannot be an admin in one school and a teacher in
+// another.
+export const userRoles = pgTable(
+  'user_roles',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    role: text('role').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (t) => ({
+    uniqueUserRole: unique().on(t.userId),
+  })
+);
+
 /* =========================================================
    👨‍🎓 STUDENTS
 ========================================================= */
@@ -207,6 +227,79 @@ export const teacherClassroomAssignments = pgTable(
 );
 
 /* =========================================================
+   📚 SUBJECTS & TOPICS (single-school)
+   ========================================================= */
+
+// A "materia" (Math, History) and the "temas" it contains (sums, fractions,
+// revolutions). Both are first-class: grades and assignments point at a
+// materia and optionally at one of its temas.
+export const subjects = pgTable(
+  'subjects',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: text('name').notNull(),
+    code: text('code'),
+    description: text('description'),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (t) => ({
+    uniqueSubjectName: unique().on(t.name),
+  })
+);
+
+export const topics = pgTable(
+  'topics',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    subjectId: uuid('subject_id')
+      .notNull()
+      .references(() => subjects.id),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (t) => ({
+    uniqueTopicName: unique().on(t.subjectId, t.name),
+  })
+);
+
+// Which materias a grade level (classroom) offers.
+export const classroomSubjects = pgTable(
+  'classroom_subjects',
+  {
+    classroomId: uuid('classroom_id')
+      .notNull()
+      .references(() => classrooms.id),
+    subjectId: uuid('subject_id')
+      .notNull()
+      .references(() => subjects.id),
+  },
+  (t) => ({
+    pk: primaryKey({
+      columns: [t.classroomId, t.subjectId],
+    }),
+  })
+);
+
+// Which materias a teacher is responsible for.
+export const subjectTeachers = pgTable(
+  'subject_teachers',
+  {
+    subjectId: uuid('subject_id')
+      .notNull()
+      .references(() => subjects.id),
+    teacherUserId: uuid('teacher_user_id')
+      .notNull()
+      .references(() => users.id),
+  },
+  (t) => ({
+    pk: primaryKey({
+      columns: [t.subjectId, t.teacherUserId],
+    }),
+  })
+);
+
+/* =========================================================
    📚 ENROLLMENTS
 ========================================================= */
 
@@ -256,6 +349,11 @@ export const grades = pgTable(
     enrollmentId: uuid('enrollment_id')
       .notNull()
       .references(() => enrollments.id),
+
+    // The free-text `subject` column survives until the contract migration
+    // backfills `subject_id` from it; the text column is dropped there.
+    subjectId: uuid('subject_id').references(() => subjects.id),
+    topicId: uuid('topic_id').references(() => topics.id),
 
     subject: text('subject').notNull(),
     score: integer('score').notNull(),
@@ -341,6 +439,9 @@ export const assignments = pgTable('assignments', {
     .notNull()
     .references(() => institutions.id),
   classroomId: uuid('classroom_id').references(() => classrooms.id),
+  // An assignment targets a materia and optionally one of its temas.
+  subjectId: uuid('subject_id').references(() => subjects.id),
+  topicId: uuid('topic_id').references(() => topics.id),
   createdByUserId: uuid('created_by_user_id').references(() => users.id),
   title: text('title').notNull(),
   type: text('type').notNull(),
@@ -401,6 +502,47 @@ export const reportHistory = pgTable('report_history', {
 /* =========================================================
    🚩 FEATURE FLAGS
 ========================================================= */
+
+/* =========================================================
+   OFFLINE PAYMENTS (single-school)
+   ========================================================= */
+
+// The offline payment ledger: one row per billed concept for a student.
+// `status` and `paid_at` are kept consistent by a check constraint, so a
+// payment is either unpaid with no date, or paid with one.
+export const payments = pgTable(
+  'payments',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id),
+    concept: text('concept').notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    dueDate: timestamp('due_date'),
+    paidAt: timestamp('paid_at'),
+    method: text('method').notNull(),
+    status: text('status').notNull().default('pending'),
+    receiptNumber: text('receipt_number').notNull(),
+    recordedByUserId: uuid('recorded_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    note: text('note'),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (t) => ({
+    uniqueReceiptNumber: unique().on(t.receiptNumber),
+    positiveAmount: check('payments_amount_cents_check', sql`${t.amountCents} > 0`),
+    validStatus: check(
+      'payments_status_check',
+      sql`${t.status} in ('pending', 'paid', 'cancelled')`
+    ),
+    paidMatchesDate: check(
+      'payments_paid_at_check',
+      sql`(${t.status} = 'paid') = (${t.paidAt} is not null)`
+    ),
+  })
+);
 
 export const featureFlags = pgTable('feature_flags', {
   key: text('key').primaryKey(),
