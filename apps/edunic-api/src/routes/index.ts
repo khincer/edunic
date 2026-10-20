@@ -19,6 +19,7 @@ import { notificationRoutes } from './notifications.routes.js';
 import { reportRoutes } from './reports.routes.js';
 import { schoolProfileRoutes } from './school-profile.routes.js';
 import { studentRoutes } from './students.routes.js';
+import { teacherRoutes } from './teachers.routes.js';
 import { workflowRoutes } from './workflows.routes.js';
 
 export async function registerRoutes(app: FastifyInstance) {
@@ -43,5 +44,6 @@ export async function registerRoutes(app: FastifyInstance) {
   app.register(reportRoutes, { prefix: '/reports' });
   app.register(schoolProfileRoutes, { prefix: '/school-profile' });
   app.register(studentRoutes, { prefix: '/students' });
+  app.register(teacherRoutes, { prefix: '/teachers' });
   app.register(workflowRoutes);
 }
