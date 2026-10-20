@@ -30,7 +30,7 @@ export default function SchoolSettingsPage() {
 
       try {
         const result = await apiRequest<ApiSingleResponse<Institution>>(
-          `/institutions/${institutionId}`
+          `/school-profile`
         );
         setInstitution(result.data);
       } catch (err) {
@@ -58,9 +58,6 @@ export default function SchoolSettingsPage() {
         <div className="button-row">
           <ButtonLink href="/admin/settings/edit" variant="secondary">
             Edit
-          </ButtonLink>
-          <ButtonLink href="/admin/institutions" variant="secondary">
-            Back
           </ButtonLink>
         </div>
       </header>

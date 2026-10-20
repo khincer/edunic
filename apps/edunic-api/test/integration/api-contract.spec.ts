@@ -30,8 +30,7 @@ const PROTECTED_GET_ROUTES = [
   `/guardians`,
   `/guardians/${FAKE_ID}`,
   `/students/${FAKE_ID}/guardians`,
-  `/institutions`,
-  `/institutions/${FAKE_ID}`,
+    `/school-profile`,
   `/institutions/${FAKE_ID}/extensions`,
   `/audit-logs`,
   `/custom-fields`,
@@ -177,7 +176,7 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
         institutionId,
       });
 
-      for (const route of ['/institutions', '/audit-logs']) {
+      for (const route of ['/school-profile', '/audit-logs']) {
         const response = await app.inject({
           method: 'GET',
           url: route,

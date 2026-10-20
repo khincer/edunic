@@ -31,7 +31,7 @@ export default function InstitutionFeatureFlagsPage() {
 
     try {
       const [institutionResult, flagsResult] = await Promise.all([
-        apiRequest<ApiSingleResponse<Institution>>(`/institutions/${institutionId}`),
+        apiRequest<ApiSingleResponse<Institution>>(`/school-profile`),
         apiRequest<{ data: FeatureFlag[] }>(
           `/institutions/${institutionId}/feature-flags`
         ),

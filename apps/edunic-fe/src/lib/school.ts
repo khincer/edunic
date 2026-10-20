@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiRequest, type ApiListResponse, type Institution } from './api';
+import { apiRequest, type ApiSingleResponse, type Institution } from './api';
 
 /**
  * The school is a single row. The admin pages read it once and use its id for
@@ -18,10 +18,10 @@ export function useSchool() {
 
     async function load() {
       try {
-        const result = await apiRequest<ApiListResponse<Institution>>('/institutions');
+        const result = await apiRequest<ApiSingleResponse<Institution>>('/school-profile');
 
         if (active) {
-          setSchool(result.data[0] ?? null);
+          setSchool(result.data);
         }
       } catch (err) {
         if (active) {

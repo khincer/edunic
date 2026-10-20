@@ -37,7 +37,7 @@ export default function InstitutionAuditLogsPage() {
 
       try {
         const [institutionResult, logsResult] = await Promise.all([
-          apiRequest<ApiSingleResponse<Institution>>(`/institutions/${institutionId}`),
+          apiRequest<ApiSingleResponse<Institution>>(`/school-profile`),
           apiRequest<ApiListResponse<AuditLog>>(
             `/audit-logs?limit=${PAGE_SIZE}&offset=${offset}&sortOrder=desc`,
           ),

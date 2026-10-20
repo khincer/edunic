@@ -34,7 +34,7 @@ export default function InstitutionExtensionsPage() {
 
     try {
       const [institutionResult, extensionsResult, enabledResult] = await Promise.all([
-        apiRequest<ApiSingleResponse<Institution>>(`/institutions/${institutionId}`),
+        apiRequest<ApiSingleResponse<Institution>>(`/school-profile`),
         apiRequest<ApiListResponse<Extension>>('/extensions?limit=100&offset=0&sortOrder=asc'),
         apiRequest<ApiSingleResponse<InstitutionExtension[]> | { data: InstitutionExtension[] }>(
           `/institutions/${institutionId}/extensions`

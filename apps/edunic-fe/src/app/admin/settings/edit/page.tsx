@@ -40,7 +40,7 @@ export default function EditInstitutionPage() {
 
       try {
         const result = await apiRequest<ApiSingleResponse<Institution>>(
-          `/institutions/${institutionId}`
+          `/school-profile`
         );
         setName(result.data.name);
         setSenderName(result.data.senderName ?? '');
@@ -61,7 +61,7 @@ export default function EditInstitutionPage() {
     setBusy(true);
 
     try {
-      await apiRequest<ApiSingleResponse<Institution>>(`/institutions/${institutionId}`, {
+      await apiRequest<ApiSingleResponse<Institution>>(`/school-profile`, {
         method: 'PATCH',
         body: { name, senderName, replyToEmail },
       });

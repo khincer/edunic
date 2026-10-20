@@ -77,10 +77,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="button-row">
-          <ButtonLink href="/admin/institutions">Institutions</ButtonLink>
-          <ButtonLink href="/admin/institutions/new" variant="secondary">
-            New school
-          </ButtonLink>
+          <ButtonLink href="/admin/settings">School</ButtonLink>
         </div>
       </header>
 

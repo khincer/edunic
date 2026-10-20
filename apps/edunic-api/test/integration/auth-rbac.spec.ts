@@ -121,7 +121,7 @@ describe('auth and RBAC routes', () => {
       role: 'admin',
     });
 
-    const response = await client.get('/institutions').set({
+    const response = await client.get('/school-profile').set({
       authorization: (await createAuthHeaders({
         userId: adminUser.id,
         institutionId: institution.id,
@@ -165,7 +165,7 @@ describe('auth and RBAC routes', () => {
     });
 
     const response = await client
-      .get('/institutions')
+      .get('/school-profile')
       .set({
         authorization: (await createAuthHeaders({
           userId: teacherUser.id,
