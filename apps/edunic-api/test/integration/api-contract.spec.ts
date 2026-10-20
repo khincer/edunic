@@ -189,7 +189,7 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
       }
     });
 
-    it('answers the FORBIDDEN envelope on an x-institution-id mismatch', async () => {
+    it('ignores an x-institution-id header: the school comes from the user', async () => {
       const adminUser = await createUserFixture({
         institutionId,
         role: 'admin',
@@ -206,12 +206,9 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
         headers: { ...adminHeaders, 'x-institution-id': otherInstitution.id },
       });
 
-      expect(response.statusCode).toBe(403);
-      const body = response.json();
-      expect(body.code).toBe('FORBIDDEN');
-      expect(body.message).toBe(
-        'Authenticated institution does not match x-institution-id'
-      );
+      // The tenant header no longer selects a school, so a mismatched value
+      // is ignored instead of rejected.
+      expect(response.statusCode).toBe(200);
     });
   });
 

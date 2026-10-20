@@ -2,7 +2,6 @@ import { SignJWT, jwtVerify } from 'jose';
 
 export type JwtPayload = {
   sub: string;
-  institutionId: string;
   exp: number;
 };
 
@@ -10,14 +9,16 @@ function keyFor(secret: string) {
   return new TextEncoder().encode(secret);
 }
 
+// The token carries no institution: the school is resolved server-side from
+// the user's own record, never from a client-supplied value.
 export async function signJwt(
-  payload: Omit<JwtPayload, 'exp'> & { exp?: number },
+  payload: { sub: string; exp?: number },
   secret: string,
   expiresInSeconds = 60 * 60 * 12
 ) {
   const exp = payload.exp ?? Math.floor(Date.now() / 1000) + expiresInSeconds;
 
-  return new SignJWT({ institutionId: payload.institutionId })
+  return new SignJWT({})
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(payload.sub)
     .setExpirationTime(exp)
@@ -41,15 +42,14 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
     throw new Error('Invalid token');
   }
 
-  const { sub, institutionId, exp } = verified.payload;
+  const { sub, exp } = verified.payload;
 
-  if (!sub || typeof institutionId !== 'string' || typeof exp !== 'number') {
+  if (!sub || typeof exp !== 'number') {
     throw new Error('Invalid token');
   }
 
   return {
     sub,
-    institutionId,
     exp,
   };
 }

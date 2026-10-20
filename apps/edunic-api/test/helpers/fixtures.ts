@@ -17,6 +17,7 @@ import {
   students,
   teacherClassroomAssignments,
   userInstitutionRoles,
+  userRoles,
   users,
 } from '@edunic/source/db/schema';
 
@@ -100,6 +101,15 @@ export async function createUserFixture(input: {
     id: nextId('16000000'),
     userId: user.id,
     institutionId: input.institutionId,
+    role: input.role,
+  });
+
+  // The single-school model reads the role from `user_roles` (one role per
+  // user). The legacy `user_institution_roles` row stays until the contract
+  // migration, because the domain still resolves the institution from it.
+  await db.insert(userRoles).values({
+    id: nextId('17000000'),
+    userId: user.id,
     role: input.role,
   });
 

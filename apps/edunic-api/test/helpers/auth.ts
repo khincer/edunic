@@ -6,10 +6,12 @@ export async function createBearerToken(input: {
   institutionId: string;
   expiresAt?: number;
 }) {
+  // The token carries no institution: the server resolves it from the user's
+  // own record. The institution is still sent as a header so the tests keep
+  // exercising the request shape they always had.
   return signJwt(
     {
       sub: input.userId,
-      institutionId: input.institutionId,
       exp: input.expiresAt,
     },
     env.JWT_SECRET

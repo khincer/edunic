@@ -28,6 +28,7 @@ import {
   studentGuardians,
   teacherClassroomAssignments,
   userInstitutionRoles,
+  userRoles,
   users,
   students,
 } from '../libs/db/src/schema/index.js';
@@ -48,6 +49,12 @@ const ids = {
     centralTeacher: '71000000-0000-0000-0000-000000000002',
     centralParent: '71000000-0000-0000-0000-000000000003',
     northAdmin: '71000000-0000-0000-0000-000000000004',
+  },
+  userRoles: {
+    centralAdmin: '72000000-0000-0000-0000-000000000001',
+    centralTeacher: '72000000-0000-0000-0000-000000000002',
+    centralParent: '72000000-0000-0000-0000-000000000003',
+    northAdmin: '72000000-0000-0000-0000-000000000004',
   },
   academicPeriods: {
     centralTerm1: '10000000-0000-0000-0000-000000000001',
@@ -203,6 +210,35 @@ export async function seedDatabase() {
         id: ids.userInstitutionRoles.northAdmin,
         userId: ids.users.northAdmin,
         institutionId: ids.institutions.north,
+        role: 'admin',
+      },
+    ])
+    .onConflictDoNothing();
+
+  // The single-school model reads the role from `user_roles` (one role per
+  // user). The legacy `user_institution_roles` rows stay until the contract
+  // migration, because the domain still resolves the institution from them.
+  await db
+    .insert(userRoles)
+    .values([
+      {
+        id: ids.userRoles.centralAdmin,
+        userId: ids.users.centralAdmin,
+        role: 'admin',
+      },
+      {
+        id: ids.userRoles.centralTeacher,
+        userId: ids.users.centralTeacher,
+        role: 'teacher',
+      },
+      {
+        id: ids.userRoles.centralParent,
+        userId: ids.users.centralParent,
+        role: 'parent',
+      },
+      {
+        id: ids.userRoles.northAdmin,
+        userId: ids.users.northAdmin,
         role: 'admin',
       },
     ])
