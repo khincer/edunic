@@ -7,11 +7,9 @@ const scoreSchema = z
   .min(0, 'Score must be at least 0')
   .max(100, 'Score must be 100 or less');
 
-const subjectSchema = z
-  .string()
-  .trim()
-  .min(1, 'Subject is required')
-  .max(120, 'Subject must be 120 characters or less');
+// A grade points at a materia and optionally at one of its temas.
+const subjectIdSchema = uuidSchema;
+const topicIdSchema = uuidSchema;
 
 export const gradeParamsSchema = z.object({
   gradeId: uuidSchema,
@@ -21,7 +19,7 @@ export const listGradesQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   cursor: z.string().trim().min(1).max(512).optional(),
   enrollmentId: uuidSchema.optional(),
-  subject: z.string().trim().max(120).optional(),
+  subjectId: subjectIdSchema.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
   offset: z.coerce.number().int().min(0).default(0),
   sortBy: z.enum(['createdAt', 'subject', 'score']).default('createdAt'),
@@ -30,17 +28,22 @@ export const listGradesQuerySchema = z.object({
 
 export const createGradeBodySchema = z.object({
   enrollmentId: uuidSchema,
-  subject: subjectSchema,
+  subjectId: subjectIdSchema,
+  topicId: topicIdSchema.optional(),
   score: z.coerce.number().pipe(scoreSchema),
 });
 
 export const updateGradeBodySchema = z
   .object({
-    subject: subjectSchema.optional(),
+    subjectId: subjectIdSchema.optional(),
+    topicId: topicIdSchema.optional(),
     score: z.coerce.number().pipe(scoreSchema).optional(),
   })
   .refine(
-    (value) => value.subject !== undefined || value.score !== undefined,
+    (value) =>
+      value.subjectId !== undefined ||
+      value.topicId !== undefined ||
+      value.score !== undefined,
     {
       message: 'At least one field must be provided',
     }

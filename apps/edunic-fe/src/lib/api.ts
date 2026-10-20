@@ -111,10 +111,21 @@ export type AttendanceRecord = {
   createdAt: string | null;
 };
 
+export type Subject = {
+  id: string;
+  name: string;
+  code: string | null;
+  description: string | null;
+  active: boolean;
+  createdAt: string;
+};
+
 export type Grade = {
   id: string;
   institutionId: string;
   enrollmentId: string;
+  subjectId: string;
+  topicId: string | null;
   subject: string;
   score: number;
   createdAt: string | null;

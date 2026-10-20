@@ -6,6 +6,7 @@ import {
   createEnrollmentFixture,
   createInstitutionFixture,
   createStudentFixture,
+  createSubjectFixture,
   createUserFixture,
 } from '../helpers/fixtures.js';
 
@@ -58,7 +59,7 @@ describe('notifications routes', () => {
 
     const gradeResponse = await client.post('/grades').set(headers).send({
       enrollmentId: enrollment.id,
-      subject: 'Mathematics',
+      subjectId: (await createSubjectFixture('Mathematics')).id,
       score: 95,
     });
 

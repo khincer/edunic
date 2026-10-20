@@ -464,12 +464,13 @@ export class DashboardsRepository {
     const result = await this.db.execute<RecentGradeRow>(sql`
       select
         g.id,
-        g.subject,
+        subjects.name as subject,
         g.score,
         g.created_at as "createdAt",
         s.id as "studentId",
         concat(s.first_name, ' ', s.last_name) as "studentName"
       from grades g
+      inner join subjects on subjects.id = g.subject_id
       inner join enrollments e
         on e.id = g.enrollment_id
        and e.institution_id = g.institution_id
@@ -588,6 +589,7 @@ export class DashboardsRepository {
         avg(g.score)::numeric(10,2) as average,
         count(g.id)::int as "gradeCount"
       from grades g
+      inner join subjects on subjects.id = g.subject_id
       inner join enrollments e
         on e.id = g.enrollment_id
        and e.institution_id = g.institution_id
@@ -633,12 +635,13 @@ export class DashboardsRepository {
     const result = await this.db.execute<RecentGradeRow>(sql`
       select
         g.id,
-        g.subject,
+        subjects.name as subject,
         g.score,
         g.created_at as "createdAt",
         s.id as "studentId",
         concat(s.first_name, ' ', s.last_name) as "studentName"
       from grades g
+      inner join subjects on subjects.id = g.subject_id
       inner join enrollments e
         on e.id = g.enrollment_id
        and e.institution_id = g.institution_id

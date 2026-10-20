@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { sql } from 'drizzle-orm';
-import { db, runMigrations } from '@edunic/source/db';
+import { db, runMigrations, runMigrationsDown } from '@edunic/source/db';
 import { ensureTestDatabaseReady } from '../helpers/db.js';
 
 const MIGRATIONS_DIR = 'libs/db/src/migrations';
@@ -225,14 +225,11 @@ describe('migration 0009 single school expand', () => {
   });
 
   it('down reverses 0009 and up re-applies it cleanly', async () => {
-    await db.execute(
-      sql.raw(
-        readFileSync(
-          `${MIGRATIONS_DIR}/0009_single_school_expand.down.sql`,
-          'utf8'
-        )
-      )
-    );
+    // 0011, 0010 and 0009 come off in order: each of them builds on what the
+    // previous one created, and the runner keeps the journal in step.
+    await runMigrationsDown();
+    await runMigrationsDown();
+    await runMigrationsDown();
 
     expect(await tableName('user_roles')).toBeNull();
     expect(await tableName('subjects')).toBeNull();
@@ -240,26 +237,11 @@ describe('migration 0009 single school expand', () => {
     expect(await columnExists('grades', 'subject_id')).toBe(false);
     expect(await columnExists('assignments', 'topic_id')).toBe(false);
 
-    await db.execute(
-      sql.raw(
-        readFileSync(
-          `${MIGRATIONS_DIR}/0009_single_school_expand.sql`,
-          'utf8'
-        )
-      )
-    );
+    await runMigrations();
 
     expect(await tableName('user_roles')).toBe('user_roles');
     expect(await tableName('payments')).toBe('payments');
     expect(await columnExists('grades', 'subject_id')).toBe(true);
-
-    // 0009's up recreated these tables empty, so the backfill that populates
-    // them (0010) is re-applied to leave the database consistent.
-    await db.execute(
-      sql.raw(
-        readFileSync(`${MIGRATIONS_DIR}/0010_single_school_merge.sql`, 'utf8')
-      )
-    );
 
     // The migrator journal stays consistent: a re-run is a no-op, not an error.
     await expect(runMigrations()).resolves.toBeUndefined();

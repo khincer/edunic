@@ -7,6 +7,8 @@ import {
   createEnrollmentFixture,
   createInstitutionFixture,
   createStudentFixture,
+  createClassroomSubjectFixture,
+  createSubjectFixture,
   createTeacherClassroomAssignmentFixture,
   createUserFixture,
 } from '../helpers/fixtures.js';
@@ -55,9 +57,13 @@ describe('grades routes', () => {
       institutionId: institution.id,
     });
 
+    // The teacher owns the materia of their classroom.
+    const subject = await createSubjectFixture('Mathematics');
+    await createClassroomSubjectFixture(classroom.id, subject.id);
+
     const createResponse = await client.post('/grades').set(headers).send({
       enrollmentId: enrollment.id,
-      subject: 'Mathematics',
+      subjectId: subject.id,
       score: 88,
     });
 
@@ -106,7 +112,7 @@ describe('grades routes', () => {
       )
       .send({
         enrollmentId: enrollment.id,
-        subject: 'Science',
+        subjectId: (await createSubjectFixture('Science')).id,
         score: 95,
       });
 

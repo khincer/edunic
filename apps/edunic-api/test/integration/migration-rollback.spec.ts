@@ -106,12 +106,12 @@ describe('migration down runner (P4-R6, D6)', () => {
     return (result.rows[0] as { count: number }).count;
   }
 
-  it('up -> down -> up restores the full schema (0010 down to 0000)', async () => {
+  it('up -> down -> up restores the full schema (0011 down to 0000)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(11);
+    expect(await appliedCount()).toBe(12);
 
-    for (let step = 0; step < 11; step += 1) {
+    for (let step = 0; step < 12; step += 1) {
       await withScratchDatabaseUrl(runMigrationsDown);
     }
     expect(await appliedCount()).toBe(0);
@@ -126,7 +126,7 @@ describe('migration down runner (P4-R6, D6)', () => {
     }
 
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(11);
+    expect(await appliedCount()).toBe(12);
     for (const table of [
       'email_deliveries',
       'outbox_events',
@@ -144,6 +144,11 @@ describe('migration down runner (P4-R6, D6)', () => {
   it('rolls back exactly one migration per step (0010, 0009, 0008, 0007, 0006, 0005)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
+
+    // 0011 down: the materia name comes back as free text.
+    await withScratchDatabaseUrl(runMigrationsDown);
+    expect(await appliedCount()).toBe(11);
+    expect(await columnExists('grades', 'subject')).toBe(true);
 
     // 0010 down: the merge is irreversible, but the email key goes back to
     // the institution-scoped one. 0009's tables stay.

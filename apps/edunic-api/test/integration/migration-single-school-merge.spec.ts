@@ -55,6 +55,8 @@ describe('migration 0010 single school merge', () => {
     // Migrate up, then roll the merge back so the seed data below lands on
     // the pre-merge schema.
     await withScratchDatabaseUrl(runMigrations);
+    // 0011 (the materia reference) comes off first, then the merge.
+    await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
   }, 120_000);
 
@@ -216,7 +218,7 @@ describe('migration 0010 single school merge', () => {
     ]);
 
     const grades = await db().query(
-      'select id, institution_id, subject from grades order by id'
+      'select g.id, g.institution_id, s.name as subject from grades g join subjects s on s.id = g.subject_id order by g.id'
     );
     expect(grades.rows.every((row) => row.institution_id === A)).toBe(true);
     expect(grades.rows).toHaveLength(2);
@@ -305,13 +307,13 @@ describe('migration 0010 single school merge', () => {
     ]);
 
     const grades = await db().query(
-      `select g.subject, s.name as subject_name
+      `select s.name as subject_name
         from grades g join subjects s on s.id = g.subject_id
-        order by g.subject`
+        order by s.name`
     );
     expect(grades.rows).toEqual([
-      { subject: 'History', subject_name: 'History' },
-      { subject: 'Mathematics', subject_name: 'Mathematics' },
+      { subject_name: 'History' },
+      { subject_name: 'Mathematics' },
     ]);
   });
 

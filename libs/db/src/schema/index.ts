@@ -350,12 +350,11 @@ export const grades = pgTable(
       .notNull()
       .references(() => enrollments.id),
 
-    // The free-text `subject` column survives until the contract migration
-    // backfills `subject_id` from it; the text column is dropped there.
-    subjectId: uuid('subject_id').references(() => subjects.id),
+    // A grade points at a materia and optionally at one of its temas.
+    subjectId: uuid('subject_id')
+      .notNull()
+      .references(() => subjects.id),
     topicId: uuid('topic_id').references(() => topics.id),
-
-    subject: text('subject').notNull(),
     score: integer('score').notNull(),
 
     createdAt: timestamp('created_at').defaultNow(),

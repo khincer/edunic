@@ -24,7 +24,7 @@ describe('GradesService', () => {
       role: 'admin',
       userId: 'user-1',
         enrollmentId: 'enrollment-1',
-        subject: 'Science',
+        subjectId: 'subject-1',
         score: 90,
       })
     ).rejects.toEqual(
@@ -61,19 +61,19 @@ describe('GradesService', () => {
     const publish = jest.fn().mockResolvedValue(undefined);
     const service = new GradesService(repository as never, {
       publish,
-    } as never);
+    } as never, access);
 
     const result = await service.createGrade({
       institutionId: 'inst-1',
       role: 'admin',
       userId: 'user-1',
       enrollmentId: 'enrollment-1',
-      subject: 'Science',
+      subjectId: 'subject-1',
       score: 90,
     });
 
     expect(result.data).toEqual(
-      expect.objectContaining({ id: 'grade-1', subject: 'Science' })
+      expect.objectContaining({ id: 'grade-1' })
     );
     expect(repository.transaction).toHaveBeenCalledTimes(1);
     expect(repository.create).toHaveBeenCalledWith(
@@ -106,7 +106,7 @@ describe('GradesService', () => {
       .mockRejectedValue(new Error('event bus down (injected)'));
     const service = new GradesService(repository as never, {
       publish,
-    } as never);
+    } as never, access);
 
     await expect(
       service.createGrade({
@@ -114,7 +114,7 @@ describe('GradesService', () => {
       role: 'admin',
       userId: 'user-1',
         enrollmentId: 'enrollment-1',
-        subject: 'Science',
+        subjectId: 'subject-1',
         score: 90,
       })
     ).rejects.toThrow('event bus down (injected)');
@@ -133,7 +133,7 @@ describe('GradesService', () => {
       role: 'admin',
       userId: 'user-1',
       enrollmentId: 'enrollment-1',
-      subject: 'Science',
+      subjectId: 'subject-1',
       score: 90,
     });
 

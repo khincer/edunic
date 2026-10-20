@@ -12,37 +12,46 @@ import {
   type ApiListResponse,
   type ApiSingleResponse,
   type Grade,
+  type Subject,
 } from '@/lib/api';
 
 export default function AdminGradesPage() {
   const [grades, setGrades] = useState<Grade[]>([]);
-  const [subject, setSubject] = useState('');
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjectId, setSubjectId] = useState('');
   const [enrollmentId, setEnrollmentId] = useState('');
-  const [newSubject, setNewSubject] = useState('');
+  const [newSubjectId, setNewSubjectId] = useState('');
   const [score, setScore] = useState('90');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    void loadSubjects();
     void loadGrades();
   }, []);
 
-  async function loadGrades(nextSubject = subject) {
+  async function loadSubjects() {
+    try {
+      const result = await apiRequest<ApiListResponse<Subject>>('/subjects');
+      setSubjects(result.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load subjects');
+    }
+  }
 
-
+  async function loadGrades(nextSubjectId = subjectId) {
     setLoading(true);
     setError('');
 
     try {
       const query = buildQuery({
-        subject: nextSubject,
+        subjectId: nextSubjectId,
         limit: 50,
         sortBy: 'createdAt',
         sortOrder: 'desc',
       });
-      const result = await apiRequest<ApiListResponse<Grade>>(`/grades${query}`, {
-      });
+      const result = await apiRequest<ApiListResponse<Grade>>(`/grades${query}`);
       setGrades(result.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load grades');
@@ -52,8 +61,7 @@ export default function AdminGradesPage() {
   }
 
   async function createGrade() {
-
-    if (!enrollmentId.trim() || !newSubject.trim()) {
+    if (!enrollmentId.trim() || !newSubjectId) {
       return;
     }
 
@@ -65,11 +73,11 @@ export default function AdminGradesPage() {
         method: 'POST',
         body: {
           enrollmentId,
-          subject: newSubject,
+          subjectId: newSubjectId,
           score: Number(score),
         },
       });
-      setNewSubject('');
+      setNewSubjectId('');
       await loadGrades();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to create grade');
@@ -99,8 +107,24 @@ export default function AdminGradesPage() {
             </div>
           </div>
           <div className="form">
-            <FormField label="Subject" name="subject" onChange={(event) => setSubject(event.target.value)} value={subject} />
-            <Button onClick={() => void loadGrades(subject)}>Search</Button>
+            <label className="field" htmlFor="grade-subject-filter">
+              <span className="field-label">Subject</span>
+              <select
+                id="grade-subject-filter"
+                onChange={(event) => {
+                  setSubjectId(event.target.value);
+                  void loadGrades(event.target.value);
+                }}
+                value={subjectId}
+              >
+                <option value="">All subjects</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
         </Card>
 
@@ -113,9 +137,23 @@ export default function AdminGradesPage() {
           </div>
           <div className="form">
             <FormField label="Enrollment ID" name="enrollmentId" onChange={(event) => setEnrollmentId(event.target.value)} value={enrollmentId} />
-            <FormField label="Subject" name="newSubject" onChange={(event) => setNewSubject(event.target.value)} value={newSubject} />
+            <label className="field" htmlFor="grade-subject">
+              <span className="field-label">Subject</span>
+              <select
+                id="grade-subject"
+                onChange={(event) => setNewSubjectId(event.target.value)}
+                value={newSubjectId}
+              >
+                <option value="">Choose a subject</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <FormField label="Score" max={100} min={0} name="score" onChange={(event) => setScore(event.target.value)} type="number" value={score} />
-            <Button disabled={saving || !enrollmentId.trim() || !newSubject.trim()} onClick={() => void createGrade()}>
+            <Button disabled={saving || !enrollmentId.trim() || !newSubjectId} onClick={() => void createGrade()}>
               {saving ? 'Submitting...' : 'Submit grade'}
             </Button>
           </div>

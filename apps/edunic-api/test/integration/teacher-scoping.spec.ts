@@ -7,6 +7,8 @@ import {
   createEnrollmentFixture,
   createInstitutionFixture,
   createStudentFixture,
+  createClassroomSubjectFixture,
+  createSubjectFixture,
   createTeacherClassroomAssignmentFixture,
   createUserFixture,
 } from '../helpers/fixtures.js';
@@ -80,7 +82,12 @@ describe('teacher write scoping', () => {
       role: 'admin',
     });
 
+    // The teacher teaches one materia, in their own classroom.
+    const subject = await createSubjectFixture('Matem?ticas');
+    await createClassroomSubjectFixture(ownClassroom.id, subject.id);
+
     return {
+      subjectId: subject.id,
       institution,
       ownEnrollment,
       otherEnrollment,
@@ -96,30 +103,30 @@ describe('teacher write scoping', () => {
   }
 
   it('lets a teacher record a grade for their own classroom', async () => {
-    const { ownEnrollment, teacherHeaders } = await createSchool();
+    const { ownEnrollment, teacherHeaders, subjectId } = await createSchool();
 
     const response = await client
       .post('/grades')
       .set(teacherHeaders)
       .send({
         enrollmentId: ownEnrollment.id,
-        subject: 'Mathematics',
+        subjectId,
         score: 90,
       });
 
     expect(response.status).toBe(201);
-    expect(response.body.data.subject).toBe('Mathematics');
+    expect(response.body.data.subject).toBe('Matem?ticas');
   });
 
   it('refuses a grade for a classroom the teacher does not own', async () => {
-    const { otherEnrollment, teacherHeaders } = await createSchool();
+    const { otherEnrollment, teacherHeaders, subjectId } = await createSchool();
 
     const response = await client
       .post('/grades')
       .set(teacherHeaders)
       .send({
         enrollmentId: otherEnrollment.id,
-        subject: 'Mathematics',
+        subjectId,
         score: 90,
       });
 
@@ -128,14 +135,14 @@ describe('teacher write scoping', () => {
   });
 
   it('lets an admin record a grade for any classroom', async () => {
-    const { otherEnrollment, adminHeaders } = await createSchool();
+    const { otherEnrollment, adminHeaders, subjectId } = await createSchool();
 
     const response = await client
       .post('/grades')
       .set(adminHeaders)
       .send({
         enrollmentId: otherEnrollment.id,
-        subject: 'Mathematics',
+        subjectId,
         score: 90,
       });
 
@@ -143,7 +150,7 @@ describe('teacher write scoping', () => {
   });
 
   it('lets a teacher record attendance for their own classroom', async () => {
-    const { ownEnrollment, teacherHeaders } = await createSchool();
+    const { ownEnrollment, teacherHeaders, subjectId } = await createSchool();
 
     const response = await client
       .post('/attendance')
@@ -158,7 +165,7 @@ describe('teacher write scoping', () => {
   });
 
   it('refuses attendance for a classroom the teacher does not own', async () => {
-    const { otherEnrollment, teacherHeaders } = await createSchool();
+    const { otherEnrollment, teacherHeaders, subjectId } = await createSchool();
 
     const response = await client
       .post('/attendance')
@@ -174,7 +181,8 @@ describe('teacher write scoping', () => {
   });
 
   it('refuses a teacher editing a grade of another classroom', async () => {
-    const { institution, otherEnrollment, teacherHeaders } = await createSchool();
+    const { institution, otherEnrollment, teacherHeaders, subjectId } =
+      await createSchool();
 
     const admin = await createUserFixture({
       institutionId: institution.id,
@@ -190,7 +198,7 @@ describe('teacher write scoping', () => {
       .set(adminHeaders)
       .send({
         enrollmentId: otherEnrollment.id,
-        subject: 'Mathematics',
+        subjectId,
         score: 90,
       });
     expect(created.status).toBe(201);
@@ -204,7 +212,8 @@ describe('teacher write scoping', () => {
   });
 
   it('refuses a teacher deleting attendance of another classroom', async () => {
-    const { institution, otherEnrollment, teacherHeaders } = await createSchool();
+    const { institution, otherEnrollment, teacherHeaders, subjectId } =
+      await createSchool();
 
     const admin = await createUserFixture({
       institutionId: institution.id,
