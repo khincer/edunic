@@ -2,14 +2,14 @@
 
 ## 🧠 Project Overview
 
-This project is a **multi-tenant academic management SaaS platform** designed for schools. It supports:
+This project is a **single-school academic management platform**. One deployment serves exactly one school; there is no tenant dimension. It supports:
 
 - Student management
 - Enrollments
 - Grades & attendance
 - Government compliance (MINED)
 - Extension system (modular features)
-- Multi-role access (admin, teacher, parent)
+- Role-based access (director, vice-director, teacher, parent, student)
 
 ---
 
@@ -38,15 +38,55 @@ This project is a **multi-tenant academic management SaaS platform** designed fo
 
 - No business logic in controllers
 
-### 4. Multi-Tenancy First
+### 4. Single School
 
-- Every core table includes `institution_id`
-- All queries MUST be scoped by tenant
+- One deployment serves exactly one school. There is no tenant dimension.
+- New tables and queries MUST NOT add or require `institution_id`.
+- The `institutions` table survives only as the single configuration row (school name, sender identity, reply-to). It is not a tenant selector.
+- Migration status: the data merge landed in migrations `0009`–`0011`, and `user_roles` already holds one role per user. The code sweep that removes the remaining `institution_id` filters is still in progress. While it runs, do not add new tenant scoping, and remove it in any module you touch.
 
 ### 5. Feature Flags
 
 - Incomplete features must be hidden via flags
 - Never block merges due to unfinished work
+
+---
+
+## 👥 Roles & Permissions
+
+Five roles. A user holds exactly one role (`user_roles.uniqueUserRole`).
+
+### Director / Administrator
+
+- Manage the teacher roster
+- Assign one or more classrooms to each teacher
+- Create subjects (materias) and assign them to grades and teachers
+- Generate, manage, and export reports
+- Create school-wide events
+- View activity across all classrooms
+- Record student payments (offline payments)
+
+### Vice-Director / Subdirector
+
+Same operational surface as the director unless a spec says otherwise. The
+director/vice split is **not yet defined in code**; treat any permission
+difference as a product decision, not an assumption.
+
+### Teacher
+
+- Manage their own classrooms
+- Record attendance
+- Record grades
+- Send assignment reports (this notifies parents)
+- Create events scoped to their own classroom only (for example, a student's birthday)
+
+### Parent
+
+- Read-only view of their own children: assigned work, pending exams, upcoming payments, activity
+
+### Student
+
+- Record, not necessarily a login. Confirm before giving it authentication.
 
 ---
 
@@ -163,7 +203,7 @@ Commercial-ready platform
 - Parent portal
 - Notifications system
 - Analytics dashboards
-- Multi-school management
+- Multi-school management → out of scope; one school per deployment
 
 ---
 
@@ -182,7 +222,7 @@ Commercial-ready platform
 
 ### 🚫 Never:
 
-- Access DB without `institution_id`
+- Add new `institution_id` scoping or a new tenant dimension
 - Put business logic in routes
 - Merge unfinished features without flags
 - Modify DB manually outside migrations
@@ -201,9 +241,7 @@ Commercial-ready platform
 ## 🧩 Feature Flags Strategy
 
 - All new features must be behind flags
-- Flags can be:
-  - Global
-  - Per institution
+- Flags are global. The per-institution dimension is being removed.
 
 Example:
 
@@ -259,7 +297,6 @@ Used for:
 ## 📦 Future Improvements
 
 - Redis caching layer
-- Row-Level Security (Postgres)
 - Observability (logs + tracing)
 - Load testing
 
@@ -269,8 +306,8 @@ Used for:
 
 This system should evolve into:
 
-> A modular, multi-tenant, extensible academic platform
-> capable of serving public and private institutions at scale.
+> A modular, single-school academic platform, deployed per institution,
+> with a clear role hierarchy from leadership to parents.
 
 ---
 
@@ -281,7 +318,7 @@ When working on this repo:
 - Prefer modifying existing modules over creating new ones
 - Follow domain structure strictly
 - Do not bypass service layer
-- Ensure tenant isolation in all queries
+- Do not introduce tenant scoping; one deployment is one school
 - Keep code minimal, explicit, and testable
 - Agents always have approval to use documented demo credentials for local demo/testing flows.
 
