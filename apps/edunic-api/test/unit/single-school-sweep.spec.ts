@@ -13,12 +13,14 @@ const SWEPT: string[] = [
   'libs/events/src',
   'apps/edunic-worker/src',
   'apps/edunic-fe/src',
+  'tools',
 ];
 
 // Deliberately NOT scanned:
-//  - libs/db (Drizzle schema + migrations keep the columns until 0015, S1.8b),
-//    tools/ (seed, S1.7) and every test directory (fixtures, S1.8a) are outside
-//    the roots above. Nothing inside the roots is excluded.
+//  - libs/db (Drizzle schema + migrations keep the columns until 0015, S1.8b)
+//    and every test directory (fixtures, S1.8a) are outside the roots above.
+//    Nothing inside the roots is excluded. tools/ (seed, create-user,
+//    reset-db) is scanned since S1.7.
 
 // The pattern targets the tenant identifier, never the `institutions` table:
 // the school profile and the single-school context lookups legitimately read

@@ -944,22 +944,25 @@ export async function seedDatabase() {
   console.log('Seed complete');
 }
 
-dotenv.config();
+// Importing this module (the seed spec does) must not run the CLI.
+if (require.main === module) {
+  dotenv.config();
 
-const flags = parseFlags(process.argv.slice(2), []);
+  const flags = parseFlags(process.argv.slice(2), []);
 
-if (flags.help) {
-  renderHelp(
-    'Seed the database with initial data.',
-    ['npm run db:seed'],
-    [],
-  );
-  process.exit(0);
+  if (flags.help) {
+    renderHelp(
+      'Seed the database with initial data.',
+      ['npm run db:seed'],
+      [],
+    );
+    process.exit(0);
+  }
+
+  requireEnv('DATABASE_URL');
+
+  seedDatabase().catch((error) => {
+    console.error(getCliErrorMessage(error));
+    process.exit(1);
+  });
 }
-
-requireEnv('DATABASE_URL');
-
-seedDatabase().catch((error) => {
-  console.error(getCliErrorMessage(error));
-  process.exit(1);
-});
