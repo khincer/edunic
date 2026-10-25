@@ -225,8 +225,9 @@ describe('migration 0009 single school expand', () => {
   });
 
   it('down reverses 0009 and up re-applies it cleanly', async () => {
-    // 0012, 0011, 0010 and 0009 come off in order: each of them builds on
-    // what the previous one created, and the runner keeps the journal in step.
+    // 0013, 0012, 0011, 0010 and 0009 come off in order: each of them builds
+    // on what the previous one created, and the runner keeps the journal in step.
+    await runMigrationsDown();
     await runMigrationsDown();
     await runMigrationsDown();
     await runMigrationsDown();

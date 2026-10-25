@@ -106,12 +106,12 @@ describe('migration down runner (P4-R6, D6)', () => {
     return (result.rows[0] as { count: number }).count;
   }
 
-  it('up -> down -> up restores the full schema (0012 down to 0000)', async () => {
+  it('up -> down -> up restores the full schema (0013 down to 0000)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(13);
+    expect(await appliedCount()).toBe(14);
 
-    for (let step = 0; step < 13; step += 1) {
+    for (let step = 0; step < 14; step += 1) {
       await withScratchDatabaseUrl(runMigrationsDown);
     }
     expect(await appliedCount()).toBe(0);
@@ -126,7 +126,7 @@ describe('migration down runner (P4-R6, D6)', () => {
     }
 
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(13);
+    expect(await appliedCount()).toBe(14);
     for (const table of [
       'email_deliveries',
       'outbox_events',
@@ -144,6 +144,12 @@ describe('migration down runner (P4-R6, D6)', () => {
   it('rolls back exactly one migration per step (0010, 0009, 0008, 0007, 0006, 0005)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
+
+    // 0013 down: user_institution_roles comes back; user_roles stays.
+    await withScratchDatabaseUrl(runMigrationsDown);
+    expect(await appliedCount()).toBe(13);
+    expect(await tableExists('user_institution_roles')).toBe(true);
+    expect(await tableExists('user_roles')).toBe(true);
 
     // 0012 down: the receipt number sequence goes.
     await withScratchDatabaseUrl(runMigrationsDown);

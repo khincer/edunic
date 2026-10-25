@@ -219,8 +219,18 @@ describe('migration 0008 email_deliveries (D4)', () => {
   });
 
   it('down reverses 0008 then 0007 and up re-applies both cleanly', async () => {
-    // 0011 comes off first: it dropped the free-text subject that 0010's
-    // backfill reads.
+    // 0013 comes off first: it dropped user_institution_roles, which 0010
+    // reads to pick the surviving school.
+    await db.execute(
+      sql.raw(
+        readFileSync(
+          `${MIGRATIONS_DIR}/0013_roles_director_drop_user_institution_roles.down.sql`,
+          'utf8'
+        )
+      )
+    );
+
+    // Then 0011: it dropped the free-text subject that 0010's backfill reads.
     await db.execute(
       sql.raw(
         readFileSync(
@@ -279,6 +289,14 @@ describe('migration 0008 email_deliveries (D4)', () => {
       sql.raw(
         readFileSync(
           `${MIGRATIONS_DIR}/0011_single_school_subjects.sql`,
+          'utf8'
+        )
+      )
+    );
+    await db.execute(
+      sql.raw(
+        readFileSync(
+          `${MIGRATIONS_DIR}/0013_roles_director_drop_user_institution_roles.sql`,
           'utf8'
         )
       )
