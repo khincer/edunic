@@ -121,7 +121,7 @@ describe('E2E flow: events', () => {
     // created row's identity.
     expect(received).toHaveLength(1);
     expect(received[0].name).toBe('enrollment.created');
-    expect(received[0].institutionId).toBe(institutionId);
+    expect(received[0]).not.toHaveProperty('institutionId');
     expect(received[0].payload).toMatchObject({
       enrollmentId,
       studentId,

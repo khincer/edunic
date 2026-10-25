@@ -52,6 +52,7 @@ describe('enrollments routes', () => {
     });
 
     expect(createResponse.status).toBe(201);
+    expect(createResponse.body.data).not.toHaveProperty('institutionId');
     const enrollmentId = createResponse.body.data.id;
 
     const duplicateResponse = await client.post('/enrollments').set(headers).send({
@@ -128,32 +129,41 @@ describe('enrollments routes', () => {
     expect(response.status).toBe(200);
     expect(response.body.meta.total).toBe(1);
     expect(response.body.data[0].student.firstName).toBe('Ana');
+    expect(response.body.data[0]).not.toHaveProperty('institutionId');
   });
 
-  it('rejects cross-institution relations', async () => {
-    const institution = await createInstitutionFixture('Alpha');
+  it('returns 404 for an unknown student, period or classroom', async () => {
+    const institution = await createInstitutionFixture();
     const teacherUser = await createUserFixture({
       institutionId: institution.id,
       role: 'teacher',
     });
-    const otherInstitution = await createInstitutionFixture('Beta');
-    const student = await createStudentFixture({ institutionId: otherInstitution.id });
+    const student = await createStudentFixture({ institutionId: institution.id });
     const period = await createAcademicPeriodFixture({ institutionId: institution.id });
+    const headers = await createAuthHeaders({
+      userId: teacherUser.id,
+      institutionId: institution.id,
+    });
+    const unknown = '00000000-0000-4000-8000-000000000000';
 
-    const response = await client
-      .post('/enrollments')
-      .set(
-        await createAuthHeaders({
-          userId: teacherUser.id,
-          institutionId: institution.id,
+    const post = (body: Record<string, unknown>) =>
+      client.post('/enrollments').set(headers).send(body);
+
+    expect(
+      (await post({ studentId: unknown, academicPeriodId: period.id })).status
+    ).toBe(404);
+    expect(
+      (await post({ studentId: student.id, academicPeriodId: unknown })).status
+    ).toBe(404);
+    expect(
+      (
+        await post({
+          studentId: student.id,
+          academicPeriodId: period.id,
+          classroomId: unknown,
         })
-      )
-      .send({
-        studentId: student.id,
-        academicPeriodId: period.id,
-      });
-
-    expect(response.status).toBe(404);
+      ).status
+    ).toBe(404);
   });
 
   it('returns 409 when dependent grades or attendance exist on delete', async () => {

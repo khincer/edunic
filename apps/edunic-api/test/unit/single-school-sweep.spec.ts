@@ -40,11 +40,17 @@ const SWEPT: string[] = [
   // S1.4e-1: students and guardians. student_guardians has no institution
   // column (PK (student_id, guardian_id)); guardian_user_links keeps its
   // (institution_id, guardian_id, user_id) PK until 0015 and is written by
-  // other modules, not these. Enrollments follow in S1.4e-2.
+  // other modules, not these.
   'libs/domain/src/students',
   'apps/edunic-api/src/routes/students.routes.ts',
   'libs/domain/src/guardians',
   'apps/edunic-api/src/routes/guardians.routes.ts',
+  // S1.4e-2: enrollments. UNIQUE (student_id, academic_period_id) never
+  // included institution_id, so the 409 duplicate check is unchanged. The
+  // enrollment.* events stop carrying institutionId (the optional field stays
+  // on the event types until S1.4h).
+  'libs/domain/src/enrollments',
+  'apps/edunic-api/src/routes/enrollments.routes.ts',
 ];
 
 // Also the per-school tables, which stay in the DB only until 0015.
