@@ -140,11 +140,13 @@ export type StudentAverageRow = {
 export class DashboardsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
-  // The single configuration row of the school.
+  // The single configuration row of the school: the oldest row, ties by lowest
+  // id, the same rule as single_school_id() and AuthRepository.findAuthContext.
   async getInstitutionContext() {
     const result = await this.db.execute<InstitutionContextRow>(sql`
       select id, name
       from institutions
+      order by created_at asc nulls last, id asc
       limit 1
     `);
 
