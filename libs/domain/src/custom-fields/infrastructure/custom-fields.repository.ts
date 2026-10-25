@@ -31,7 +31,6 @@ export const CUSTOM_FIELD_LIST_COLUMNS = {
 } as const;
 
 export type ListCustomFieldsInput = ListCustomFieldsQuery & {
-  institutionId: string;
   filters?: FilterSpec[];
   sort?: SortSpec | null;
 };
@@ -47,7 +46,6 @@ type CountRow = {
 
 export type CustomFieldRecord = {
   id: string;
-  institutionId: string;
   entity: string;
   name: string;
   type: CustomFieldType;
@@ -67,7 +65,7 @@ export class CustomFieldsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
   async list(input: ListCustomFieldsInput): Promise<ListCustomFieldsResult> {
-    const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+    const filters: SQL[] = [sql`true`];
 
     if (input.entity) {
       filters.push(sql`entity = ${input.entity}`);
@@ -91,7 +89,6 @@ export class CustomFieldsRepository {
     const itemsQuery = sql`
       select
         id,
-        institution_id as "institutionId",
         entity,
         name,
         type
@@ -133,24 +130,22 @@ export class CustomFieldsRepository {
     return standardSort ?? sql`entity asc, name asc`;
   }
 
-  async findById(institutionId: string, customFieldId: string) {
+  async findById(customFieldId: string) {
     const result = await this.db.execute<CustomFieldRecord>(sql`
       select
         id,
-        institution_id as "institutionId",
         entity,
         name,
         type
       from custom_fields
       where id = ${customFieldId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async findManyByIds(institutionId: string, fieldIds: string[]) {
+  async findManyByIds(fieldIds: string[]) {
     if (fieldIds.length === 0) {
       return [];
     }
@@ -158,40 +153,34 @@ export class CustomFieldsRepository {
     const result = await this.db.execute<CustomFieldRecord>(sql`
       select
         id,
-        institution_id as "institutionId",
         entity,
         name,
         type
       from custom_fields
-      where institution_id = ${institutionId}
-        and id in ${sql`(${sql.join(fieldIds.map((id) => sql`${id}`), sql`, `)})`}
+      where id in ${sql`(${sql.join(fieldIds.map((id) => sql`${id}`), sql`, `)})`}
     `);
 
     return result.rows;
   }
 
   async create(input: {
-    institutionId: string;
     entity: string;
     name: string;
     type: CustomFieldType;
   }) {
     const result = await this.db.execute<CustomFieldRecord>(sql`
       insert into custom_fields (
-        institution_id,
         entity,
         name,
         type
       )
       values (
-        ${input.institutionId},
         ${input.entity},
         ${input.name},
         ${input.type}
       )
       returning
         id,
-        institution_id as "institutionId",
         entity,
         name,
         type
@@ -201,7 +190,6 @@ export class CustomFieldsRepository {
   }
 
   async update(input: {
-    institutionId: string;
     customFieldId: string;
     name?: string;
     type?: CustomFieldType;
@@ -217,17 +205,15 @@ export class CustomFieldsRepository {
     }
 
     if (assignments.length === 0) {
-      return this.findById(input.institutionId, input.customFieldId);
+      return this.findById(input.customFieldId);
     }
 
     const result = await this.db.execute<CustomFieldRecord>(sql`
       update custom_fields
       set ${sql.join(assignments, sql`, `)}
       where id = ${input.customFieldId}
-        and institution_id = ${input.institutionId}
       returning
         id,
-        institution_id as "institutionId",
         entity,
         name,
         type
@@ -236,14 +222,12 @@ export class CustomFieldsRepository {
     return result.rows[0] ?? null;
   }
 
-  async delete(institutionId: string, customFieldId: string) {
+  async delete(customFieldId: string) {
     const result = await this.db.execute<CustomFieldRecord>(sql`
       delete from custom_fields
       where id = ${customFieldId}
-        and institution_id = ${institutionId}
       returning
         id,
-        institution_id as "institutionId",
         entity,
         name,
         type
@@ -263,7 +247,6 @@ export class CustomFieldsRepository {
   }
 
   async listValues(input: {
-    institutionId: string;
     entity: string;
     entityId: string;
   }) {
@@ -280,8 +263,7 @@ export class CustomFieldsRepository {
       left join custom_field_values
         on custom_field_values.field_id = custom_fields.id
         and custom_field_values.entity_id = ${input.entityId}
-      where custom_fields.institution_id = ${input.institutionId}
-        and custom_fields.entity = ${input.entity}
+      where custom_fields.entity = ${input.entity}
       order by custom_fields.name asc
     `);
 

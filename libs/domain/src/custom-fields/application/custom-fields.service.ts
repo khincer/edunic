@@ -31,7 +31,6 @@ export class CustomFieldsService {
 
   async listCustomFields(
     input: ListCustomFieldsQuery & {
-      institutionId: string;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
     }
@@ -59,9 +58,8 @@ export class CustomFieldsService {
     };
   }
 
-  async createCustomField(input: CreateCustomFieldBody & { institutionId: string }) {
+  async createCustomField(input: CreateCustomFieldBody) {
     const field = await this.customFieldsRepository.create({
-      institutionId: input.institutionId,
       entity: input.entity.trim(),
       name: input.name.trim(),
       type: input.type,
@@ -74,21 +72,16 @@ export class CustomFieldsService {
 
   async updateCustomField(
     input: UpdateCustomFieldBody & {
-      institutionId: string;
       customFieldId: string;
     }
   ) {
-    const existingField = await this.customFieldsRepository.findById(
-      input.institutionId,
-      input.customFieldId
-    );
+    const existingField = await this.customFieldsRepository.findById(input.customFieldId);
 
     if (!existingField) {
       throw new CustomFieldsServiceError('Custom field not found', 404);
     }
 
     const field = await this.customFieldsRepository.update({
-      institutionId: input.institutionId,
       customFieldId: input.customFieldId,
       name: input.name?.trim(),
       type: input.type,
@@ -103,11 +96,9 @@ export class CustomFieldsService {
     };
   }
 
-  async deleteCustomField(institutionId: string, customFieldId: string) {
-    const existingField = await this.customFieldsRepository.findById(
-      institutionId,
-      customFieldId
-    );
+  async deleteCustomField(customFieldId: string) {
+    const existingField =
+      await this.customFieldsRepository.findById(customFieldId);
 
     if (!existingField) {
       throw new CustomFieldsServiceError('Custom field not found', 404);
@@ -122,7 +113,7 @@ export class CustomFieldsService {
       );
     }
 
-    await this.customFieldsRepository.delete(institutionId, customFieldId);
+    await this.customFieldsRepository.delete(customFieldId);
 
     return {
       data: {
@@ -133,7 +124,6 @@ export class CustomFieldsService {
   }
 
   async listCustomFieldValues(input: {
-    institutionId: string;
     entity: string;
     entityId: string;
   }) {
@@ -146,13 +136,11 @@ export class CustomFieldsService {
 
   async upsertCustomFieldValues(
     input: UpsertCustomFieldValuesBody & {
-      institutionId: string;
       entity: string;
       entityId: string;
     }
   ) {
     const fields = await this.customFieldsRepository.findManyByIds(
-      input.institutionId,
       input.values.map((value) => value.fieldId)
     );
     const fieldsById = new Map(fields.map((field) => [field.id, field]));
@@ -176,7 +164,6 @@ export class CustomFieldsService {
     }
 
     return this.listCustomFieldValues({
-      institutionId: input.institutionId,
       entity: input.entity,
       entityId: input.entityId,
     });
@@ -222,7 +209,6 @@ export class CustomFieldsService {
   private toCustomFieldResponse(field: CustomFieldRecord) {
     return {
       id: field.id,
-      institutionId: field.institutionId,
       entity: field.entity,
       name: field.name,
       type: field.type,
