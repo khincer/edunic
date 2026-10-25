@@ -1,5 +1,14 @@
 import { AppError } from '@edunic/source/domain/shared';
 import { AccessRepository } from '../infrastructure/access.repository.js';
+import { isAdminRole } from '../roles.js';
+
+export type ReadActor = { role: string; userId: string };
+
+// `all: true` is the administration; otherwise the ids a list may contain
+// (possibly empty: such an actor sees nothing).
+export type ReadableStudents =
+  | { all: true }
+  | { all: false; studentIds: string[] };
 
 /**
  * The single place that answers "does this actor own this record?".
@@ -67,6 +76,104 @@ export class AccessService {
         403
       );
     }
+  }
+
+  // The one rule for reading a student's record: the administration reads any
+  // student, a teacher the students of their classrooms, a parent their own
+  // children. Run it BEFORE the lookup so a refusal does not reveal whether
+  // the student exists.
+  async assertCanReadStudent(
+    actor: ReadActor,
+    studentId: string
+  ): Promise<void> {
+    if (isAdminRole(actor.role)) {
+      return;
+    }
+
+    if (actor.role === 'teacher') {
+      return this.assertTeacherTeachesStudent(actor.userId, studentId);
+    }
+
+    if (actor.role === 'parent') {
+      return this.assertParentOwnsStudent(actor.userId, studentId);
+    }
+
+    throw new AppError('Forbidden', 403);
+  }
+
+  // A guardian's record follows the students they are a guardian of.
+  async assertCanReadGuardian(
+    actor: ReadActor,
+    guardianId: string
+  ): Promise<void> {
+    if (isAdminRole(actor.role)) {
+      return;
+    }
+
+    const allowed =
+      actor.role === 'teacher'
+        ? await this.accessRepository.isGuardianOfTeacherStudent(
+            actor.userId,
+            guardianId
+          )
+        : actor.role === 'parent'
+          ? await this.accessRepository.isGuardianOfParentStudent(
+              actor.userId,
+              guardianId
+            )
+          : false;
+
+    if (!allowed) {
+      throw new AppError('Forbidden', 403);
+    }
+  }
+
+  // An enrollment follows its student. A missing enrollment is refused to
+  // non-admin actors so the answer does not reveal whether it exists.
+  async assertCanReadEnrollment(
+    actor: ReadActor,
+    enrollmentId: string
+  ): Promise<void> {
+    if (isAdminRole(actor.role)) {
+      return;
+    }
+
+    const studentId =
+      await this.accessRepository.findEnrollmentStudentId(enrollmentId);
+
+    if (!studentId) {
+      throw new AppError('Forbidden', 403);
+    }
+
+    await this.assertCanReadStudent(actor, studentId);
+  }
+
+  // Which students a list may contain for this actor: everything for the
+  // administration, otherwise the explicit set the actor may read.
+  async resolveReadableStudents(actor: ReadActor): Promise<ReadableStudents> {
+    if (isAdminRole(actor.role)) {
+      return { all: true };
+    }
+
+    if (actor.role === 'teacher') {
+      return {
+        all: false,
+        studentIds: await this.accessRepository.listTeacherStudentIds(
+          actor.userId
+        ),
+      };
+    }
+
+    if (actor.role === 'parent') {
+      return {
+        all: false,
+        studentIds: await this.accessRepository.listParentStudentIds(
+          actor.userId
+        ),
+      };
+    }
+
+    throw new AppError('Forbidden', 403);
   }
 
   async assertTeacherOwnsSubject(
