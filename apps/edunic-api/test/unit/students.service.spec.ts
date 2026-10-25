@@ -18,7 +18,7 @@ describe('StudentsService', () => {
       delete: jest.fn(),
     };
 
-    const service = new StudentsService(repository as never);
+    const service = new StudentsService(repository as never, {} as never);
 
     await expect(service.deleteStudent('inst-1', 'student-1')).rejects.toEqual(
       expect.objectContaining<Partial<StudentsServiceError>>({

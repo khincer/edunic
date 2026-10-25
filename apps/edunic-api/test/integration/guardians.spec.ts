@@ -1,4 +1,6 @@
-﻿import { createTestApp, createHttpClient } from '../helpers/app.js';
+﻿import { db } from '@edunic/source/db';
+import { guardianUserLinks, studentGuardians } from '@edunic/source/db/schema';
+import { createTestApp, createHttpClient } from '../helpers/app.js';
 import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import {
@@ -207,23 +209,35 @@ describe('guardians routes', () => {
     expect(detailResponse.body.data.email).toBeNull();
   });
 
-  it('allows parent users to read guardians', async () => {
+  // Reading a guardian is scoped to the family of the parent (PAR-04): the
+  // guardian must be linked to one of the parent's own children.
+  it('allows parent users to read the guardians of their own children', async () => {
     const institution = await createInstitutionFixture();
     const parentUser = await createUserFixture({
       institutionId: institution.id,
       role: 'parent',
     });
+    const student = await createStudentFixture({ institutionId: institution.id });
     const guardian = await createGuardianFixture({ institutionId: institution.id });
+    const unrelated = await createGuardianFixture({ institutionId: institution.id });
+    await db.insert(studentGuardians).values({
+      studentId: student.id,
+      guardianId: guardian.id,
+    });
+    await db.insert(guardianUserLinks).values({
+      institutionId: institution.id,
+      guardianId: guardian.id,
+      userId: parentUser.id,
+    });
+    const headers = await createAuthHeaders({
+      userId: parentUser.id,
+      institutionId: institution.id,
+    });
 
-    const response = await client
-      .get(`/guardians/${guardian.id}`)
-      .set(
-        await createAuthHeaders({
-          userId: parentUser.id,
-          institutionId: institution.id,
-        })
-      );
+    const own = await client.get(`/guardians/${guardian.id}`).set(headers);
+    const other = await client.get(`/guardians/${unrelated.id}`).set(headers);
 
-    expect(response.status).toBe(200);
+    expect(own.status).toBe(200);
+    expect(other.status).toBe(403);
   });
 });

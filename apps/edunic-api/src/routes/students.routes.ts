@@ -13,7 +13,13 @@ import {
   studentParamsSchema,
   updateStudentBodySchema,
 } from '@edunic/source/domain/students';
-import { ADMIN_ROLES, adminAnd } from '@edunic/source/domain/authorization';
+import {
+  AccessRepository,
+  AccessService,
+  ADMIN_ROLES,
+  adminAnd,
+} from '@edunic/source/domain/authorization';
+import { actorOf } from './actor.js';
 
 const STUDENT_FILTER_SORT_OPTIONS = {
   filterFields: ['firstName', 'lastName', 'dateOfBirth', 'createdAt'],
@@ -21,7 +27,10 @@ const STUDENT_FILTER_SORT_OPTIONS = {
 };
 
 export async function studentRoutes(app: FastifyInstance) {
-  const studentsService = new StudentsService(new StudentsRepository(app.db));
+  const studentsService = new StudentsService(
+    new StudentsRepository(app.db),
+    new AccessService(new AccessRepository(app.db))
+  );
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
   };
@@ -43,6 +52,7 @@ export async function studentRoutes(app: FastifyInstance) {
 
     return studentsService.listStudents({
       institutionId,
+      actor: actorOf(request),
       ...query,
       filters,
       sort,
@@ -53,7 +63,11 @@ export async function studentRoutes(app: FastifyInstance) {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentParamsSchema, request.params);
 
-    return studentsService.getStudent(institutionId, params.studentId);
+    return studentsService.getStudent(
+      institutionId,
+      params.studentId,
+      actorOf(request)
+    );
   });
 
   app.post('/', adminOnly, async (request, reply) => {

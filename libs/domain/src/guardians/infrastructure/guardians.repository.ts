@@ -6,6 +6,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   applyCursorPagination,
   buildFilterConditions,
+  buildStudentIdCondition,
   buildSortSql,
   type CursorOrderSpec,
   type FilterSpec,
@@ -66,6 +67,9 @@ export type UpdateGuardianInput = {
 
 export type ListGuardiansInput = ListGuardiansQuery & {
   institutionId: string;
+  // Restricts the list to guardians of these students; undefined means
+  // unscoped.
+  studentIds?: string[];
   filters?: FilterSpec[];
   sort?: SortSpec | null;
 };
@@ -80,6 +84,14 @@ export class GuardiansRepository {
 
   async list(input: ListGuardiansInput): Promise<ListGuardiansResult> {
     const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+
+    const scope = buildStudentIdCondition('student_id', input.studentIds);
+
+    if (scope) {
+      filters.push(
+        sql`id in (select guardian_id from student_guardians where ${scope})`
+      );
+    }
 
     if (input.search) {
       filters.push(

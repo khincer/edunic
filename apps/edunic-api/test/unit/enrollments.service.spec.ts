@@ -11,7 +11,7 @@ describe('EnrollmentsService', () => {
       findClassroom: jest.fn().mockResolvedValue(null),
     };
 
-    const service = new EnrollmentsService(repository as never);
+    const service = new EnrollmentsService(repository as never, {} as never);
 
     await expect(
       service.createEnrollment({
@@ -40,7 +40,7 @@ describe('EnrollmentsService', () => {
       create: jest.fn().mockRejectedValue({ code: '23505' }),
     };
 
-    const service = new EnrollmentsService(repository as never);
+    const service = new EnrollmentsService(repository as never, {} as never);
 
     await expect(
       service.createEnrollment({
@@ -82,7 +82,7 @@ describe('EnrollmentsService', () => {
       findById: jest.fn().mockResolvedValue(record),
     };
     const publish = jest.fn().mockResolvedValue(undefined);
-    const service = new EnrollmentsService(repository as never, {
+    const service = new EnrollmentsService(repository as never, {} as never, {
       publish,
     } as never);
 
@@ -149,7 +149,7 @@ describe('EnrollmentsService', () => {
     const publish = jest
       .fn()
       .mockRejectedValue(new Error('event bus down (injected)'));
-    const service = new EnrollmentsService(repository as never, {
+    const service = new EnrollmentsService(repository as never, {} as never, {
       publish,
     } as never);
 
@@ -192,7 +192,7 @@ describe('EnrollmentsService', () => {
         studentLastName: 'Lovelace',
       }),
     };
-    const service = new EnrollmentsService(repository as never);
+    const service = new EnrollmentsService(repository as never, {} as never);
 
     const result = await service.createEnrollment({
       institutionId: 'inst-1',

@@ -2,10 +2,7 @@ import {
   computeAverage,
   buildSubjectAverages,
 } from '@edunic/source/domain/shared';
-import {
-  AccessService,
-  isAdminRole,
-} from '@edunic/source/domain/authorization';
+import { AccessService } from '@edunic/source/domain/authorization';
 import {
   ReportsRepository,
   type StudentReportEnrollmentRow,
@@ -34,7 +31,9 @@ export class ReportsService {
     year: number;
     actor: { role: string; userId: string };
   }) {
-    await this.assertCanReadStudent(input.actor, input.studentId);
+    // The rule lives in AccessService; it runs before the lookup so a refusal
+    // does not reveal whether the student exists.
+    await this.accessService.assertCanReadStudent(input.actor, input.studentId);
 
     const student = await this.reportsRepository.findStudent(
       input.institutionId,
@@ -81,34 +80,6 @@ export class ReportsService {
         })),
       },
     };
-  }
-
-  // A student's summary is private: the administration reads any student, a
-  // teacher the students of their classrooms, a parent their own children.
-  // The check runs before the lookup so a refusal does not reveal whether the
-  // student exists.
-  private async assertCanReadStudent(
-    actor: { role: string; userId: string },
-    studentId: string
-  ) {
-    if (isAdminRole(actor.role)) {
-      return;
-    }
-
-    if (actor.role === 'teacher') {
-      await this.accessService.assertTeacherTeachesStudent(
-        actor.userId,
-        studentId
-      );
-      return;
-    }
-
-    if (actor.role === 'parent') {
-      await this.accessService.assertParentOwnsStudent(actor.userId, studentId);
-      return;
-    }
-
-    throw new ReportsServiceError('Forbidden', 403);
   }
 
   private buildTermAverages(

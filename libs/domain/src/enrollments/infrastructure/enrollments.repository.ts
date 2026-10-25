@@ -6,6 +6,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   applyCursorPagination,
   buildFilterConditions,
+  buildStudentIdCondition,
   buildSortSql,
   type DbExecutor,
   type CursorOrderSpec,
@@ -80,7 +81,8 @@ export type UpdateEnrollmentInput = {
 
 export type ListEnrollmentsInput = ListEnrollmentsQuery & {
   institutionId: string;
-  teacherUserId?: string;
+  // Restricts the list to these students; undefined means unscoped.
+  studentIds?: string[];
   filters?: FilterSpec[];
   sort?: SortSpec | null;
 };
@@ -101,14 +103,11 @@ export class EnrollmentsRepository {
 
   async list(input: ListEnrollmentsInput): Promise<ListEnrollmentsResult> {
     const filters: SQL[] = [sql`e.institution_id = ${input.institutionId}`];
-    const assignmentJoin = input.teacherUserId
-      ? sql`
-        inner join teacher_classroom_assignments tca
-          on tca.classroom_id = e.classroom_id
-         and tca.institution_id = e.institution_id
-         and tca.teacher_user_id = ${input.teacherUserId}
-      `
-      : sql``;
+    const scope = buildStudentIdCondition('e.student_id', input.studentIds);
+
+    if (scope) {
+      filters.push(scope);
+    }
 
     if (input.search) {
       filters.push(sql`(
@@ -161,7 +160,6 @@ export class EnrollmentsRepository {
         s.first_name as "studentFirstName",
         s.last_name as "studentLastName"
       from enrollments e
-      ${assignmentJoin}
       inner join students s on s.id = e.student_id
       ${whereClause}
       order by ${orderBy}
@@ -179,7 +177,6 @@ export class EnrollmentsRepository {
       this.db.execute<CountRow>(sql`
         select count(*)::int as count
         from enrollments e
-        ${assignmentJoin}
         inner join students s on s.id = e.student_id
         ${whereClause}
       `),

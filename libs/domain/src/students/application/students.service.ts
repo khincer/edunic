@@ -8,6 +8,10 @@ import type {
   ListStudentsQuery,
   UpdateStudentBody,
 } from '../schemas/student.schemas.js';
+import type {
+  AccessService,
+  ReadActor,
+} from '@edunic/source/domain/authorization';
 import {
   StudentsRepository,
   type StudentRecord,
@@ -24,17 +28,24 @@ export class StudentsServiceError extends Error {
 }
 
 export class StudentsService {
-  constructor(private readonly studentsRepository: StudentsRepository) {}
+  constructor(
+    private readonly studentsRepository: StudentsRepository,
+    private readonly access: AccessService
+  ) {}
 
   async listStudents(
     input: ListStudentsQuery & {
       institutionId: string;
+      actor: ReadActor;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
     }
   ) {
+    const { actor, ...query } = input;
+    const readable = await this.access.resolveReadableStudents(actor);
     const result = await this.studentsRepository.list({
-      ...input,
+      ...query,
+      studentIds: readable.all ? undefined : readable.studentIds,
       search: input.search?.trim() || undefined,
     });
 
@@ -56,7 +67,13 @@ export class StudentsService {
     };
   }
 
-  async getStudent(institutionId: string, studentId: string) {
+  async getStudent(
+    institutionId: string,
+    studentId: string,
+    actor: ReadActor
+  ) {
+    await this.access.assertCanReadStudent(actor, studentId);
+
     const student = await this.studentsRepository.findById(
       institutionId,
       studentId

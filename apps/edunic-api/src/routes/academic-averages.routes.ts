@@ -7,11 +7,17 @@ import {
   studentAverageParamsSchema,
   studentAverageQuerySchema,
 } from '@edunic/source/domain/academic-averages';
-import { adminAnd } from '@edunic/source/domain/authorization';
+import {
+  AccessRepository,
+  AccessService,
+  adminAnd,
+} from '@edunic/source/domain/authorization';
+import { actorOf } from './actor.js';
 
 export async function academicAverageRoutes(app: FastifyInstance) {
   const academicAveragesService = new AcademicAveragesService(
-    new AcademicAveragesRepository(app.db)
+    new AcademicAveragesRepository(app.db),
+    new AccessService(new AccessRepository(app.db))
   );
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
@@ -24,6 +30,7 @@ export async function academicAverageRoutes(app: FastifyInstance) {
     return academicAveragesService.getStudentAverages({
       studentId: params.studentId,
       year: query.year,
+      actor: actorOf(request),
     });
   });
 }

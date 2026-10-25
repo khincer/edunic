@@ -1,4 +1,8 @@
 import type { EventBus } from '@edunic/source/events';
+import type {
+  AccessService,
+  ReadActor,
+} from '@edunic/source/domain/authorization';
 import { createEnrollmentCreatedEvent } from '@edunic/source/domain/events';
 import {
   PROMOTION_THRESHOLD,
@@ -38,19 +42,23 @@ export class EnrollmentsServiceError extends Error {
 export class EnrollmentsService {
   constructor(
     private readonly enrollmentsRepository: EnrollmentsRepository,
+    private readonly access: AccessService,
     private readonly eventBus?: EventBus
   ) {}
 
   async listEnrollments(
     input: ListEnrollmentsQuery & {
       institutionId: string;
-      teacherUserId?: string;
+      actor: ReadActor;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
     }
   ) {
+    const { actor, ...query } = input;
+    const readable = await this.access.resolveReadableStudents(actor);
     const result = await this.enrollmentsRepository.list({
-      ...input,
+      ...query,
+      studentIds: readable.all ? undefined : readable.studentIds,
       search: input.search?.trim() || undefined,
     });
 
@@ -75,7 +83,13 @@ export class EnrollmentsService {
     };
   }
 
-  async getEnrollment(institutionId: string, enrollmentId: string) {
+  async getEnrollment(
+    institutionId: string,
+    enrollmentId: string,
+    actor: ReadActor
+  ) {
+    await this.access.assertCanReadEnrollment(actor, enrollmentId);
+
     const enrollment = await this.enrollmentsRepository.findById(
       institutionId,
       enrollmentId
