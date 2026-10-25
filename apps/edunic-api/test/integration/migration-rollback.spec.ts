@@ -98,6 +98,14 @@ describe('migration down runner (P4-R6, D6)', () => {
     return (result.rows[0] as { exists: boolean }).exists;
   }
 
+  async function functionExists(name: string) {
+    const result = await db().query(
+      'SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = $1) AS exists',
+      [name]
+    );
+    return (result.rows[0] as { exists: boolean }).exists;
+  }
+
   async function emailFlagRows() {
     const result = await db().query(
       `SELECT COUNT(*)::int AS count FROM feature_flags
@@ -106,12 +114,12 @@ describe('migration down runner (P4-R6, D6)', () => {
     return (result.rows[0] as { count: number }).count;
   }
 
-  it('up -> down -> up restores the full schema (0013 down to 0000)', async () => {
+  it('up -> down -> up restores the full schema (0014 down to 0000)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(14);
+    expect(await appliedCount()).toBe(15);
 
-    for (let step = 0; step < 14; step += 1) {
+    for (let step = 0; step < 15; step += 1) {
       await withScratchDatabaseUrl(runMigrationsDown);
     }
     expect(await appliedCount()).toBe(0);
@@ -126,7 +134,7 @@ describe('migration down runner (P4-R6, D6)', () => {
     }
 
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(14);
+    expect(await appliedCount()).toBe(15);
     for (const table of [
       'email_deliveries',
       'outbox_events',
@@ -144,6 +152,12 @@ describe('migration down runner (P4-R6, D6)', () => {
   it('rolls back exactly one migration per step (0010, 0009, 0008, 0007, 0006, 0005)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
+
+    // 0014 down: the default function and extensions.config go; data stays.
+    await withScratchDatabaseUrl(runMigrationsDown);
+    expect(await appliedCount()).toBe(14);
+    expect(await functionExists('single_school_id')).toBe(false);
+    expect(await columnExists('extensions', 'config')).toBe(false);
 
     // 0013 down: user_institution_roles comes back; user_roles stays.
     await withScratchDatabaseUrl(runMigrationsDown);
