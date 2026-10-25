@@ -6,6 +6,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   applyCursorPagination,
   buildFilterConditions,
+  buildStudentIdCondition,
   buildSortSql,
   type DbExecutor,
   type CursorOrderSpec,
@@ -33,6 +34,11 @@ export const ATTENDANCE_LIST_COLUMNS = {
   enrollmentId: 'enrollment_id',
   createdAt: 'created_at',
 } as const;
+
+// The student an attendance record belongs to, through its enrollment.
+// Constant literal.
+const ATTENDANCE_STUDENT_ID =
+  '(select e.student_id from enrollments e where e.id = attendance.enrollment_id)';
 
 type CountRow = {
   count: string | number;
@@ -63,6 +69,8 @@ export type UpdateAttendanceInput = {
 };
 
 export type ListAttendanceInput = ListAttendanceQuery & {
+  // Restricts the list to these students; undefined means unscoped.
+  studentIds?: string[];
   filters?: FilterSpec[];
   sort?: SortSpec | null;
 };
@@ -83,6 +91,14 @@ export class AttendanceRepository {
 
   async list(input: ListAttendanceInput): Promise<ListAttendanceResult> {
     const filters: SQL[] = [];
+    const scope = buildStudentIdCondition(
+      ATTENDANCE_STUDENT_ID,
+      input.studentIds
+    );
+
+    if (scope) {
+      filters.push(scope);
+    }
 
     if (input.enrollmentId) {
       filters.push(sql`enrollment_id = ${input.enrollmentId}`);
