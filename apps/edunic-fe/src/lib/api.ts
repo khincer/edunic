@@ -203,21 +203,18 @@ export type DashboardReportHistory = {
 };
 
 export type WorkflowAssignment = DashboardAssignment & {
-  institutionId: string;
   classroomId: string | null;
   createdByUserId: string | null;
   createdAt: string | null;
 };
 
 export type WorkflowEvent = DashboardEvent & {
-  institutionId: string;
   classroomId: string | null;
   createdByUserId: string | null;
   createdAt: string | null;
 };
 
 export type WorkflowMessage = DashboardMessage & {
-  institutionId: string;
   threadId: string;
   senderUserId: string | null;
   recipientUserId: string | null;

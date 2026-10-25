@@ -33,7 +33,6 @@ export class WorkflowsService {
   constructor(private readonly workflowsRepository: WorkflowsRepository) {}
 
   async listAssignments(input: ListWorkflowQuery & {
-    institutionId: string;
     role: WorkflowRole;
     userId: string;
     filters?: FilterSpec[];
@@ -62,7 +61,6 @@ export class WorkflowsService {
   }
 
   async createAssignment(input: CreateAssignmentBody & {
-    institutionId: string;
     role: WorkflowRole;
     userId: string;
   }) {
@@ -71,7 +69,6 @@ export class WorkflowsService {
     }
 
     await this.assertClassroomAccess({
-      institutionId: input.institutionId,
       classroomId: input.classroomId,
       role: input.role,
       userId: input.userId,
@@ -79,7 +76,6 @@ export class WorkflowsService {
     });
 
     const created = await this.workflowsRepository.createAssignment({
-      institutionId: input.institutionId,
       userId: input.userId,
       classroomId: input.classroomId,
       subjectId: input.subjectId,
@@ -95,7 +91,6 @@ export class WorkflowsService {
     }
 
     const assignment = await this.workflowsRepository.findAssignment(
-      input.institutionId,
       created.id
     );
 
@@ -104,7 +99,6 @@ export class WorkflowsService {
     }
 
     await this.workflowsRepository.createNotification({
-      institutionId: input.institutionId,
       eventName: 'assignment.created',
       title: 'Assignment created',
       message: assignment.title,
@@ -121,7 +115,6 @@ export class WorkflowsService {
   }
 
   async updateAssignment(input: UpdateAssignmentBody & {
-    institutionId: string;
     assignmentId: string;
     role: WorkflowRole;
     userId: string;
@@ -131,7 +124,6 @@ export class WorkflowsService {
     }
 
     const existing = await this.workflowsRepository.findAssignment(
-      input.institutionId,
       input.assignmentId
     );
 
@@ -140,14 +132,12 @@ export class WorkflowsService {
     }
 
     await this.assertClassroomAccess({
-      institutionId: input.institutionId,
       classroomId: existing.classroomId ?? undefined,
       role: input.role,
       userId: input.userId,
       allowSchoolWideForTeacher: false,
     });
     await this.assertClassroomAccess({
-      institutionId: input.institutionId,
       classroomId: input.classroomId,
       role: input.role,
       userId: input.userId,
@@ -155,7 +145,6 @@ export class WorkflowsService {
     });
 
     const updated = await this.workflowsRepository.updateAssignment({
-      institutionId: input.institutionId,
       assignmentId: input.assignmentId,
       classroomId: input.classroomId,
       subjectId: input.subjectId,
@@ -171,7 +160,6 @@ export class WorkflowsService {
     }
 
     const assignment = await this.workflowsRepository.findAssignment(
-      input.institutionId,
       input.assignmentId
     );
 
@@ -185,7 +173,6 @@ export class WorkflowsService {
   }
 
   async listEvents(input: ListWorkflowQuery & {
-    institutionId: string;
     role: WorkflowRole;
     userId: string;
     filters?: FilterSpec[];
@@ -211,7 +198,6 @@ export class WorkflowsService {
   }
 
   async createEvent(input: CreateEventBody & {
-    institutionId: string;
     role: WorkflowRole;
     userId: string;
   }) {
@@ -220,7 +206,6 @@ export class WorkflowsService {
     }
 
     await this.assertClassroomAccess({
-      institutionId: input.institutionId,
       classroomId: input.classroomId ?? undefined,
       role: input.role,
       userId: input.userId,
@@ -228,7 +213,6 @@ export class WorkflowsService {
     });
 
     const created = await this.workflowsRepository.createEvent({
-      institutionId: input.institutionId,
       userId: input.userId,
       classroomId: input.classroomId ?? undefined,
       title: input.title.trim(),
@@ -242,7 +226,6 @@ export class WorkflowsService {
     }
 
     const event = await this.workflowsRepository.findEvent(
-      input.institutionId,
       created.id
     );
 
@@ -251,7 +234,6 @@ export class WorkflowsService {
     }
 
     await this.workflowsRepository.createNotification({
-      institutionId: input.institutionId,
       eventName: event.eventType === 'exam' ? 'exam.scheduled' : 'event.created',
       title: event.eventType === 'exam' ? 'Exam scheduled' : 'Event created',
       message: event.title,
@@ -268,7 +250,6 @@ export class WorkflowsService {
   }
 
   async listMessages(input: ListWorkflowQuery & {
-    institutionId: string;
     userId: string;
     filters?: FilterSpec[];
     sort?: SortSpec | null;
@@ -293,7 +274,6 @@ export class WorkflowsService {
   }
 
   async createMessage(input: CreateMessageBody & {
-    institutionId: string;
     userId: string;
   }) {
     const recipient = await this.workflowsRepository.findUserRole(
@@ -305,7 +285,6 @@ export class WorkflowsService {
     }
 
     const created = await this.workflowsRepository.createThreadWithMessage({
-      institutionId: input.institutionId,
       userId: input.userId,
       recipientUserId: input.recipientUserId,
       subject: input.subject.trim(),
@@ -317,7 +296,6 @@ export class WorkflowsService {
     }
 
     const message = await this.workflowsRepository.findMessage(
-      input.institutionId,
       created.id
     );
 
@@ -326,7 +304,6 @@ export class WorkflowsService {
     }
 
     await this.workflowsRepository.createNotification({
-      institutionId: input.institutionId,
       eventName: 'message.received',
       title: 'Message received',
       message: input.subject.trim(),
@@ -343,7 +320,6 @@ export class WorkflowsService {
   }
 
   async markMessageRead(input: {
-    institutionId: string;
     messageId: string;
     userId: string;
   }) {
@@ -354,7 +330,6 @@ export class WorkflowsService {
     }
 
     const message = await this.workflowsRepository.findMessage(
-      input.institutionId,
       input.messageId
     );
 
@@ -368,7 +343,6 @@ export class WorkflowsService {
   }
 
   private async assertClassroomAccess(input: {
-    institutionId: string;
     classroomId?: string | null;
     role: WorkflowRole;
     userId: string;
@@ -383,7 +357,6 @@ export class WorkflowsService {
     }
 
     const classroom = await this.workflowsRepository.findClassroom(
-      input.institutionId,
       input.classroomId
     );
 
@@ -394,7 +367,6 @@ export class WorkflowsService {
     if (input.role === 'teacher') {
       const assigned =
         await this.workflowsRepository.isTeacherAssignedToClassroom({
-          institutionId: input.institutionId,
           teacherUserId: input.userId,
           classroomId: input.classroomId,
         });
@@ -411,7 +383,6 @@ export class WorkflowsService {
   private toAssignmentResponse(assignment: AssignmentRecord) {
     return {
       id: assignment.id,
-      institutionId: assignment.institutionId,
       classroomId: assignment.classroomId,
       classroomName: assignment.classroomName,
       subjectId: assignment.subjectId,
@@ -429,7 +400,6 @@ export class WorkflowsService {
   private toEventResponse(event: SchoolEventRecord) {
     return {
       id: event.id,
-      institutionId: event.institutionId,
       classroomId: event.classroomId,
       classroomName: event.classroomName,
       createdByUserId: event.createdByUserId,
@@ -444,7 +414,6 @@ export class WorkflowsService {
   private toMessageResponse(message: MessageRecord) {
     return {
       id: message.id,
-      institutionId: message.institutionId,
       threadId: message.threadId,
       subject: message.subject,
       senderUserId: message.senderUserId,

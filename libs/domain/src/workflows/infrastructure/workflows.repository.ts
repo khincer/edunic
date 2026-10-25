@@ -48,7 +48,6 @@ export type WorkflowRole = 'admin' | 'teacher' | 'parent';
 
 export type AssignmentRecord = {
   id: string;
-  institutionId: string;
   classroomId: string | null;
   classroomName: string | null;
   subjectId: string | null;
@@ -65,7 +64,6 @@ export type AssignmentRecord = {
 
 export type SchoolEventRecord = {
   id: string;
-  institutionId: string;
   classroomId: string | null;
   classroomName: string | null;
   createdByUserId: string | null;
@@ -78,7 +76,6 @@ export type SchoolEventRecord = {
 
 export type MessageRecord = {
   id: string;
-  institutionId: string;
   threadId: string;
   subject: string;
   senderUserId: string | null;
@@ -97,7 +94,6 @@ export class WorkflowsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
   async listAssignments(input: ListWorkflowQuery & {
-    institutionId: string;
     role: WorkflowRole;
     userId: string;
     filters?: FilterSpec[];
@@ -107,7 +103,7 @@ export class WorkflowsRepository {
     const plan = applyCursorPagination(input, WORKFLOW_CURSOR_ORDER);
     const extraFilters = this.andConditions(input, plan.keyset);
     const whereClause = sql`
-      w.institution_id = ${input.institutionId}
+      true
       ${roleFilter}
       ${extraFilters}
     `;
@@ -117,7 +113,6 @@ export class WorkflowsRepository {
     const itemsQuery = sql`
       select
         w.id,
-        w.institution_id as "institutionId",
         w.classroom_id as "classroomId",
         concat('Grade ', classrooms.grade_level, coalesce(' ' || classrooms.section, '')) as "classroomName",
         w.created_by_user_id as "createdByUserId",
@@ -133,7 +128,6 @@ export class WorkflowsRepository {
       left join subjects on subjects.id = w.subject_id
       left join classrooms
         on classrooms.id = w.classroom_id
-       and classrooms.institution_id = w.institution_id
       where ${whereClause}
       order by ${orderBy}
       limit ${plan.fetchLimit}
@@ -162,12 +156,10 @@ export class WorkflowsRepository {
   }
 
   async createAssignment(input: CreateAssignmentBody & {
-    institutionId: string;
     userId: string;
   }) {
     const result = await this.db.execute<{ id: string }>(sql`
       insert into assignments (
-        institution_id,
         classroom_id,
         created_by_user_id,
         subject_id,
@@ -178,7 +170,6 @@ export class WorkflowsRepository {
         due_date
       )
       values (
-        ${input.institutionId},
         ${input.classroomId ?? null},
         ${input.userId},
         ${input.subjectId ?? null},
@@ -195,7 +186,6 @@ export class WorkflowsRepository {
   }
 
   async updateAssignment(input: UpdateAssignmentBody & {
-    institutionId: string;
     assignmentId: string;
   }) {
     const assignmentsToSet: SQL[] = [];
@@ -232,18 +222,16 @@ export class WorkflowsRepository {
       update assignments
       set ${sql.join(assignmentsToSet, sql`, `)}
       where id = ${input.assignmentId}
-        and institution_id = ${input.institutionId}
       returning id
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async findAssignment(institutionId: string, assignmentId: string) {
+  async findAssignment(assignmentId: string) {
     const result = await this.db.execute<AssignmentRecord>(sql`
       select
         assignments.id,
-        assignments.institution_id as "institutionId",
         assignments.classroom_id as "classroomId",
         concat('Grade ', classrooms.grade_level, coalesce(' ' || classrooms.section, '')) as "classroomName",
         assignments.created_by_user_id as "createdByUserId",
@@ -259,9 +247,7 @@ export class WorkflowsRepository {
       left join subjects on subjects.id = assignments.subject_id
       left join classrooms
         on classrooms.id = assignments.classroom_id
-       and classrooms.institution_id = assignments.institution_id
       where assignments.id = ${assignmentId}
-        and assignments.institution_id = ${institutionId}
       limit 1
     `);
 
@@ -269,7 +255,6 @@ export class WorkflowsRepository {
   }
 
   async listEvents(input: ListWorkflowQuery & {
-    institutionId: string;
     role: WorkflowRole;
     userId: string;
     filters?: FilterSpec[];
@@ -279,7 +264,7 @@ export class WorkflowsRepository {
     const plan = applyCursorPagination(input, WORKFLOW_CURSOR_ORDER);
     const extraFilters = this.andConditions(input, plan.keyset);
     const whereClause = sql`
-      w.institution_id = ${input.institutionId}
+      true
       ${roleFilter}
       ${extraFilters}
     `;
@@ -289,7 +274,6 @@ export class WorkflowsRepository {
     const itemsQuery = sql`
       select
         w.id,
-        w.institution_id as "institutionId",
         w.classroom_id as "classroomId",
         concat('Grade ', classrooms.grade_level, coalesce(' ' || classrooms.section, '')) as "classroomName",
         w.created_by_user_id as "createdByUserId",
@@ -301,7 +285,6 @@ export class WorkflowsRepository {
       from school_events w
       left join classrooms
         on classrooms.id = w.classroom_id
-       and classrooms.institution_id = w.institution_id
       where ${whereClause}
       order by ${orderBy}
       limit ${plan.fetchLimit}
@@ -330,12 +313,10 @@ export class WorkflowsRepository {
   }
 
   async createEvent(input: CreateEventBody & {
-    institutionId: string;
     userId: string;
   }) {
     const result = await this.db.execute<{ id: string }>(sql`
       insert into school_events (
-        institution_id,
         classroom_id,
         created_by_user_id,
         title,
@@ -344,7 +325,6 @@ export class WorkflowsRepository {
         ends_at
       )
       values (
-        ${input.institutionId},
         ${input.classroomId ?? null},
         ${input.userId},
         ${input.title},
@@ -358,11 +338,10 @@ export class WorkflowsRepository {
     return result.rows[0];
   }
 
-  async findEvent(institutionId: string, eventId: string) {
+  async findEvent(eventId: string) {
     const result = await this.db.execute<SchoolEventRecord>(sql`
       select
         school_events.id,
-        school_events.institution_id as "institutionId",
         school_events.classroom_id as "classroomId",
         concat('Grade ', classrooms.grade_level, coalesce(' ' || classrooms.section, '')) as "classroomName",
         school_events.created_by_user_id as "createdByUserId",
@@ -374,9 +353,7 @@ export class WorkflowsRepository {
       from school_events
       left join classrooms
         on classrooms.id = school_events.classroom_id
-       and classrooms.institution_id = school_events.institution_id
       where school_events.id = ${eventId}
-        and school_events.institution_id = ${institutionId}
       limit 1
     `);
 
@@ -384,7 +361,6 @@ export class WorkflowsRepository {
   }
 
   async listMessages(input: ListWorkflowQuery & {
-    institutionId: string;
     userId: string;
     filters?: FilterSpec[];
     sort?: SortSpec | null;
@@ -392,8 +368,7 @@ export class WorkflowsRepository {
     const plan = applyCursorPagination(input, WORKFLOW_CURSOR_ORDER);
     const extraFilters = this.andConditions(input, plan.keyset);
     const whereClause = sql`
-      w.institution_id = ${input.institutionId}
-      and (
+      (
         w.sender_user_id = ${input.userId}
         or w.recipient_user_id = ${input.userId}
       )
@@ -405,7 +380,6 @@ export class WorkflowsRepository {
     const itemsQuery = sql`
       select
         w.id,
-        w.institution_id as "institutionId",
         w.thread_id as "threadId",
         message_threads.subject,
         w.sender_user_id as "senderUserId",
@@ -416,7 +390,6 @@ export class WorkflowsRepository {
       from messages w
       inner join message_threads
         on message_threads.id = w.thread_id
-       and message_threads.institution_id = w.institution_id
       where ${whereClause}
       order by ${orderBy}
       limit ${plan.fetchLimit}
@@ -445,17 +418,14 @@ export class WorkflowsRepository {
   }
 
   async createThreadWithMessage(input: CreateMessageBody & {
-    institutionId: string;
     userId: string;
   }) {
     const thread = await this.db.execute<{ id: string }>(sql`
       insert into message_threads (
-        institution_id,
         subject,
         created_by_user_id
       )
       values (
-        ${input.institutionId},
         ${input.subject},
         ${input.userId}
       )
@@ -469,14 +439,12 @@ export class WorkflowsRepository {
 
     const message = await this.db.execute<{ id: string }>(sql`
       insert into messages (
-        institution_id,
         thread_id,
         sender_user_id,
         recipient_user_id,
         body
       )
       values (
-        ${input.institutionId},
         ${threadId},
         ${input.userId},
         ${input.recipientUserId},
@@ -488,11 +456,10 @@ export class WorkflowsRepository {
     return message.rows[0] ?? null;
   }
 
-  async findMessage(institutionId: string, messageId: string) {
+  async findMessage(messageId: string) {
     const result = await this.db.execute<MessageRecord>(sql`
       select
         messages.id,
-        messages.institution_id as "institutionId",
         messages.thread_id as "threadId",
         message_threads.subject,
         messages.sender_user_id as "senderUserId",
@@ -503,9 +470,7 @@ export class WorkflowsRepository {
       from messages
       inner join message_threads
         on message_threads.id = messages.thread_id
-       and message_threads.institution_id = messages.institution_id
       where messages.id = ${messageId}
-        and messages.institution_id = ${institutionId}
       limit 1
     `);
 
@@ -513,7 +478,6 @@ export class WorkflowsRepository {
   }
 
   async markMessageRead(input: {
-    institutionId: string;
     messageId: string;
     userId: string;
   }) {
@@ -521,7 +485,6 @@ export class WorkflowsRepository {
       update messages
       set read_at = coalesce(read_at, now())
       where id = ${input.messageId}
-        and institution_id = ${input.institutionId}
         and recipient_user_id = ${input.userId}
       returning id
     `);
@@ -529,12 +492,11 @@ export class WorkflowsRepository {
     return result.rows[0] ?? null;
   }
 
-  async findClassroom(institutionId: string, classroomId: string) {
+  async findClassroom(classroomId: string) {
     const result = await this.db.execute<{ id: string }>(sql`
       select id
       from classrooms
       where id = ${classroomId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
@@ -542,15 +504,13 @@ export class WorkflowsRepository {
   }
 
   async isTeacherAssignedToClassroom(input: {
-    institutionId: string;
     teacherUserId: string;
     classroomId: string;
   }) {
     const result = await this.db.execute<CountRow>(sql`
       select count(*)::int as count
       from teacher_classroom_assignments
-      where institution_id = ${input.institutionId}
-        and teacher_user_id = ${input.teacherUserId}
+      where teacher_user_id = ${input.teacherUserId}
         and classroom_id = ${input.classroomId}
     `);
 
@@ -571,7 +531,6 @@ export class WorkflowsRepository {
   }
 
   async createNotification(input: {
-    institutionId: string;
     eventName: string;
     title: string;
     message: string;
@@ -579,14 +538,12 @@ export class WorkflowsRepository {
   }) {
     await this.db.execute(sql`
       insert into notifications (
-        institution_id,
         event_name,
         title,
         message,
         metadata
       )
       values (
-        ${input.institutionId},
         ${input.eventName},
         ${input.title},
         ${input.message},
@@ -606,7 +563,6 @@ export class WorkflowsRepository {
           select 1
           from teacher_classroom_assignments tca
           where tca.classroom_id = w.classroom_id
-            and tca.institution_id = w.institution_id
             and tca.teacher_user_id = ${input.userId}
         )
       `;
@@ -621,11 +577,9 @@ export class WorkflowsRepository {
             on sg.guardian_id = gul.guardian_id
           inner join enrollments e
             on e.student_id = sg.student_id
-           and e.institution_id = gul.institution_id
            and e.classroom_id = w.classroom_id
            and e.status = 'active'
-          where gul.institution_id = w.institution_id
-            and gul.user_id = ${input.userId}
+          where gul.user_id = ${input.userId}
         )
       `;
     }
@@ -645,7 +599,6 @@ export class WorkflowsRepository {
             select 1
             from teacher_classroom_assignments tca
             where tca.classroom_id = w.classroom_id
-              and tca.institution_id = w.institution_id
               and tca.teacher_user_id = ${input.userId}
           )
         )
@@ -663,11 +616,9 @@ export class WorkflowsRepository {
               on sg.guardian_id = gul.guardian_id
             inner join enrollments e
               on e.student_id = sg.student_id
-             and e.institution_id = gul.institution_id
              and e.classroom_id = w.classroom_id
              and e.status = 'active'
-            where gul.institution_id = w.institution_id
-              and gul.user_id = ${input.userId}
+            where gul.user_id = ${input.userId}
           )
         )
       `;
