@@ -69,6 +69,8 @@ describe('notifications routes', () => {
 
     expect(notificationsResponse.status).toBe(200);
     expect(notificationsResponse.body.data[0].eventName).toBe('grade.submitted');
+    // The tenant is implicit now: rows carry it through the column default only.
+    expect(notificationsResponse.body.data[0]).not.toHaveProperty('institutionId');
   });
 
   it('creates no notifications while the extension has no config', async () => {

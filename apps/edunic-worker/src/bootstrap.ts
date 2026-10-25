@@ -156,7 +156,6 @@ export function bootstrapWorker(
         const created = event as EnrollmentCreatedEvent;
         await eventBus.publish(
           createEnrollmentWelcomedEvent({
-            institutionId: event.institutionId,
             payload: {
               enrollmentId: created.payload.enrollmentId,
               studentId: created.payload.studentId,

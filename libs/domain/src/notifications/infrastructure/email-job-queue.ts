@@ -4,7 +4,6 @@ import { createHash } from 'node:crypto';
 // the queue library so the API bundle never loads BullMQ; the worker supplies
 // the BullMQ implementation (apps/edunic-worker/src/email).
 export type EmailDeliveryJob = {
-  institutionId: string;
   /** Envelope id of the triggering event — half of the deterministic job id. */
   eventId: string;
   /** Normalized recipient address — the other half. */

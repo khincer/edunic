@@ -35,7 +35,6 @@ export const NOTIFICATION_LIST_COLUMNS = {
 
 export type NotificationRecord = {
   id: string;
-  institutionId: string;
   eventName: string;
   title: string;
   message: string;
@@ -61,7 +60,6 @@ export class NotificationsRepository {
   }
 
   async create(input: {
-    institutionId: string;
     eventName: string;
     title: string;
     message: string;
@@ -69,14 +67,12 @@ export class NotificationsRepository {
   }) {
     const result = await this.db.execute<NotificationRecord>(sql`
       insert into notifications (
-        institution_id,
         event_name,
         title,
         message,
         metadata
       )
       values (
-        ${input.institutionId},
         ${input.eventName},
         ${input.title},
         ${input.message},
@@ -84,7 +80,6 @@ export class NotificationsRepository {
       )
       returning
         id,
-        institution_id as "institutionId",
         event_name as "eventName",
         title,
         message,
@@ -97,13 +92,13 @@ export class NotificationsRepository {
   }
 
   async list(input: ListNotificationsQuery & {
-    institutionId: string;
     role?: string;
     userId?: string;
     filters?: FilterSpec[];
     sort?: SortSpec | null;
   }) {
-    const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+    // `true` keeps the where clause valid when no other filter applies.
+    const filters: SQL[] = [sql`true`];
 
     if (input.unreadOnly) {
       filters.push(sql`read_at is null`);
@@ -133,7 +128,6 @@ export class NotificationsRepository {
     const itemsQuery = sql`
       select
         id,
-        institution_id as "institutionId",
         event_name as "eventName",
         title,
         message,
@@ -169,7 +163,6 @@ export class NotificationsRepository {
   }
 
   async markRead(input: {
-    institutionId: string;
     notificationId: string;
     role?: string;
     userId?: string;
@@ -183,11 +176,9 @@ export class NotificationsRepository {
       update notifications
       set read_at = coalesce(read_at, now())
       where id = ${input.notificationId}
-        and institution_id = ${input.institutionId}
         ${roleClause}
       returning
         id,
-        institution_id as "institutionId",
         event_name as "eventName",
         title,
         message,
@@ -232,8 +223,7 @@ export class NotificationsRepository {
             from guardian_user_links gul
             inner join student_guardians sg
               on sg.guardian_id = gul.guardian_id
-            where gul.institution_id = notifications.institution_id
-              and gul.user_id = ${userId}
+            where gul.user_id = ${userId}
               and metadata->'studentIds' ? sg.student_id::text
           )
         )
@@ -247,8 +237,7 @@ export class NotificationsRepository {
           or exists (
             select 1
             from teacher_classroom_assignments tca
-            where tca.institution_id = notifications.institution_id
-              and tca.teacher_user_id = ${userId}
+            where tca.teacher_user_id = ${userId}
               and metadata->'classroomIds' ? tca.classroom_id::text
           )
         )

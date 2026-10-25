@@ -45,7 +45,7 @@ export type AcademicDomainEvent =
   | AttendanceMarkedEvent;
 
 export function createEnrollmentCreatedEvent(input: {
-  institutionId: string;
+  institutionId?: string;
   payload: EnrollmentCreatedPayload;
 }) {
   return createEventEnvelope({
@@ -56,7 +56,7 @@ export function createEnrollmentCreatedEvent(input: {
 }
 
 export function createGradeSubmittedEvent(input: {
-  institutionId: string;
+  institutionId?: string;
   payload: GradeSubmittedPayload;
 }) {
   return createEventEnvelope({
@@ -67,7 +67,7 @@ export function createGradeSubmittedEvent(input: {
 }
 
 export function createAttendanceMarkedEvent(input: {
-  institutionId: string;
+  institutionId?: string;
   payload: AttendanceMarkedPayload;
 }) {
   return createEventEnvelope({
@@ -91,7 +91,7 @@ export type EnrollmentWelcomedEvent = EventEnvelope<
 >;
 
 export function createEnrollmentWelcomedEvent(input: {
-  institutionId: string;
+  institutionId?: string;
   payload: EnrollmentWelcomedPayload;
 }) {
   return createEventEnvelope({

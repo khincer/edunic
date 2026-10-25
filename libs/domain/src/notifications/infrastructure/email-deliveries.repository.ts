@@ -33,7 +33,6 @@ export const EMAIL_DELIVERY_LIST_COLUMNS = {
 
 export type EmailDeliveryRecord = {
   id: string;
-  institutionId: string;
   eventId: string;
   eventName: string;
   recipientAddress: string;
@@ -60,8 +59,8 @@ export type EmailDeliveryState = {
   senderIdentityConfigured: boolean;
 };
 
-// Per-institution sender identity (D4/SI-R1). `senderName` is the configured
-// display name; a NULL means the institution is unconfigured and nothing is
+// The school's sender identity (D4/SI-R1). `senderName` is the configured
+// display name; a NULL means the school is unconfigured and nothing is
 // sent (SI-R3).
 export type EmailSenderIdentity = {
   senderName: string | null;
@@ -91,7 +90,6 @@ export type EmailDeliveryClaim = {
 };
 
 export type ListEmailDeliveriesInput = ListEmailDeliveriesQuery & {
-  institutionId: string;
   filters?: FilterSpec[];
   sort?: SortSpec | null;
 };
@@ -100,13 +98,9 @@ export class EmailDeliveriesRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
   // RC-R1: the union of the student's guardians on record with a non-empty
-  // email and the users reachable through `guardian_user_links`. Institution
-  // scoping is explicit on both branches (RC-R3); one row per address, with the
-  // guardian on record winning when an address is both (RC-R2).
-  async resolveRecipients(
-    institutionId: string,
-    studentId: string
-  ): Promise<RecipientRecord[]> {
+  // email and the users reachable through `guardian_user_links`. One row per
+  // address, with the guardian on record winning when an address is both (RC-R2).
+  async resolveRecipients(studentId: string): Promise<RecipientRecord[]> {
     const result = await this.db.execute<RecipientRecord>(sql`
       select
         candidates.address,
@@ -117,13 +111,9 @@ export class EmailDeliveriesRepository {
       from (
         select trim(lower(guardians.email)) as address, 'guardian' as source
         from student_guardians
-        inner join students
-          on students.id = student_guardians.student_id
         inner join guardians
           on guardians.id = student_guardians.guardian_id
         where student_guardians.student_id = ${studentId}
-          and students.institution_id = ${institutionId}
-          and guardians.institution_id = ${institutionId}
           and guardians.email is not null
           and length(trim(guardians.email)) > 0
 
@@ -131,15 +121,11 @@ export class EmailDeliveriesRepository {
 
         select trim(lower(users.email)) as address, 'user' as source
         from student_guardians
-        inner join students
-          on students.id = student_guardians.student_id
         inner join guardian_user_links
           on guardian_user_links.guardian_id = student_guardians.guardian_id
-         and guardian_user_links.institution_id = ${institutionId}
         inner join users
           on users.id = guardian_user_links.user_id
         where student_guardians.student_id = ${studentId}
-          and students.institution_id = ${institutionId}
           and length(trim(users.email)) > 0
       ) as candidates
       group by candidates.address
@@ -153,7 +139,6 @@ export class EmailDeliveriesRepository {
   // makes a redelivered event a no-op instead of a second record, and a
   // conflict is not an error.
   async insertPending(input: {
-    institutionId: string;
     eventId: string;
     eventName: string;
     studentId: string | null;
@@ -165,7 +150,6 @@ export class EmailDeliveriesRepository {
 
     const values = input.recipients.map(
       (recipient) => sql`(
-        ${input.institutionId},
         ${input.eventId},
         ${input.eventName},
         ${recipient.address},
@@ -176,7 +160,6 @@ export class EmailDeliveriesRepository {
 
     await this.db.execute(sql`
       insert into email_deliveries (
-        institution_id,
         event_id,
         event_name,
         recipient_address,
@@ -188,17 +171,15 @@ export class EmailDeliveriesRepository {
     `);
   }
 
-  // SI-R1/SI-R3: the institution's own sender identity, scoped to the row
-  // keyed by `institution_id`. NULL means unconfigured.
-  async findSenderIdentity(
-    institutionId: string
-  ): Promise<EmailSenderIdentity | null> {
+  // SI-R1/SI-R3: the school's sender identity: the single institutions row, the
+  // oldest by the same rule as single_school_id(). NULL means unconfigured.
+  async findSenderIdentity(): Promise<EmailSenderIdentity | null> {
     const result = await this.db.execute<EmailSenderIdentity>(sql`
       select
         sender_name as "senderName",
         reply_to_email as "replyToEmail"
       from institutions
-      where id = ${institutionId}
+      order by created_at asc nulls last, id asc
       limit 1
     `);
 
@@ -206,9 +187,8 @@ export class EmailDeliveriesRepository {
   }
 
   // RC-R1/RC-R3: the student the event is about, resolved from the enrollment
-  // every trigger carries, scoped to the institution on both joins.
+  // every trigger carries.
   async findDeliveryTarget(input: {
-    institutionId: string;
     enrollmentId: string;
   }): Promise<EmailStudentTarget | null> {
     const result = await this.db.execute<EmailStudentTarget>(sql`
@@ -219,8 +199,6 @@ export class EmailDeliveriesRepository {
       inner join students
         on students.id = enrollments.student_id
       where enrollments.id = ${input.enrollmentId}
-        and enrollments.institution_id = ${input.institutionId}
-        and students.institution_id = ${input.institutionId}
       limit 1
     `);
 
@@ -236,7 +214,6 @@ export class EmailDeliveriesRepository {
   // `attempt_count` increments here, at the claim, so it counts attempts, not
   // completions.
   async claimDelivery(input: {
-    institutionId: string;
     eventId: string;
     recipientAddress: string;
   }): Promise<EmailDeliveryClaim | null> {
@@ -246,8 +223,7 @@ export class EmailDeliveriesRepository {
         status = 'sending',
         attempt_count = attempt_count + 1,
         updated_at = now()
-      where institution_id = ${input.institutionId}
-        and event_id = ${input.eventId}
+      where event_id = ${input.eventId}
         and recipient_address = ${input.recipientAddress}
         and status in ('queued', 'retried')
       returning
@@ -343,7 +319,6 @@ export class EmailDeliveriesRepository {
   // (and increments `attempt_count`) belongs to the idempotency guard, not this
   // transition.
   async completeDelivery(input: {
-    institutionId: string;
     eventId: string;
     recipientAddress: string;
     completion: EmailDeliveryCompletion;
@@ -359,14 +334,14 @@ export class EmailDeliveriesRepository {
         provider_error = ${providerError},
         sent_at = case when ${status} = 'sent' then now() else sent_at end,
         updated_at = now()
-      where institution_id = ${input.institutionId}
-        and event_id = ${input.eventId}
+      where event_id = ${input.eventId}
         and recipient_address = ${input.recipientAddress}
     `);
   }
 
   async list(input: ListEmailDeliveriesInput) {
-    const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+    // `true` keeps the where clause valid when no other filter applies.
+    const filters: SQL[] = [sql`true`];
 
     if (input.status) {
       filters.push(sql`status = ${input.status}`);
@@ -397,7 +372,6 @@ export class EmailDeliveriesRepository {
     const itemsQuery = sql`
       select
         id,
-        institution_id as "institutionId",
         event_id as "eventId",
         event_name as "eventName",
         recipient_address as "recipientAddress",
@@ -439,8 +413,8 @@ export class EmailDeliveriesRepository {
   }
 
   // PN-R3: the panel's state payload. A missing flag row reads as disabled
-  // (D7), and `sender_name IS NULL` is SI-R3's "unconfigured institution".
-  async getState(institutionId: string): Promise<EmailDeliveryState | null> {
+  // (D7), and `sender_name IS NULL` is SI-R3's "unconfigured school".
+  async getState(): Promise<EmailDeliveryState | null> {
     const result = await this.db.execute<EmailDeliveryState>(sql`
       select
         coalesce(feature_flags.default_value, false) as "emailNotificationsEnabled",
@@ -448,7 +422,7 @@ export class EmailDeliveriesRepository {
       from institutions
       left join feature_flags
         on feature_flags.key = 'email_notifications'
-      where institutions.id = ${institutionId}
+      order by institutions.created_at asc nulls last, institutions.id asc
       limit 1
     `);
 

@@ -37,7 +37,6 @@ export class NotificationsService {
 
   async listNotifications(
     input: ListNotificationsQuery & {
-      institutionId: string;
       role?: string;
       userId?: string;
       filters?: FilterSpec[];
@@ -71,7 +70,6 @@ export class NotificationsService {
   }
 
   async markNotificationRead(input: {
-    institutionId: string;
     notificationId: string;
     role?: string;
     userId?: string;
@@ -92,7 +90,6 @@ export class NotificationsService {
   private toNotificationInput(event: AcademicDomainEvent) {
     if (event.name === 'enrollment.created') {
       return {
-        institutionId: event.institutionId,
         eventName: event.name,
         title: 'Enrollment created',
         message: `Enrollment ${event.payload.enrollmentId} was created`,
@@ -102,7 +99,6 @@ export class NotificationsService {
 
     if (event.name === 'grade.submitted') {
       return {
-        institutionId: event.institutionId,
         eventName: event.name,
         title: 'Grade submitted',
         message: `${event.payload.subject} grade was submitted`,
@@ -111,7 +107,6 @@ export class NotificationsService {
     }
 
     return {
-      institutionId: event.institutionId,
       eventName: event.name,
       title: 'Attendance marked',
       message: `Attendance ${event.payload.status} was marked`,
@@ -122,7 +117,6 @@ export class NotificationsService {
   private toNotificationResponse(notification: NotificationRecord) {
     return {
       id: notification.id,
-      institutionId: notification.institutionId,
       eventName: notification.eventName,
       title: notification.title,
       message: notification.message,

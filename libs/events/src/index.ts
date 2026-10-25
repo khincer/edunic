@@ -13,7 +13,9 @@ export {
 export type EventEnvelope<TName extends string = string, TPayload = unknown> = {
   id: string;
   name: TName;
-  institutionId: string;
+  // Optional since S1.4c (single school). Entries queued before the sweep
+  // still carry it and must keep parsing; new events omit it. Removed in S1.4h.
+  institutionId?: string;
   payload: TPayload;
   occurredAt: string;
 };
@@ -32,13 +34,15 @@ export interface EventBus {
 
 export function createEventEnvelope<TName extends string, TPayload>(input: {
   name: TName;
-  institutionId: string;
+  institutionId?: string;
   payload: TPayload;
 }): EventEnvelope<TName, TPayload> {
   return {
     id: randomUUID(),
     name: input.name,
-    institutionId: input.institutionId,
+    ...(input.institutionId === undefined
+      ? {}
+      : { institutionId: input.institutionId }),
     payload: input.payload,
     occurredAt: new Date().toISOString(),
   };
