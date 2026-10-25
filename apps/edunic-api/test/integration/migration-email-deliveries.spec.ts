@@ -2,9 +2,19 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { sql } from 'drizzle-orm';
 import { db, runMigrations } from '@edunic/source/db';
-import { ensureTestDatabaseReady } from '../helpers/db.js';
+import { ensureTestDatabaseReady, resetTestDatabase } from '../helpers/db.js';
 
 const MIGRATIONS_DIR = 'libs/db/src/migrations';
+
+// The down/up test re-applies 0010, which merges every school into one and
+// repoints their rows. Suites truncate when they start, not when they end, so
+// the previous suite's school and students are still here; when this suite's
+// school wins the merge, those students move onto it and afterAll cannot
+// delete it. Start from an empty database so the merge only sees our rows.
+beforeAll(async () => {
+  await ensureTestDatabaseReady();
+  await resetTestDatabase();
+});
 
 // Rows created by this suite; deleted in afterAll so the shared test database is
 // handed back the way it was found.
