@@ -45,6 +45,7 @@ describe('academic periods routes', () => {
     });
 
     expect(createResponse.status).toBe(201);
+    expect(createResponse.body.data).not.toHaveProperty('institutionId');
     const periodId = createResponse.body.data.id;
 
     const duplicateResponse = await client.post('/academic-periods').set(headers).send({
@@ -53,12 +54,39 @@ describe('academic periods routes', () => {
     });
     expect(duplicateResponse.status).toBe(409);
 
+    // The UNIQUE key still carries institution_id until 0015: with one school
+    // the app-level check is what keeps (year, term) unique.
+    const secondResponse = await client.post('/academic-periods').set(headers).send({
+      year: 2026,
+      term: 2,
+    });
+    expect(secondResponse.status).toBe(201);
+
+    const collidingUpdate = await client
+      .patch(`/academic-periods/${secondResponse.body.data.id}`)
+      .set(headers)
+      .send({ term: 1 });
+    expect(collidingUpdate.status).toBe(409);
+
+    const getResponse = await client
+      .get(`/academic-periods/${periodId}`)
+      .set(headers);
+    expect(getResponse.status).toBe(200);
+    expect(getResponse.body.data).not.toHaveProperty('institutionId');
+
+    const listResponse = await client.get('/academic-periods?year=2026').set(headers);
+    expect(listResponse.status).toBe(200);
+    expect(listResponse.body.data).toHaveLength(2);
+    for (const item of listResponse.body.data) {
+      expect(item).not.toHaveProperty('institutionId');
+    }
+
     const updateResponse = await client
       .patch(`/academic-periods/${periodId}`)
       .set(headers)
-      .send({ term: 2 });
+      .send({ term: 3 });
     expect(updateResponse.status).toBe(200);
-    expect(updateResponse.body.data.term).toBe(2);
+    expect(updateResponse.body.data.term).toBe(3);
 
     const deleteResponse = await client
       .delete(`/academic-periods/${periodId}`)

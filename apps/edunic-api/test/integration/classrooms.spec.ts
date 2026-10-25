@@ -46,6 +46,7 @@ describe('classrooms routes', () => {
 
     expect(createResponse.status).toBe(201);
     expect(createResponse.body.data.name).toBe('Grade 5 A');
+    expect(createResponse.body.data).not.toHaveProperty('institutionId');
     const classroomId = createResponse.body.data.id;
 
     const duplicateResponse = await client.post('/classrooms').set(headers).send({
@@ -59,13 +60,33 @@ describe('classrooms routes', () => {
       .set(headers);
     expect(listResponse.status).toBe(200);
     expect(listResponse.body.meta.total).toBe(1);
+    for (const item of listResponse.body.data) {
+      expect(item).not.toHaveProperty('institutionId');
+    }
+
+    // The UNIQUE key still carries institution_id until 0015: with one school
+    // the app-level check is what keeps (grade_level, section) unique.
+    const sectionB = await client.post('/classrooms').set(headers).send({
+      gradeLevel: 5,
+      section: 'B',
+    });
+    expect(sectionB.status).toBe(201);
+    const collidingUpdate = await client
+      .patch(`/classrooms/${sectionB.body.data.id}`)
+      .set(headers)
+      .send({ section: 'A' });
+    expect(collidingUpdate.status).toBe(409);
+
+    const getResponse = await client.get(`/classrooms/${classroomId}`).set(headers);
+    expect(getResponse.status).toBe(200);
+    expect(getResponse.body.data).not.toHaveProperty('institutionId');
 
     const updateResponse = await client
       .patch(`/classrooms/${classroomId}`)
       .set(headers)
-      .send({ section: 'B' });
+      .send({ section: 'C' });
     expect(updateResponse.status).toBe(200);
-    expect(updateResponse.body.data.name).toBe('Grade 5 B');
+    expect(updateResponse.body.data.name).toBe('Grade 5 C');
 
     const deleteResponse = await client
       .delete(`/classrooms/${classroomId}`)
@@ -93,6 +114,9 @@ describe('classrooms routes', () => {
     const listResponse = await client.get('/classrooms').set(headers);
     expect(listResponse.status).toBe(200);
     expect(listResponse.body.meta.total).toBe(1);
+    for (const item of listResponse.body.data) {
+      expect(item).not.toHaveProperty('institutionId');
+    }
 
     const createResponse = await client.post('/classrooms').set(headers).send({
       gradeLevel: 6,
