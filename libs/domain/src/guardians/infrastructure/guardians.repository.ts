@@ -37,7 +37,6 @@ type CountRow = {
 
 export type GuardianRecord = {
   id: string;
-  institutionId: string;
   name: string;
   phone: string | null;
   email: string | null;
@@ -45,20 +44,17 @@ export type GuardianRecord = {
 
 export type StudentRecord = {
   id: string;
-  institutionId: string;
   firstName: string;
   lastName: string;
 };
 
 export type CreateGuardianInput = {
-  institutionId: string;
   name: string;
   phone?: string | null;
   email?: string | null;
 };
 
 export type UpdateGuardianInput = {
-  institutionId: string;
   guardianId: string;
   name?: string;
   phone?: string | null;
@@ -66,7 +62,6 @@ export type UpdateGuardianInput = {
 };
 
 export type ListGuardiansInput = ListGuardiansQuery & {
-  institutionId: string;
   // Restricts the list to guardians of these students; undefined means
   // unscoped.
   studentIds?: string[];
@@ -83,7 +78,7 @@ export class GuardiansRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
   async list(input: ListGuardiansInput): Promise<ListGuardiansResult> {
-    const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+    const filters: SQL[] = [];
 
     const scope = buildStudentIdCondition('student_id', input.studentIds);
 
@@ -109,7 +104,10 @@ export class GuardiansRepository {
       filters.push(plan.keyset);
     }
 
-    const whereClause = sql`where ${sql.join(filters, sql` and `)}`;
+    const whereClause =
+      filters.length > 0
+        ? sql`where ${sql.join(filters, sql` and `)}`
+        : sql``;
     const orderBy = plan.orderBy ?? this.legacyOrderBy(input);
     const offsetClause =
       plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
@@ -117,7 +115,6 @@ export class GuardiansRepository {
     const itemsQuery = sql`
       select
         id,
-        institution_id as "institutionId",
         name,
         phone,
         email
@@ -148,17 +145,15 @@ export class GuardiansRepository {
     };
   }
 
-  async findById(institutionId: string, guardianId: string) {
+  async findById(guardianId: string) {
     const result = await this.db.execute<GuardianRecord>(sql`
       select
         id,
-        institution_id as "institutionId",
         name,
         phone,
         email
       from guardians
       where id = ${guardianId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
@@ -168,20 +163,17 @@ export class GuardiansRepository {
   async create(input: CreateGuardianInput) {
     const result = await this.db.execute<GuardianRecord>(sql`
       insert into guardians (
-        institution_id,
         name,
         phone,
         email
       )
       values (
-        ${input.institutionId},
         ${input.name},
         ${input.phone ?? null},
         ${input.email ?? null}
       )
       returning
         id,
-        institution_id as "institutionId",
         name,
         phone,
         email
@@ -206,17 +198,15 @@ export class GuardiansRepository {
     }
 
     if (assignments.length === 0) {
-      return this.findById(input.institutionId, input.guardianId);
+      return this.findById(input.guardianId);
     }
 
     const result = await this.db.execute<GuardianRecord>(sql`
       update guardians
       set ${sql.join(assignments, sql`, `)}
       where id = ${input.guardianId}
-        and institution_id = ${input.institutionId}
       returning
         id,
-        institution_id as "institutionId",
         name,
         phone,
         email
@@ -225,14 +215,12 @@ export class GuardiansRepository {
     return result.rows[0] ?? null;
   }
 
-  async delete(institutionId: string, guardianId: string) {
+  async delete(guardianId: string) {
     const result = await this.db.execute<GuardianRecord>(sql`
       delete from guardians
       where id = ${guardianId}
-        and institution_id = ${institutionId}
       returning
         id,
-        institution_id as "institutionId",
         name,
         phone,
         email
@@ -241,27 +229,24 @@ export class GuardiansRepository {
     return result.rows[0] ?? null;
   }
 
-  async findStudentById(institutionId: string, studentId: string) {
+  async findStudentById(studentId: string) {
     const result = await this.db.execute<StudentRecord>(sql`
       select
         id,
-        institution_id as "institutionId",
         first_name as "firstName",
         last_name as "lastName"
       from students
       where id = ${studentId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async listStudentGuardians(institutionId: string, studentId: string) {
+  async listStudentGuardians(studentId: string) {
     const result = await this.db.execute<GuardianRecord>(sql`
       select
         guardians.id,
-        guardians.institution_id as "institutionId",
         guardians.name,
         guardians.phone,
         guardians.email
@@ -271,23 +256,16 @@ export class GuardiansRepository {
       inner join students
         on students.id = student_guardians.student_id
       where student_guardians.student_id = ${studentId}
-        and guardians.institution_id = ${institutionId}
-        and students.institution_id = ${institutionId}
       order by guardians.name asc
     `);
 
     return result.rows;
   }
 
-  async findStudentGuardianLink(
-    institutionId: string,
-    studentId: string,
-    guardianId: string
-  ) {
+  async findStudentGuardianLink(studentId: string, guardianId: string) {
     const result = await this.db.execute<GuardianRecord>(sql`
       select
         guardians.id,
-        guardians.institution_id as "institutionId",
         guardians.name,
         guardians.phone,
         guardians.email
@@ -298,8 +276,6 @@ export class GuardiansRepository {
         on students.id = student_guardians.student_id
       where student_guardians.student_id = ${studentId}
         and student_guardians.guardian_id = ${guardianId}
-        and guardians.institution_id = ${institutionId}
-        and students.institution_id = ${institutionId}
       limit 1
     `);
 
@@ -319,38 +295,19 @@ export class GuardiansRepository {
     `);
   }
 
-  async removeGuardianFromStudent(
-    institutionId: string,
-    studentId: string,
-    guardianId: string
-  ) {
+  async removeGuardianFromStudent(studentId: string, guardianId: string) {
     await this.db.execute(sql`
       delete from student_guardians
       where student_id = ${studentId}
         and guardian_id = ${guardianId}
-        and exists (
-          select 1
-          from students
-          where id = ${studentId}
-            and institution_id = ${institutionId}
-        )
-        and exists (
-          select 1
-          from guardians
-          where id = ${guardianId}
-            and institution_id = ${institutionId}
-        )
     `);
   }
 
-  async countLinkedStudents(institutionId: string, guardianId: string) {
+  async countLinkedStudents(guardianId: string) {
     const result = await this.db.execute<CountRow>(sql`
       select count(*)::int as count
       from student_guardians
-      inner join students
-        on students.id = student_guardians.student_id
-      where student_guardians.guardian_id = ${guardianId}
-        and students.institution_id = ${institutionId}
+      where guardian_id = ${guardianId}
     `);
 
     return this.toCount(result.rows[0]?.count);

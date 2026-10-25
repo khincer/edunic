@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId, parseFilterSort } from '@edunic/source/domain/shared';
+import { parseWithSchema, parseFilterSort } from '@edunic/source/domain/shared';
 import {
   GuardiansService,
   GuardiansServiceError,
@@ -37,7 +37,6 @@ export async function guardianRoutes(app: FastifyInstance) {
   };
 
   app.get('/guardians', readAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listGuardiansQuerySchema, request.query);
     const { filters, sort } = parseFilterSort(
       request.query as { filter?: string | string[]; sort?: string },
@@ -49,7 +48,6 @@ export async function guardianRoutes(app: FastifyInstance) {
     }
 
     return guardiansService.listGuardians({
-      institutionId,
       actor: actorOf(request),
       ...query,
       filters,
@@ -58,62 +56,43 @@ export async function guardianRoutes(app: FastifyInstance) {
   });
 
   app.get('/guardians/:guardianId', readAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(guardianParamsSchema, request.params);
 
-    return guardiansService.getGuardian(
-      institutionId,
-      params.guardianId,
-      actorOf(request)
-    );
+    return guardiansService.getGuardian(params.guardianId, actorOf(request));
   });
 
   app.post('/guardians', adminOnly, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createGuardianBodySchema, request.body);
-    const result = await guardiansService.createGuardian({
-      institutionId,
-      ...body,
-    });
+    const result = await guardiansService.createGuardian(body);
 
     return reply.status(201).send(result);
   });
 
   app.patch('/guardians/:guardianId', adminOnly, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(guardianParamsSchema, request.params);
     const body = parseWithSchema(updateGuardianBodySchema, request.body);
 
     return guardiansService.updateGuardian({
-      institutionId,
       guardianId: params.guardianId,
       ...body,
     });
   });
 
   app.delete('/guardians/:guardianId', adminOnly, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(guardianParamsSchema, request.params);
 
-    return guardiansService.deleteGuardian(institutionId, params.guardianId);
+    return guardiansService.deleteGuardian(params.guardianId);
   });
 
   app.get('/students/:studentId/guardians', readAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentGuardiansParamsSchema, request.params);
 
-    return guardiansService.listStudentGuardians(
-      institutionId,
-      params.studentId,
-      actorOf(request)
-    );
+    return guardiansService.listStudentGuardians(params.studentId, actorOf(request));
   });
 
   app.post('/students/:studentId/guardians/:guardianId', adminOnly, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentGuardianParamsSchema, request.params);
     const result = await guardiansService.linkGuardianToStudent(
-      institutionId,
       params.studentId,
       params.guardianId
     );
@@ -122,11 +101,9 @@ export async function guardianRoutes(app: FastifyInstance) {
   });
 
   app.delete('/students/:studentId/guardians/:guardianId', adminOnly, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentGuardianParamsSchema, request.params);
 
     return guardiansService.unlinkGuardianFromStudent(
-      institutionId,
       params.studentId,
       params.guardianId
     );
