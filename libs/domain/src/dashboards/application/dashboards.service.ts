@@ -59,7 +59,7 @@ export class DashboardsService {
         institutionId,
         activePeriod?.id ?? null
       ),
-      this.dashboardsRepository.listFeatureStatuses(institutionId),
+      this.dashboardsRepository.listFeatureStatuses(),
       this.dashboardsRepository.listExtensionStatuses(institutionId),
       this.dashboardsRepository.listRecentNotifications({
         institutionId,

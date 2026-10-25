@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { uuidSchema } from '@edunic/source/domain/shared';
 
 const featureKeySchema = z
   .string()
@@ -11,19 +10,12 @@ const featureKeySchema = z
     'Feature flag key must use lowercase letters, numbers, or underscores'
   );
 
-export const institutionFeatureFlagsParamsSchema = z.object({
-  institutionId: uuidSchema,
-});
-
-export const institutionFeatureFlagParamsSchema = z.object({
-  institutionId: uuidSchema,
+export const featureFlagParamsSchema = z.object({
   featureKey: featureKeySchema,
 });
 
-export const updateInstitutionFeatureFlagBodySchema = z.object({
+export const updateFeatureFlagBodySchema = z.object({
   enabled: z.boolean(),
 });
 
-export type UpdateInstitutionFeatureFlagBody = z.infer<
-  typeof updateInstitutionFeatureFlagBodySchema
->;
+export type UpdateFeatureFlagBody = z.infer<typeof updateFeatureFlagBodySchema>;

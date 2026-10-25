@@ -443,18 +443,11 @@ export class EmailDeliveriesRepository {
   async getState(institutionId: string): Promise<EmailDeliveryState | null> {
     const result = await this.db.execute<EmailDeliveryState>(sql`
       select
-        coalesce(
-          institution_feature_flags.enabled,
-          feature_flags.default_value,
-          false
-        ) as "emailNotificationsEnabled",
+        coalesce(feature_flags.default_value, false) as "emailNotificationsEnabled",
         institutions.sender_name is not null as "senderIdentityConfigured"
       from institutions
       left join feature_flags
         on feature_flags.key = 'email_notifications'
-      left join institution_feature_flags
-        on institution_feature_flags.feature_key = feature_flags.key
-       and institution_feature_flags.institution_id = institutions.id
       where institutions.id = ${institutionId}
       limit 1
     `);

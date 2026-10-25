@@ -296,20 +296,14 @@ export class DashboardsRepository {
     };
   }
 
-  async listFeatureStatuses(institutionId: string) {
+  async listFeatureStatuses() {
     const result = await this.db.execute<FeatureStatusRow>(sql`
       select
-        feature_flags.key,
-        coalesce(institution_feature_flags.enabled, feature_flags.default_value) as enabled,
-        case
-          when institution_feature_flags.enabled is null then 'default'
-          else 'institution'
-        end as source
+        key,
+        default_value as enabled,
+        'default' as source
       from feature_flags
-      left join institution_feature_flags
-        on institution_feature_flags.feature_key = feature_flags.key
-       and institution_feature_flags.institution_id = ${institutionId}
-      order by feature_flags.key asc
+      order by key asc
     `);
 
     return result.rows.filter((flag) => flag.key !== 'billing_module');

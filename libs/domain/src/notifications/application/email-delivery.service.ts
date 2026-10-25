@@ -107,7 +107,7 @@ export class EmailDeliveryService {
   async enqueueForEvent(event: EmailTriggerEvent): Promise<void> {
     const sendDeps = this.sender;
 
-    if (!(await this.isEnabled(event.institutionId))) {
+    if (!(await this.isEnabled())) {
       return;
     }
 
@@ -189,7 +189,7 @@ export class EmailDeliveryService {
       return;
     }
 
-    if (!(await this.isEnabled(job.institutionId))) {
+    if (!(await this.isEnabled())) {
       await this.complete(job, {
         status: 'failed',
         providerError: FLAG_DISABLED_REASON,
@@ -281,10 +281,9 @@ export class EmailDeliveryService {
     return { data: state };
   }
 
-  private async isEnabled(institutionId: string): Promise<boolean> {
-    // D7: a missing flag row reads as disabled.
-    const flag = await this.sender.featureFlags.findEffective(
-      institutionId,
+  private async isEnabled(): Promise<boolean> {
+    // D7: a missing flag row reads as disabled. Flags are global.
+    const flag = await this.sender.featureFlags.findByKey(
       EMAIL_NOTIFICATIONS_FLAG
     );
 
