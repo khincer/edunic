@@ -30,6 +30,10 @@ export type UserRole =
   | 'teacher'
   | 'parent';
 
+// Fixtures never write the school into a row: the single_school_id() default of
+// migration 0014 fills it in, so a school must exist (createInstitutionFixture).
+// The optional school parameter on every fixture is deprecated and ignored; it
+// stays only until S1.8a part 2 migrates the remaining specs, then it is removed.
 let idCounter = 1;
 
 function nextId(prefix: string) {
@@ -59,7 +63,6 @@ export async function createStudentFixture(input: {
     .insert(students)
     .values({
       id: nextId('20000000'),
-      institutionId: input.institutionId,
       firstName: input.firstName ?? 'Jane',
       lastName: input.lastName ?? 'Doe',
       dateOfBirth: input.dateOfBirth ?? '2012-03-15',
@@ -79,7 +82,6 @@ export async function createGuardianFixture(input: {
     .insert(guardians)
     .values({
       id: nextId('25000000'),
-      institutionId: input.institutionId,
       name: input.name ?? 'Maria Lopez',
       phone: input.phone ?? '+50255550000',
       email: input.email ?? null,
@@ -116,7 +118,6 @@ export async function createUserFixture(input: {
 
   return {
     ...user,
-    institutionId: input.institutionId,
     role: input.role,
     password: input.password ?? `${input.role}1234`,
   };
@@ -133,7 +134,6 @@ export async function createAcademicPeriodFixture(input: {
     .insert(academicPeriods)
     .values({
       id: nextId('30000000'),
-      institutionId: input.institutionId,
       year: input.year ?? 2026,
       term: input.term ?? 1,
       startDate: input.startDate ?? new Date('2026-01-15T00:00:00.000Z'),
@@ -153,7 +153,6 @@ export async function createClassroomFixture(input: {
     .insert(classrooms)
     .values({
       id: nextId('40000000'),
-      institutionId: input.institutionId,
       gradeLevel: input.gradeLevel ?? 5,
       section: input.section ?? 'A',
     })
@@ -163,7 +162,7 @@ export async function createClassroomFixture(input: {
 }
 
 export async function createTeacherClassroomAssignmentFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   teacherUserId: string;
   classroomId: string;
 }) {
@@ -171,7 +170,6 @@ export async function createTeacherClassroomAssignmentFixture(input: {
     .insert(teacherClassroomAssignments)
     .values({
       id: nextId('45000000'),
-      institutionId: input.institutionId,
       teacherUserId: input.teacherUserId,
       classroomId: input.classroomId,
     })
@@ -192,7 +190,6 @@ export async function createEnrollmentFixture(input: {
     .insert(enrollments)
     .values({
       id: nextId('50000000'),
-      institutionId: input.institutionId,
       studentId: input.studentId,
       academicPeriodId: input.academicPeriodId,
       classroomId: input.classroomId ?? null,
@@ -239,7 +236,7 @@ export async function createClassroomSubjectFixture(
 }
 
 export async function createGradeFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   enrollmentId: string;
   subject?: string;
   score?: number;
@@ -250,7 +247,6 @@ export async function createGradeFixture(input: {
     .insert(grades)
     .values({
       id: nextId('60000000'),
-      institutionId: input.institutionId,
       enrollmentId: input.enrollmentId,
       subjectId: subject.id,
       score: input.score ?? 90,
@@ -261,7 +257,7 @@ export async function createGradeFixture(input: {
 }
 
 export async function createAttendanceFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   enrollmentId: string;
   date?: Date;
   status?: 'present' | 'absent' | 'late';
@@ -270,7 +266,6 @@ export async function createAttendanceFixture(input: {
     .insert(attendance)
     .values({
       id: nextId('70000000'),
-      institutionId: input.institutionId,
       enrollmentId: input.enrollmentId,
       date: input.date ?? new Date('2026-02-01T08:00:00.000Z'),
       status: input.status ?? 'present',
@@ -281,7 +276,7 @@ export async function createAttendanceFixture(input: {
 }
 
 export async function createAuditLogFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   entity?: string;
   action?: string;
   createdAt?: Date;
@@ -290,7 +285,6 @@ export async function createAuditLogFixture(input: {
     .insert(auditLogs)
     .values({
       id: nextId('90000000'),
-      institutionId: input.institutionId,
       action: input.action ?? 'create',
       entity: input.entity ?? 'students',
       createdAt: input.createdAt ?? new Date('2026-01-01T00:00:00.000Z'),
@@ -301,7 +295,7 @@ export async function createAuditLogFixture(input: {
 }
 
 export async function createAssignmentFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   title?: string;
   dueDate?: Date | null;
   createdAt?: Date;
@@ -310,7 +304,6 @@ export async function createAssignmentFixture(input: {
     .insert(assignments)
     .values({
       id: nextId('97000000'),
-      institutionId: input.institutionId,
       title: input.title ?? 'Homework',
       type: 'assignment',
       status: 'published',
@@ -323,7 +316,7 @@ export async function createAssignmentFixture(input: {
 }
 
 export async function createSchoolEventFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   title?: string;
   startsAt?: Date;
   createdAt?: Date;
@@ -332,7 +325,6 @@ export async function createSchoolEventFixture(input: {
     .insert(schoolEvents)
     .values({
       id: nextId('98000000'),
-      institutionId: input.institutionId,
       title: input.title ?? 'School event',
       eventType: 'school',
       startsAt: input.startsAt ?? new Date('2026-02-01T00:00:00.000Z'),
@@ -344,7 +336,7 @@ export async function createSchoolEventFixture(input: {
 }
 
 export async function createMessageFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   senderUserId: string;
   subject?: string;
   body?: string;
@@ -354,7 +346,6 @@ export async function createMessageFixture(input: {
     .insert(messageThreads)
     .values({
       id: nextId('99000000'),
-      institutionId: input.institutionId,
       subject: input.subject ?? 'Thread subject',
       createdByUserId: input.senderUserId,
     })
@@ -364,7 +355,6 @@ export async function createMessageFixture(input: {
     .insert(messages)
     .values({
       id: nextId('99500000'),
-      institutionId: input.institutionId,
       threadId: thread[0].id,
       senderUserId: input.senderUserId,
       body: input.body ?? 'Message body',
@@ -376,7 +366,7 @@ export async function createMessageFixture(input: {
 }
 
 export async function createNotificationFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   eventName?: string;
   title?: string;
   createdAt?: Date;
@@ -385,7 +375,6 @@ export async function createNotificationFixture(input: {
     .insert(notifications)
     .values({
       id: nextId('95000000'),
-      institutionId: input.institutionId,
       eventName: input.eventName ?? 'enrollment.created',
       title: input.title ?? 'Enrollment created',
       message: 'Fixture notification',
