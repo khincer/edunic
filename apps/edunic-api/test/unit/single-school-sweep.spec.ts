@@ -29,6 +29,14 @@ const SWEPT: string[] = [
   'apps/edunic-api/src/routes/classrooms.routes.ts',
   'libs/domain/src/academic-averages',
   'apps/edunic-api/src/routes/academic-averages.routes.ts',
+  // S1.4d-2: custom fields and audit logs. custom_fields has no unique key
+  // that includes institution_id, so there is no duplicate check to keep.
+  // plugins/audit-logs.plugin.ts is NOT listed: resolveEntityId still reads
+  // the `:institutionId` route param of the institutions routes (S1.4h).
+  'libs/domain/src/custom-fields',
+  'apps/edunic-api/src/routes/custom-fields.routes.ts',
+  'libs/domain/src/audit-logs',
+  'apps/edunic-api/src/routes/audit-logs.routes.ts',
 ];
 
 // Also the per-school tables, which stay in the DB only until 0015.

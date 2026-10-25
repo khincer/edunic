@@ -48,6 +48,7 @@ describe('audit logs routes', () => {
     expect(logsResponse.body.meta.total).toBeGreaterThan(0);
     expect(logsResponse.body.data[0].action).toBe('create');
     expect(logsResponse.body.data[0].entity).toBe('students');
+    expect(logsResponse.body.data[0]).not.toHaveProperty('institutionId');
   });
 
   it('does not allow teachers to read audit logs', async () => {
