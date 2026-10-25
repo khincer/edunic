@@ -6,6 +6,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   applyCursorPagination,
   buildFilterConditions,
+  buildStudentIdCondition,
   buildSortSql,
   type DbExecutor,
   type CursorOrderSpec,
@@ -30,6 +31,10 @@ export const GRADE_LIST_COLUMNS = {
   enrollmentId: 'g.enrollment_id',
   createdAt: 'g.created_at',
 } as const;
+
+// The student a grade belongs to, through its enrollment. Constant literal.
+const GRADE_STUDENT_ID =
+  '(select e.student_id from enrollments e where e.id = g.enrollment_id)';
 
 type CountRow = {
   count: string | number;
@@ -65,6 +70,8 @@ export type UpdateGradeInput = {
 };
 
 export type ListGradesInput = ListGradesQuery & {
+  // Restricts the list to these students; undefined means unscoped.
+  studentIds?: string[];
   filters?: FilterSpec[];
   sort?: SortSpec | null;
 };
@@ -85,6 +92,11 @@ export class GradesRepository {
 
   async list(input: ListGradesInput): Promise<ListGradesResult> {
     const filters: SQL[] = [];
+    const scope = buildStudentIdCondition(GRADE_STUDENT_ID, input.studentIds);
+
+    if (scope) {
+      filters.push(scope);
+    }
 
     if (input.search) {
       filters.push(sql`s.name ilike ${`%${input.search}%`}`);

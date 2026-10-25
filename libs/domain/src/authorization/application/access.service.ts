@@ -128,18 +128,20 @@ export class AccessService {
     }
   }
 
-  // An enrollment follows its student. A missing enrollment is refused to
-  // non-admin actors so the answer does not reveal whether it exists.
+  // An enrollment follows its student. A missing enrollment (or a record whose
+  // enrollment could not be resolved: null) is refused to non-admin actors so
+  // the answer does not reveal whether it exists.
   async assertCanReadEnrollment(
     actor: ReadActor,
-    enrollmentId: string
+    enrollmentId: string | null
   ): Promise<void> {
     if (isAdminRole(actor.role)) {
       return;
     }
 
-    const studentId =
-      await this.accessRepository.findEnrollmentStudentId(enrollmentId);
+    const studentId = enrollmentId
+      ? await this.accessRepository.findEnrollmentStudentId(enrollmentId)
+      : null;
 
     if (!studentId) {
       throw new AppError('Forbidden', 403);

@@ -13,6 +13,7 @@ import {
   listGradesQuerySchema,
   updateGradeBodySchema,
 } from '@edunic/source/domain/grades';
+import { actorOf } from './actor.js';
 
 const GRADE_FILTER_SORT_OPTIONS = {
   filterFields: ['subject', 'score', 'enrollmentId', 'createdAt'],
@@ -44,6 +45,7 @@ export async function gradeRoutes(app: FastifyInstance) {
     }
 
     return gradesService.listGrades({
+      actor: actorOf(request),
       ...query,
       filters,
       sort,
@@ -53,7 +55,7 @@ export async function gradeRoutes(app: FastifyInstance) {
   app.get('/:gradeId', readAccess, async (request) => {
     const params = parseWithSchema(gradeParamsSchema, request.params);
 
-    return gradesService.getGrade(params.gradeId);
+    return gradesService.getGrade(params.gradeId, actorOf(request));
   });
 
   app.post('/', academicWriteAccess, async (request, reply) => {

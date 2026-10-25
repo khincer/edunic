@@ -13,6 +13,7 @@ import {
   createAttendanceBodySchema,
   updateAttendanceBodySchema,
 } from '@edunic/source/domain/attendance';
+import { actorOf } from './actor.js';
 
 const ATTENDANCE_FILTER_SORT_OPTIONS = {
   filterFields: ['status', 'date', 'enrollmentId', 'createdAt'],
@@ -44,6 +45,7 @@ export async function attendanceRoutes(app: FastifyInstance) {
     }
 
     return attendanceService.listAttendance({
+      actor: actorOf(request),
       ...query,
       filters,
       sort,
@@ -53,7 +55,7 @@ export async function attendanceRoutes(app: FastifyInstance) {
   app.get('/:attendanceId', readAccess, async (request) => {
     const params = parseWithSchema(attendanceParamsSchema, request.params);
 
-    return attendanceService.getAttendance(params.attendanceId);
+    return attendanceService.getAttendance(params.attendanceId, actorOf(request));
   });
 
   app.post('/', academicWriteAccess, async (request, reply) => {

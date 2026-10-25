@@ -1,5 +1,8 @@
 import type { EventBus } from '@edunic/source/events';
-import { AccessService } from '@edunic/source/domain/authorization';
+import {
+  AccessService,
+  type ReadActor,
+} from '@edunic/source/domain/authorization';
 import { createGradeSubmittedEvent } from '@edunic/source/domain/events';
 import {
   buildCursorPage,
@@ -37,12 +40,16 @@ export class GradesService {
 
   async listGrades(
     input: ListGradesQuery & {
+      actor: ReadActor;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
     }
   ) {
+    const { actor, ...query } = input;
+    const readable = await this.access.resolveReadableStudents(actor);
     const result = await this.gradesRepository.list({
-      ...input,
+      ...query,
+      studentIds: readable.all ? undefined : readable.studentIds,
       search: input.search?.trim() || undefined,
       subjectId: input.subjectId,
     });
@@ -66,8 +73,13 @@ export class GradesService {
     };
   }
 
-  async getGrade(gradeId: string) {
+  async getGrade(gradeId: string, actor: ReadActor) {
     const grade = await this.gradesRepository.findById(gradeId);
+
+    await this.access.assertCanReadEnrollment(
+      actor,
+      grade?.enrollmentId ?? null
+    );
 
     if (!grade) {
       throw new GradesServiceError('Grade not found', 404);

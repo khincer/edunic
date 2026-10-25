@@ -1,5 +1,8 @@
 import type { EventBus } from '@edunic/source/events';
-import { AccessService } from '@edunic/source/domain/authorization';
+import {
+  AccessService,
+  type ReadActor,
+} from '@edunic/source/domain/authorization';
 import { createAttendanceMarkedEvent } from '@edunic/source/domain/events';
 import {
   buildCursorPage,
@@ -37,12 +40,16 @@ export class AttendanceService {
 
   async listAttendance(
     input: ListAttendanceQuery & {
+      actor: ReadActor;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
     }
   ) {
+    const { actor, ...query } = input;
+    const readable = await this.access.resolveReadableStudents(actor);
     const result = await this.attendanceRepository.list({
-      ...input,
+      ...query,
+      studentIds: readable.all ? undefined : readable.studentIds,
       date: input.date?.trim() || undefined,
     });
 
@@ -66,8 +73,13 @@ export class AttendanceService {
     };
   }
 
-  async getAttendance(attendanceId: string) {
+  async getAttendance(attendanceId: string, actor: ReadActor) {
     const attendance = await this.attendanceRepository.findById(attendanceId);
+
+    await this.access.assertCanReadEnrollment(
+      actor,
+      attendance?.enrollmentId ?? null
+    );
 
     if (!attendance) {
       throw new AttendanceServiceError('Attendance record not found', 404);

@@ -175,6 +175,18 @@ describe('AccessService read scoping', () => {
         service.assertCanReadEnrollment(teacher, 'e-missing')
       ).rejects.toMatchObject({ statusCode: 403 });
     });
+
+    it('refuses a non-admin without resolving anything when the record has no enrollment', async () => {
+      const { service, repository } = createService();
+
+      await expect(
+        service.assertCanReadEnrollment(parent, null)
+      ).rejects.toMatchObject({ statusCode: 403 });
+      await expect(
+        service.assertCanReadEnrollment(director, null)
+      ).resolves.toBeUndefined();
+      expect(repository.findEnrollmentStudentId).not.toHaveBeenCalled();
+    });
   });
 
   describe('resolveReadableStudents', () => {
