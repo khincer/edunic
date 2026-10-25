@@ -18,9 +18,7 @@ const SWEPT: string[] = [
 // Deliberately NOT scanned:
 //  - libs/db (Drizzle schema + migrations keep the columns until 0015, S1.8b),
 //    tools/ (seed, S1.7) and every test directory (fixtures, S1.8a) are outside
-//    the roots above;
-//  - the OpenAPI document is brought in line with the routes in S1.4h-2.
-const EXCLUDED: string[] = ['apps/edunic-api/src/docs/openapi.ts'];
+//    the roots above. Nothing inside the roots is excluded.
 
 // The pattern targets the tenant identifier, never the `institutions` table:
 // the school profile and the single-school context lookups legitimately read
@@ -39,10 +37,9 @@ function listFiles(path: string): string[] {
 }
 
 describe('single-school sweep guard', () => {
-  const excluded = EXCLUDED.map((path) => join(REPO_ROOT, path));
   const files = SWEPT.flatMap((path) =>
     listFiles(join(REPO_ROOT, path))
-  ).filter((file) => /\.(ts|tsx|css|mjs|json)$/.test(file) && !excluded.includes(file));
+  ).filter((file) => /\.(ts|tsx|css|mjs|json)$/.test(file));
 
   it('scans real files across every runtime root', () => {
     const relativeFiles = files.map((file) =>
@@ -70,10 +67,10 @@ describe('single-school sweep guard', () => {
     expect(offending).toEqual([]);
   });
 
-  it('only excludes files that still exist', () => {
-    for (const file of excluded) {
-      expect(statSync(file).isFile()).toBe(true);
-    }
+  it('scans the OpenAPI document like every other runtime file', () => {
+    expect(
+      files.map((file) => relative(REPO_ROOT, file).split(sep).join('/'))
+    ).toContain('apps/edunic-api/src/docs/openapi.ts');
   });
 
   it.each(files.map((file) => [relative(REPO_ROOT, file), file]))(
