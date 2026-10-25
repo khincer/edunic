@@ -27,9 +27,8 @@ describe('auth and RBAC routes', () => {
   });
 
   it('logs in with valid credentials and returns a token', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const user = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
       email: 'admin@example.com',
       password: 'admin1234',
@@ -38,7 +37,6 @@ describe('auth and RBAC routes', () => {
     const response = await client.post('/auth/login').send({
       email: user.email,
       password: user.password,
-      institutionId: institution.id,
     });
 
     expect(response.status).toBe(200);
@@ -47,9 +45,8 @@ describe('auth and RBAC routes', () => {
   });
 
   it('rejects invalid credentials', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
       email: 'admin@example.com',
       password: 'admin1234',
@@ -58,16 +55,14 @@ describe('auth and RBAC routes', () => {
     const response = await client.post('/auth/login').send({
       email: 'admin@example.com',
       password: 'wrong-pass',
-      institutionId: institution.id,
     });
 
     expect(response.status).toBe(401);
   });
 
   it('does not reveal whether valid credentials lack a role', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const user = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
       email: 'tenant-admin@example.com',
       password: 'admin1234',
@@ -87,9 +82,8 @@ describe('auth and RBAC routes', () => {
   });
 
   it('rate limits repeated failed login attempts', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const user = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
       email: 'locked-admin@example.com',
       password: 'admin1234',
@@ -99,7 +93,6 @@ describe('auth and RBAC routes', () => {
       const response = await client.post('/auth/login').send({
         email: user.email,
         password: 'wrong-pass',
-        institutionId: institution.id,
       });
 
       expect(response.status).toBe(401);
@@ -108,23 +101,20 @@ describe('auth and RBAC routes', () => {
     const lockedResponse = await client.post('/auth/login').send({
       email: user.email,
       password: user.password,
-      institutionId: institution.id,
     });
 
     expect(lockedResponse.status).toBe(429);
   });
 
   it('rejects expired bearer tokens', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
     const response = await client.get('/school-profile').set({
       authorization: (await createAuthHeaders({
         userId: adminUser.id,
-        institutionId: institution.id,
         expiresAt: Math.floor(Date.now() / 1000) - 1,
       })).authorization,
     });
@@ -134,9 +124,8 @@ describe('auth and RBAC routes', () => {
   });
 
   it('prevents parent role from mutating students', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const parentUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
 
@@ -145,7 +134,6 @@ describe('auth and RBAC routes', () => {
       .set(
         await createAuthHeaders({
           userId: parentUser.id,
-          institutionId: institution.id,
         })
       )
       .send({
@@ -158,9 +146,8 @@ describe('auth and RBAC routes', () => {
   });
 
   it('prevents teacher role from accessing institution management routes', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const teacherUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
 
@@ -169,7 +156,6 @@ describe('auth and RBAC routes', () => {
       .set({
         authorization: (await createAuthHeaders({
           userId: teacherUser.id,
-          institutionId: institution.id,
         })).authorization,
       });
 

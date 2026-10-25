@@ -23,7 +23,7 @@ import {
 
 // Dashboards (ROLE-03, ROLE-04, PAR-01..04): the admin sees the whole school,
 // a teacher only their own classrooms, a parent only their own children. None
-// of the payloads carries institutionId (AUTH-05).
+// of the payloads names a school (AUTH-05).
 describe('dashboards scoping', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let client: ReturnType<typeof createHttpClient>;
@@ -48,57 +48,45 @@ describe('dashboards scoping', () => {
   async function createSchool() {
     const institution = await createInstitutionFixture();
     const mine = await createClassroomFixture({
-      institutionId: institution.id,
       gradeLevel: 5,
       section: 'A',
     });
     const other = await createClassroomFixture({
-      institutionId: institution.id,
       gradeLevel: 6,
       section: 'B',
     });
-    const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
-    });
+    const period = await createAcademicPeriodFixture({});
     const myStudent = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'Jane',
       lastName: 'Doe',
     });
     const otherStudent = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'John',
       lastName: 'Roe',
     });
     const myEnrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: myStudent.id,
       academicPeriodId: period.id,
       classroomId: mine.id,
     });
     const otherEnrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: otherStudent.id,
       academicPeriodId: period.id,
       classroomId: other.id,
     });
     await createGradeFixture({
-      institutionId: institution.id,
       enrollmentId: myEnrollment.id,
       score: 50,
     });
     await createGradeFixture({
-      institutionId: institution.id,
       enrollmentId: otherEnrollment.id,
       score: 40,
     });
     await createAttendanceFixture({
-      institutionId: institution.id,
       enrollmentId: myEnrollment.id,
       status: 'absent',
     });
     await createAttendanceFixture({
-      institutionId: institution.id,
       enrollmentId: otherEnrollment.id,
       status: 'absent',
     });
@@ -108,7 +96,6 @@ describe('dashboards scoping', () => {
       ['In other', other.id],
     ] as const) {
       await db.insert(assignments).values({
-        institutionId: institution.id,
         classroomId,
         title,
         type: 'exam',
@@ -116,7 +103,6 @@ describe('dashboards scoping', () => {
         dueDate: future,
       });
       await db.insert(schoolEvents).values({
-        institutionId: institution.id,
         classroomId,
         title: `Event ${title}`,
         eventType: 'classroom',
@@ -124,51 +110,41 @@ describe('dashboards scoping', () => {
       });
     }
     await db.insert(schoolEvents).values({
-      institutionId: institution.id,
       title: 'Event school-wide',
       eventType: 'school',
       startsAt: future,
     });
 
-    const guardian = await createGuardianFixture({
-      institutionId: institution.id,
-    });
+    const guardian = await createGuardianFixture({});
     await db
       .insert(studentGuardians)
       .values({ studentId: myStudent.id, guardianId: guardian.id });
     const parent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: institution.id,
       guardianId: guardian.id,
       userId: parent.id,
     });
     const strayParent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     await createTeacherClassroomAssignmentFixture({
-      institutionId: institution.id,
       teacherUserId: teacher.id,
       classroomId: mine.id,
     });
     const idleTeacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
     const headersFor = (userId: string) =>
-      createAuthHeaders({ userId, institutionId: institution.id });
+      createAuthHeaders({ userId });
 
     return {
       myStudent,
@@ -184,7 +160,7 @@ describe('dashboards scoping', () => {
   const titles = (rows: { title: string }[]) => rows.map((row) => row.title).sort();
 
   describe('admin', () => {
-    it('shows the whole school and no institutionId', async () => {
+    it('shows the whole school and no school id', async () => {
       const school = await createSchool();
 
       const response = await client

@@ -25,14 +25,12 @@ describe('audit logs routes', () => {
   });
 
   it('records successful mutating requests and lists them for admins', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     const createResponse = await client.post('/students').set(headers).send({
@@ -52,9 +50,8 @@ describe('audit logs routes', () => {
   });
 
   it('does not allow teachers to read audit logs', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const teacherUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
 
@@ -63,7 +60,6 @@ describe('audit logs routes', () => {
       .set(
         await createAuthHeaders({
           userId: teacherUser.id,
-          institutionId: institution.id,
         })
       );
 
@@ -71,16 +67,14 @@ describe('audit logs routes', () => {
   });
 
   it('can filter audit logs by entity', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
+    const student = await createStudentFixture({});
 
     await client
       .patch(`/students/${student.id}`)
@@ -99,16 +93,14 @@ describe('audit logs routes', () => {
   });
 
   // The entity id of a route without a path param falls back to the response
-  // data id. The school profile has no :institutionId param any more.
+  // data id. The school profile has no id param any more.
   it('audits a school profile update with the school id taken from the response', async () => {
     const institution = await createInstitutionFixture('Colegio Central');
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     const updated = await client
