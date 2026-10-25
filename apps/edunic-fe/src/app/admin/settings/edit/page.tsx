@@ -17,7 +17,7 @@ import {
 export default function EditInstitutionPage() {
   const router = useRouter();
   const { school } = useSchool();
-  const institutionId = school?.id ?? '';
+  const schoolId = school?.id ?? '';
   // SI-R2: the API scopes PATCH to the caller's own institution (P2 added the
   // guard), so this page is only usable for that one. For any other school we
   // show what the read API returned and no form, instead of a form whose save
@@ -31,7 +31,7 @@ export default function EditInstitutionPage() {
 
   useEffect(() => {
     async function loadInstitution() {
-      if (!institutionId) {
+      if (!schoolId) {
         return;
       }
 
@@ -53,7 +53,7 @@ export default function EditInstitutionPage() {
     }
 
     void loadInstitution();
-  }, [institutionId]);
+  }, [schoolId]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -14,14 +14,14 @@ import {
 
 export default function SchoolSettingsPage() {
   const { school } = useSchool();
-  const institutionId = school?.id ?? '';
+  const schoolId = school?.id ?? '';
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadInstitution() {
-      if (!institutionId) {
+      if (!schoolId) {
         return;
       }
 
@@ -41,7 +41,7 @@ export default function SchoolSettingsPage() {
     }
 
     void loadInstitution();
-  }, [institutionId]);
+  }, [schoolId]);
 
   return (
     <AdminShell>
