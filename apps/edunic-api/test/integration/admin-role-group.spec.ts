@@ -27,14 +27,12 @@ describe('administrative role group', () => {
   });
 
   async function signIn(role: 'director' | 'vice_director' | 'subdirector' | 'teacher' | 'parent') {
-    const institution = await createInstitutionFixture('Colegio Central');
-    const user = await createUserFixture({ institutionId: institution.id, role });
+    await createInstitutionFixture('Colegio Central');
+    const user = await createUserFixture({ role });
 
     return {
-      institution,
       headers: await createAuthHeaders({
         userId: user.id,
-        institutionId: institution.id,
       }),
     };
   }
@@ -42,9 +40,8 @@ describe('administrative role group', () => {
   it.each(['director', 'vice_director', 'subdirector'] as const)(
     'lets the %s reach admin routes with the school resolved from the user',
     async (role) => {
-      const { institution, headers } = await signIn(role);
+      const { headers } = await signIn(role);
       const student = await createStudentFixture({
-        institutionId: institution.id,
         firstName: role,
       });
 
@@ -80,9 +77,8 @@ describe('administrative role group', () => {
   );
 
   it('resolves the role of a user on the server, and no school', async () => {
-    const institution = await createInstitutionFixture('Colegio Central');
+    await createInstitutionFixture('Colegio Central');
     const user = await createUserFixture({
-      institutionId: institution.id,
       role: 'vice_director',
     });
     const repository = new AuthRepository(db);

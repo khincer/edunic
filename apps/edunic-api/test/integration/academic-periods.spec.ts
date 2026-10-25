@@ -27,14 +27,12 @@ describe('academic periods routes', () => {
   });
 
   it('supports CRUD and duplicate protection', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     const createResponse = await client.post('/academic-periods').set(headers).send({
@@ -54,8 +52,7 @@ describe('academic periods routes', () => {
     });
     expect(duplicateResponse.status).toBe(409);
 
-    // The UNIQUE key still carries institution_id until 0015: with one school
-    // the app-level check is what keeps (year, term) unique.
+    // The app-level check is what keeps (year, term) unique.
     const secondResponse = await client.post('/academic-periods').set(headers).send({
       year: 2026,
       term: 2,
@@ -95,15 +92,13 @@ describe('academic periods routes', () => {
   });
 
   it('returns 409 when deleting a period with enrollments', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
-    const period = await createAcademicPeriodFixture({ institutionId: institution.id });
-    const student = await createStudentFixture({ institutionId: institution.id });
+    const period = await createAcademicPeriodFixture({});
+    const student = await createStudentFixture({});
     await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
     });
@@ -113,7 +108,6 @@ describe('academic periods routes', () => {
       .set(
         await createAuthHeaders({
           userId: adminUser.id,
-          institutionId: institution.id,
         })
       );
 
