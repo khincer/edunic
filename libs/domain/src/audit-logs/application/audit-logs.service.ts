@@ -24,7 +24,6 @@ export class AuditLogsService {
 
   async listAuditLogs(
     input: ListAuditLogsQuery & {
-      institutionId: string;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
     }
@@ -53,7 +52,6 @@ export class AuditLogsService {
   private toAuditLogResponse(auditLog: AuditLogRecord) {
     return {
       id: auditLog.id,
-      institutionId: auditLog.institutionId,
       userId: auditLog.userId,
       action: auditLog.action,
       entity: auditLog.entity,

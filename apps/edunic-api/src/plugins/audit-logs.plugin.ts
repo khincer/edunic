@@ -35,7 +35,6 @@ const auditLogsPluginHandler: FastifyPluginAsync = async (app) => {
 
     try {
       await auditLogsRepository.create({
-        institutionId: user.institutionId,
         userId: user.id,
         action: mapMethodToAction(request.method),
         entity: resolveEntity(request),
