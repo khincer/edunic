@@ -135,8 +135,8 @@ export class TeachersRepository {
 
   async assignClassroom(userId: string, classroomId: string) {
     const result = await this.db.execute(sql`
-      insert into teacher_classroom_assignments (institution_id, teacher_user_id, classroom_id)
-      select c.institution_id, ${userId}, c.id
+      insert into teacher_classroom_assignments (teacher_user_id, classroom_id)
+      select ${userId}, c.id
       from classrooms c
       where c.id = ${classroomId}
       on conflict do nothing

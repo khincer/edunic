@@ -9,7 +9,6 @@ describe('NotificationsService', () => {
     };
     const service = new NotificationsService(repository as never);
     const event = createGradeSubmittedEvent({
-      institutionId: '00000000-0000-0000-0000-000000000001',
       payload: {
         gradeId: 'grade-1',
         enrollmentId: 'enrollment-1',
@@ -69,7 +68,6 @@ describe('NotificationsService', () => {
 
     await service.handleDomainEvent(
       createGradeSubmittedEvent({
-        institutionId: '00000000-0000-0000-0000-000000000001',
         payload: {
           gradeId: 'grade-1',
           enrollmentId: 'enrollment-1',

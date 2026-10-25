@@ -79,7 +79,7 @@ describe('EmailDeliveryService without institutionId', () => {
     await service.enqueueForEvent({
       ...welcomed,
       institutionId: OLD_SCHOOL_ID,
-    });
+    } as typeof welcomed);
 
     expect(repository.findSenderIdentity).toHaveBeenCalledWith();
     expect(repository.findDeliveryTarget).toHaveBeenCalledWith({

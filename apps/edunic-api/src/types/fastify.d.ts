@@ -16,7 +16,6 @@ declare module 'fastify' {
   interface FastifyRequest {
     user?: {
       id: string;
-      institutionId: string;
       role: string;
     };
     featureFlags?: Record<string, boolean>;

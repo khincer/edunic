@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { uuidSchema } from '@edunic/source/domain/shared';
 
 const institutionNameSchema = z
   .string()
@@ -30,14 +29,6 @@ const optionalReplyToEmailSchema = z.preprocess(
     .optional()
 );
 
-export const institutionParamsSchema = z.object({
-  institutionId: uuidSchema,
-});
-
-export const createInstitutionBodySchema = z.object({
-  name: institutionNameSchema,
-});
-
 export const updateInstitutionBodySchema = z
   .object({
     name: institutionNameSchema.optional(),
@@ -54,5 +45,4 @@ export const updateInstitutionBodySchema = z
     }
   );
 
-export type CreateInstitutionBody = z.infer<typeof createInstitutionBodySchema>;
 export type UpdateInstitutionBody = z.infer<typeof updateInstitutionBodySchema>;

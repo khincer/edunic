@@ -135,10 +135,6 @@ function resolveEntityId(request: FastifyRequest) {
     return params.academicPeriodId;
   }
 
-  if (typeof params.institutionId === 'string') {
-    return params.institutionId;
-  }
-
   const responseData =
     request.auditPayload &&
     typeof request.auditPayload === 'object' &&

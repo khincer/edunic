@@ -12,16 +12,8 @@ export type InstitutionRecord = {
   createdAt: Date | null;
 };
 
-type CountRow = {
-  count: string | number;
-};
-
-export type CreateInstitutionInput = {
-  name: string;
-};
-
 export type UpdateInstitutionInput = {
-  institutionId: string;
+  id: string;
   name?: string;
   senderName?: string | null;
   replyToEmail?: string | null;
@@ -30,7 +22,7 @@ export type UpdateInstitutionInput = {
 export class InstitutionsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
-  async findById(institutionId: string) {
+  async findById(id: string) {
     const result = await this.db.execute<InstitutionRecord>(sql`
       select
         id,
@@ -39,15 +31,14 @@ export class InstitutionsRepository {
         reply_to_email as "replyToEmail",
         created_at as "createdAt"
       from institutions
-      where id = ${institutionId}
+      where id = ${id}
       limit 1
     `);
 
     return result.rows[0] ?? null;
   }
 
-  // The single school. The oldest row wins so the id stays stable for the
-  // endpoints that still address a school by id.
+  // The single school. The oldest row wins so the id stays stable.
   async findSingle() {
     const result = await this.db.execute<InstitutionRecord>(sql`
       select
@@ -62,21 +53,6 @@ export class InstitutionsRepository {
     `);
 
     return result.rows[0] ?? null;
-  }
-
-  async create(input: CreateInstitutionInput) {
-    const result = await this.db.execute<InstitutionRecord>(sql`
-      insert into institutions (name)
-      values (${input.name})
-      returning
-        id,
-        name,
-        sender_name as "senderName",
-        reply_to_email as "replyToEmail",
-        created_at as "createdAt"
-    `);
-
-    return result.rows[0];
   }
 
   async update(input: UpdateInstitutionInput) {
@@ -95,13 +71,13 @@ export class InstitutionsRepository {
     }
 
     if (assignments.length === 0) {
-      return this.findById(input.institutionId);
+      return this.findById(input.id);
     }
 
     const result = await this.db.execute<InstitutionRecord>(sql`
       update institutions
       set ${sql.join(assignments, sql`, `)}
-      where id = ${input.institutionId}
+      where id = ${input.id}
       returning
         id,
         name,
@@ -111,29 +87,5 @@ export class InstitutionsRepository {
     `);
 
     return result.rows[0] ?? null;
-  }
-
-  async delete(institutionId: string) {
-    const result = await this.db.execute<InstitutionRecord>(sql`
-      delete from institutions
-      where id = ${institutionId}
-      returning
-        id,
-        name,
-        sender_name as "senderName",
-        reply_to_email as "replyToEmail",
-        created_at as "createdAt"
-    `);
-
-    return result.rows[0] ?? null;
-  }
-
-
-  private toCount(value: string | number | undefined) {
-    if (typeof value === 'number') {
-      return value;
-    }
-
-    return Number(value ?? 0);
   }
 }

@@ -51,10 +51,7 @@ export async function teacherRoutes(app: FastifyInstance) {
 
   app.post('/', adminOnly, async (request, reply) => {
     const body = parseWithSchema(createTeacherBodySchema, request.body);
-    const result = await teachersService.createTeacher(
-      body,
-      ''
-    );
+    const result = await teachersService.createTeacher(body);
 
     return reply.status(201).send(result);
   });

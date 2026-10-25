@@ -130,7 +130,7 @@ describe('single-school request context', () => {
       role: 'teacher',
     });
 
-    const context = await new AuthRepository(db).findAuthContext(teacher.id);
+    const context = await new AuthRepository(db as never).findAuthContext(teacher.id);
 
     expect(context).toEqual({ role: 'teacher' });
   });

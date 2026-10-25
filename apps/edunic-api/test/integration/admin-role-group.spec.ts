@@ -79,7 +79,7 @@ describe('administrative role group', () => {
     }
   );
 
-  it('resolves the single school and the role of a user on the server', async () => {
+  it('resolves the role of a user on the server, and no school', async () => {
     const institution = await createInstitutionFixture('Colegio Central');
     const user = await createUserFixture({
       institutionId: institution.id,
@@ -89,10 +89,7 @@ describe('administrative role group', () => {
 
     const context = await repository.findAuthContext(user.id);
 
-    expect(context).toEqual({
-      role: 'vice_director',
-      institutionId: institution.id,
-    });
+    expect(context).toEqual({ role: 'vice_director' });
     expect(await repository.findAuthContext('00000000-0000-4000-8000-00000000dead')).toBeNull();
   });
 });
