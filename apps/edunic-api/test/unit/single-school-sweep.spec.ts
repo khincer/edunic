@@ -61,6 +61,11 @@ const SWEPT: string[] = [
   'apps/edunic-api/src/routes/grades.routes.ts',
   'libs/domain/src/reports',
   'apps/edunic-api/src/routes/reports.routes.ts',
+  // S1.4g-1: workflows (assignments, school events, messages). The tables keep
+  // the column until 0015 (DEFAULT single_school_id()); no unique key or PK on
+  // them includes institution_id. The responses stop carrying it.
+  'libs/domain/src/workflows',
+  'apps/edunic-api/src/routes/workflows.routes.ts',
 ];
 
 // Also the per-school tables, which stay in the DB only until 0015.
