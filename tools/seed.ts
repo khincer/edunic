@@ -28,7 +28,6 @@ import {
   schoolEvents,
   studentGuardians,
   teacherClassroomAssignments,
-  userInstitutionRoles,
   userRoles,
   users,
   students,
@@ -46,12 +45,6 @@ const ids = {
     centralTeacher: '70000000-0000-0000-0000-000000000002',
     centralParent: '70000000-0000-0000-0000-000000000003',
     northAdmin: '70000000-0000-0000-0000-000000000004',
-  },
-  userInstitutionRoles: {
-    centralAdmin: '71000000-0000-0000-0000-000000000001',
-    centralTeacher: '71000000-0000-0000-0000-000000000002',
-    centralParent: '71000000-0000-0000-0000-000000000003',
-    northAdmin: '71000000-0000-0000-0000-000000000004',
   },
   userRoles: {
     centralAdmin: '72000000-0000-0000-0000-000000000001',
@@ -194,46 +187,15 @@ export async function seedDatabase() {
     ])
     .onConflictDoNothing();
 
-  await db
-    .insert(userInstitutionRoles)
-    .values([
-      {
-        id: ids.userInstitutionRoles.centralAdmin,
-        userId: ids.users.centralAdmin,
-        institutionId: ids.institutions.central,
-        role: 'admin',
-      },
-      {
-        id: ids.userInstitutionRoles.centralTeacher,
-        userId: ids.users.centralTeacher,
-        institutionId: ids.institutions.central,
-        role: 'teacher',
-      },
-      {
-        id: ids.userInstitutionRoles.centralParent,
-        userId: ids.users.centralParent,
-        institutionId: ids.institutions.central,
-        role: 'parent',
-      },
-      {
-        id: ids.userInstitutionRoles.northAdmin,
-        userId: ids.users.northAdmin,
-        institutionId: ids.institutions.north,
-        role: 'admin',
-      },
-    ])
-    .onConflictDoNothing();
-
   // The single-school model reads the role from `user_roles` (one role per
-  // user). The legacy `user_institution_roles` rows stay until the contract
-  // migration, because the domain still resolves the institution from them.
+  // user).
   await db
     .insert(userRoles)
     .values([
       {
         id: ids.userRoles.centralAdmin,
         userId: ids.users.centralAdmin,
-        role: 'admin',
+        role: 'director',
       },
       {
         id: ids.userRoles.centralTeacher,
@@ -248,7 +210,7 @@ export async function seedDatabase() {
       {
         id: ids.userRoles.northAdmin,
         userId: ids.users.northAdmin,
-        role: 'admin',
+        role: 'director',
       },
     ])
     .onConflictDoNothing();

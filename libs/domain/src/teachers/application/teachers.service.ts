@@ -53,7 +53,7 @@ export class TeachersService {
     };
   }
 
-  async createTeacher(input: CreateTeacherBody, institutionId: string) {
+  async createTeacher(input: CreateTeacherBody, _institutionId: string) {
     const existing = await this.teachersRepository.findByEmail(input.email);
 
     if (existing) {
@@ -67,7 +67,6 @@ export class TeachersService {
       email: input.email,
       passwordHash: hashPassword(input.password),
       role: input.role,
-      institutionId,
     });
 
     if (!created) {

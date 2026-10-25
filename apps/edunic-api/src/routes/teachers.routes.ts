@@ -11,7 +11,7 @@ import {
 } from '@edunic/source/domain/teachers';
 import { AppError, parseWithSchema } from '@edunic/source/domain/shared';
 
-// A teacher may read their own record; an admin may read anyone's.
+// A teacher may read their own record; a director/vice-director may read anyone's.
 const selfOrAdmin: preHandlerHookHandler = async (request: FastifyRequest) => {
   const user = request.user;
 
@@ -19,7 +19,7 @@ const selfOrAdmin: preHandlerHookHandler = async (request: FastifyRequest) => {
     throw new AppError('Authentication is required', 401);
   }
 
-  if (user.role === 'admin') {
+  if (user.role === 'director' || user.role === 'vice_director' || user.role === 'subdirector') {
     return;
   }
 
@@ -36,7 +36,7 @@ const selfOrAdmin: preHandlerHookHandler = async (request: FastifyRequest) => {
 export async function teacherRoutes(app: FastifyInstance) {
   const teachersService = new TeachersService(new TeachersRepository(app.db));
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles(['director', 'vice_director', 'subdirector'])],
   };
   const selfOrAdminAccess = {
     preHandler: [app.authenticate, selfOrAdmin],
@@ -52,7 +52,7 @@ export async function teacherRoutes(app: FastifyInstance) {
     const body = parseWithSchema(createTeacherBodySchema, request.body);
     const result = await teachersService.createTeacher(
       body,
-      request.user?.institutionId ?? ''
+      ''
     );
 
     return reply.status(201).send(result);

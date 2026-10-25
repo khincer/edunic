@@ -13,7 +13,7 @@ export async function academicAverageRoutes(app: FastifyInstance) {
     new AcademicAveragesRepository(app.db)
   );
   const readAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+    preHandler: [app.authenticate, app.authorizeRoles(['director', 'vice_director', 'subdirector', 'teacher', 'parent'])],
   };
 
   app.get('/students/:studentId', readAccess, async (request) => {

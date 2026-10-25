@@ -24,7 +24,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
   app.get(
     '/admin',
     {
-      preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+      preHandler: [app.authenticate, app.authorizeRoles(['director', 'vice_director', 'subdirector'])],
     },
     async (request) => {
       const institutionId = getInstitutionId(request);
@@ -37,7 +37,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
   app.get(
     '/teacher',
     {
-      preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher'])],
+      preHandler: [app.authenticate, app.authorizeRoles(['director', 'vice_director', 'subdirector', 'teacher'])],
     },
     async (request) => {
       const institutionId = getInstitutionId(request);

@@ -54,26 +54,9 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-export const userInstitutionRoles = pgTable(
-  'user_institution_roles',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    userId: uuid('user_id').notNull().references(() => users.id),
-    institutionId: uuid('institution_id')
-      .notNull()
-      .references(() => institutions.id),
-    role: text('role').notNull(),
-  },
-  (t) => ({
-    uniqueUserInstitution: unique().on(t.userId, t.institutionId),
-  })
-);
-
-// Single-school model: one role per user, no institution dimension. Replaces
-// `user_institution_roles` once the auth contract drops the institution.
+// Single-school model: one role per user, no institution dimension.
 // The unique constraint is the ROLE-05 guarantee: a user holds exactly one
-// role, so the same person cannot be an admin in one school and a teacher in
-// another.
+// role.
 export const userRoles = pgTable(
   'user_roles',
   {

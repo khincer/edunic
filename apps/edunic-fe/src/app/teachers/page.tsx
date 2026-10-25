@@ -68,7 +68,11 @@ export default function TeachersPage() {
   const [savingWorkflow, setSavingWorkflow] = useState('');
   const [activeSection, setActiveSection] = useState<'overview' | 'roster' | 'messages' | 'events' | 'publish'>('overview');
 
-  const canUseTeacherTools = session?.user.role === 'teacher' || session?.user.role === 'admin';
+  const canUseTeacherTools =
+    session?.user.role === 'teacher' ||
+    session?.user.role === 'director' ||
+    session?.user.role === 'vice_director' ||
+    session?.user.role === 'subdirector';
   const selectedClassroom = useMemo(
     () => classrooms.find((classroom) => classroom.id === selectedClassroomId),
     [classrooms, selectedClassroomId]

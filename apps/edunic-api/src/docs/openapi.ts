@@ -1773,7 +1773,7 @@ export function buildOpenApiDocument() {
                               institutionId: { type: 'string', format: 'uuid' },
                               role: {
                                 type: 'string',
-                                enum: ['admin', 'teacher', 'parent'],
+                                enum: ['director', 'vice_director', 'subdirector', 'teacher', 'parent'],
                               },
                             },
                           },

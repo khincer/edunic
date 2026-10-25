@@ -45,7 +45,6 @@ const authPluginHandler: FastifyPluginAsync = async (app) => {
 
       request.user = {
         id: payload.sub,
-        institutionId: authContext.institutionId,
         role: authContext.role,
       };
     }) satisfies preHandlerHookHandler

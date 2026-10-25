@@ -1,7 +1,13 @@
 import { z } from 'zod';
 import { uuidSchema } from '@edunic/source/domain/shared';
 
-export const teacherRoleSchema = z.enum(['admin', 'teacher', 'parent']);
+export const teacherRoleSchema = z.enum([
+  'director',
+  'vice_director',
+  'subdirector',
+  'teacher',
+  'parent',
+]);
 
 export const listTeachersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),

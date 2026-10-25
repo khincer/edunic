@@ -69,7 +69,6 @@ export class TeachersRepository {
     email: string;
     passwordHash: string;
     role: string;
-    institutionId: string;
   }) {
     const result = await this.db.execute<TeacherRecord>(sql`
       insert into users (email, password_hash)
@@ -91,14 +90,6 @@ export class TeachersRepository {
       insert into user_roles (user_id, role)
       values (${user.id}, ${input.role})
       on conflict (user_id) do nothing
-    `);
-
-    // The legacy role row keeps the school of the account until the tenant
-    // columns are dropped; the domain still resolves the school from it.
-    await this.db.execute(sql`
-      insert into user_institution_roles (user_id, institution_id, role)
-      values (${user.id}, ${input.institutionId}, ${input.role})
-      on conflict (user_id, institution_id) do nothing
     `);
 
     return { ...user, role: input.role };

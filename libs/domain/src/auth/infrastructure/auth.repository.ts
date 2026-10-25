@@ -10,7 +10,6 @@ export type UserRecord = {
 
 export type UserRoleRecord = {
   role: string;
-  institutionId: string;
 };
 
 export class AuthRepository {
@@ -32,20 +31,13 @@ export class AuthRepository {
   }
 
   // The role comes from `user_roles` (one role per user, the single-school
-  // model). The institution is still read from `user_institution_roles`
-  // because the tenant columns survive until the contract migration; the
-  // join is what keeps every domain query tenant-scoped in the meantime.
-  // shortcut: the institution is resolved per user here; drop this join when
-  // the domain no longer filters by institution.
+  // model). No institution dimension.
   async findAuthContext(userId: string) {
     const result = await this.db.execute<UserRoleRecord>(sql`
       select
-        r.role as "role",
-        uir.institution_id as "institutionId"
-      from user_roles r
-      join user_institution_roles uir on uir.user_id = r.user_id
-      where r.user_id = ${userId}
-      order by uir.id asc
+        role as "role"
+      from user_roles
+      where user_id = ${userId}
       limit 1
     `);
 
