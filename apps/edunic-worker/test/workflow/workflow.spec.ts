@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import Redis from 'ioredis';
 import type { EventEnvelope } from '@edunic/source/events';
 import {
@@ -256,7 +257,9 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
 
     const oldShape = {
       ...created,
-      id: 'old-shape-event-queued-before-the-sweep',
+      // A fresh id per run: the consumer's `processed:<id>` marker lives in
+      // Redis across runs, so a fixed id would be skipped as a duplicate.
+      id: randomUUID(),
       institutionId: institutionId,
     };
     await redis.xadd(STREAM, '*', 'event', JSON.stringify(oldShape));
