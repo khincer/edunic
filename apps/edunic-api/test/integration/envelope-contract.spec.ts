@@ -11,7 +11,6 @@ import {
 describe('API error envelope contract', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let client: ReturnType<typeof createHttpClient>;
-  let institutionId: string;
   let adminHeaders: Record<string, string>;
 
   beforeAll(async () => {
@@ -22,16 +21,13 @@ describe('API error envelope contract', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
-    institutionId = institution.id;
     adminHeaders = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
   });
 
@@ -53,12 +49,10 @@ describe('API error envelope contract', () => {
 
   it('wraps 403 responses in a FORBIDDEN envelope', async () => {
     const teacherUser = await createUserFixture({
-      institutionId,
       role: 'teacher',
     });
     const teacherHeaders = await createAuthHeaders({
       userId: teacherUser.id,
-      institutionId,
     });
 
     const response = await client
@@ -83,7 +77,7 @@ describe('API error envelope contract', () => {
   });
 
   it('wraps 409 responses in a CONFLICT envelope', async () => {
-    await createAcademicPeriodFixture({ institutionId, year: 2026, term: 1 });
+    await createAcademicPeriodFixture({ year: 2026, term: 1 });
 
     const response = await client.post('/academic-periods').set(adminHeaders).send({
       year: 2026,
@@ -97,7 +91,7 @@ describe('API error envelope contract', () => {
   });
 
   it('wraps CursorPage list responses in the data envelope', async () => {
-    await createStudentFixture({ institutionId });
+    await createStudentFixture({});
 
     const response = await client.get('/students?cursor=start').set(adminHeaders);
 

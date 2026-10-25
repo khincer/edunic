@@ -62,28 +62,23 @@ describe('EmailDeliveriesRepository', () => {
   });
 
   it('resolves the recipient union, normalized and deduped', async () => {
-    const institution = await createInstitutionFixture();
-    const student = await createStudentFixture({ institutionId: institution.id });
+    await createInstitutionFixture();
+    const student = await createStudentFixture({});
 
     const guardianWithEmail = await createGuardianFixture({
-      institutionId: institution.id,
       email: '  Maria@Example.com ',
     });
     const guardianWithoutEmail = await createGuardianFixture({
-      institutionId: institution.id,
       email: null,
     });
     const secondGuardianWithEmail = await createGuardianFixture({
-      institutionId: institution.id,
       email: 'other@example.com',
     });
     const linkedUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
       email: 'maria@example.com',
     });
     const secondLinkedUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
       email: ' Dad@Example.com',
     });
@@ -105,8 +100,8 @@ describe('EmailDeliveriesRepository', () => {
   });
 
   it('stages queued ledger rows and swallows a redelivered event', async () => {
-    const institution = await createInstitutionFixture();
-    const student = await createStudentFixture({ institutionId: institution.id });
+    await createInstitutionFixture();
+    const student = await createStudentFixture({});
     const eventId = randomUUID();
     const input = {
       eventId,
@@ -153,8 +148,8 @@ describe('EmailDeliveriesRepository', () => {
   });
 
   it('treats an empty recipient list as a no-op', async () => {
-    const institution = await createInstitutionFixture();
-    const student = await createStudentFixture({ institutionId: institution.id });
+    await createInstitutionFixture();
+    const student = await createStudentFixture({});
 
     await expect(
       repository.insertPending({
@@ -169,7 +164,7 @@ describe('EmailDeliveriesRepository', () => {
   });
 
   it('lists a newest-first page with status and event filters', async () => {
-    // The 0014 default fills institution_id, so a bare insert needs the school.
+    // The 0014 default fills the school, so a bare insert needs one to exist.
     await createInstitutionFixture();
 
     await stageDelivery({
