@@ -105,18 +105,18 @@ describe('E2E flow: transactions', () => {
       studentId,
       academicPeriodId,
       status: 'active',
-      institutionId,
     });
+    expect(created.json().data).not.toHaveProperty('institutionId');
 
     // The committed pair: one enrollment row, one outbox event for it.
     expect(await countRows('enrollments')).toBe(1);
     expect(await countRows('outbox_events')).toBe(1);
 
     const outboxRow = await db.execute(
-      sql.raw(`SELECT event->>'name' AS name, event->>'institutionId' AS "institutionId" FROM outbox_events`)
+      sql.raw(`SELECT event->>'name' AS name, event ? 'institutionId' AS "hasInstitutionId" FROM outbox_events`)
     );
     expect(outboxRow.rows).toEqual([
-      { name: 'enrollment.created', institutionId },
+      { name: 'enrollment.created', hasInstitutionId: false },
     ]);
   });
 
