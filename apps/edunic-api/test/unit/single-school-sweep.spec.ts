@@ -88,3 +88,79 @@ describe('single-school sweep guard', () => {
     }
   );
 });
+
+// S1.8a: the API test tree stops passing, inserting or asserting the tenant
+// identifier, so migration 0015 (S1.8b) can drop the columns without touching
+// the suite. Fixtures rely on the `single_school_id()` default of 0014.
+const TEST_ROOT = 'apps/edunic-api/test';
+
+// Specs whose subject IS the database itself: the institution_id columns, the
+// 0014 default, the institutions table or the seed. S1.8b adapts them together
+// with the migration, so they are excluded on purpose (not temporarily).
+const TEST_EXCLUDED: RegExp[] = [
+  /^integration\/migration-[^/]+\.spec\.ts$/,
+  /^integration\/db-constraints\.spec\.ts$/,
+  /^integration\/seed-single-school\.spec\.ts$/,
+  /^integration\/single-school-request-context\.spec\.ts$/,
+  /^integration\/dashboards-school-context\.spec\.ts$/,
+  /^unit\/single-school-sweep\.spec\.ts$/,
+];
+
+// TEMPORARY allow-list: files S1.8a part 2 has not cleaned yet. Part 2 empties
+// it. A file listed here must still contain a reference (see the ratchet test
+// below), so a cleaned file cannot stay on the list.
+const TEST_PENDING: string[] = [];
+
+describe('single-school sweep guard (API test tree)', () => {
+  const testFiles = listFiles(join(REPO_ROOT, TEST_ROOT))
+    .filter((file) => /\.ts$/.test(file))
+    .map((file) => ({
+      file,
+      name: relative(join(REPO_ROOT, TEST_ROOT), file).split(sep).join('/'),
+    }));
+
+  const isExcluded = (name: string) =>
+    TEST_EXCLUDED.some((pattern) => pattern.test(name));
+
+  const offendingLines = (file: string) =>
+    readFileSync(file, 'utf8')
+      .split('\n')
+      .map((line, index) => ({ line, number: index + 1 }))
+      .filter(({ line }) => FORBIDDEN.test(line))
+      .map(({ line, number }) => `${number}: ${line.trim()}`);
+
+  it('scans helpers, unit, integration and e2e files', () => {
+    for (const dir of ['helpers/', 'unit/', 'integration/', 'e2e/']) {
+      expect(
+        testFiles.filter(({ name }) => name.startsWith(dir)).length
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('only lists existing files in the exclusion and pending lists', () => {
+    const names = testFiles.map(({ name }) => name);
+
+    expect(TEST_PENDING.filter((name) => !names.includes(name))).toEqual([]);
+    expect(
+      TEST_EXCLUDED.filter((pattern) => !names.some((n) => pattern.test(n)))
+    ).toEqual([]);
+  });
+
+  // The temporary allow-list shrinks: a pending file that is already clean must
+  // be removed from it.
+  it('has no clean file left on the pending list', () => {
+    expect(
+      TEST_PENDING.filter(
+        (name) => offendingLines(join(REPO_ROOT, TEST_ROOT, name)).length === 0
+      )
+    ).toEqual([]);
+  });
+
+  it.each(
+    testFiles
+      .filter(({ name }) => !isExcluded(name) && !TEST_PENDING.includes(name))
+      .map(({ name, file }) => [name, file])
+  )('%s has no institution reference', (_name, file) => {
+    expect(offendingLines(file)).toEqual([]);
+  });
+});
