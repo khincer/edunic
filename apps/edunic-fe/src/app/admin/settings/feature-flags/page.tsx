@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
-import { useSchool } from '@/lib/school';
 import { Button, ButtonLink } from '@/components/button';
 import { DataTable, type DataTableColumn } from '@/components/data-table';
 import {
@@ -13,8 +12,6 @@ import {
 } from '@/lib/api';
 
 export default function InstitutionFeatureFlagsPage() {
-  const { school } = useSchool();
-  const institutionId = school?.id ?? '';
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,19 +19,13 @@ export default function InstitutionFeatureFlagsPage() {
   const [error, setError] = useState('');
 
   const loadData = useCallback(async () => {
-    if (!institutionId) {
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
       const [institutionResult, flagsResult] = await Promise.all([
         apiRequest<ApiSingleResponse<Institution>>(`/school-profile`),
-        apiRequest<{ data: FeatureFlag[] }>(
-          `/institutions/${institutionId}/feature-flags`
-        ),
+        apiRequest<{ data: FeatureFlag[] }>('/feature-flags'),
       ]);
       setInstitution(institutionResult.data);
       setFlags(flagsResult.data);
@@ -43,7 +34,7 @@ export default function InstitutionFeatureFlagsPage() {
     } finally {
       setLoading(false);
     }
-  }, [institutionId]);
+  }, []);
 
   useEffect(() => {
     void loadData();
@@ -56,8 +47,8 @@ export default function InstitutionFeatureFlagsPage() {
 
       try {
         await apiRequest<ApiSingleResponse<FeatureFlag>>(
-          `/institutions/${institutionId}/feature-flags/${featureKey}`,
-          { method: 'PUT', body: { enabled } }
+          `/feature-flags/${featureKey}`,
+          { method: 'PATCH', body: { enabled } }
         );
         await loadData();
       } catch (err) {
@@ -66,27 +57,7 @@ export default function InstitutionFeatureFlagsPage() {
         setBusyKey('');
       }
     },
-    [institutionId, loadData]
-  );
-
-  const resetFlag = useCallback(
-    async (featureKey: string) => {
-      setBusyKey(featureKey);
-      setError('');
-
-      try {
-        await apiRequest<ApiSingleResponse<FeatureFlag>>(
-          `/institutions/${institutionId}/feature-flags/${featureKey}`,
-          { method: 'DELETE' }
-        );
-        await loadData();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unable to reset feature flag');
-      } finally {
-        setBusyKey('');
-      }
-    },
-    [institutionId, loadData]
+    [loadData]
   );
 
   const columns = useMemo<DataTableColumn<FeatureFlag>[]>(
@@ -102,29 +73,11 @@ export default function InstitutionFeatureFlagsPage() {
         ),
       },
       {
-        key: 'default',
-        header: 'Default',
-        render: (flag) => (
-          <span className={`badge ${flag.defaultValue ? 'badge-green' : ''}`}>
-            {flag.defaultValue ? 'on' : 'off'}
-          </span>
-        ),
-      },
-      {
-        key: 'effective',
-        header: 'Effective',
+        key: 'status',
+        header: 'Status',
         render: (flag) => (
           <span className={`badge ${flag.enabled ? 'badge-blue' : 'badge-red'}`}>
             {flag.enabled ? 'enabled' : 'disabled'}
-          </span>
-        ),
-      },
-      {
-        key: 'source',
-        header: 'Source',
-        render: (flag) => (
-          <span className="badge">
-            {flag.source === 'institution' ? 'school override' : 'global default'}
           </span>
         ),
       },
@@ -141,18 +94,11 @@ export default function InstitutionFeatureFlagsPage() {
             >
               {busyKey === flag.key ? 'Saving...' : flag.enabled ? 'Disable' : 'Enable'}
             </Button>
-            <Button
-              disabled={busyKey === flag.key || flag.source === 'default'}
-              onClick={() => resetFlag(flag.key)}
-              variant="ghost"
-            >
-              Reset
-            </Button>
           </div>
         ),
       },
     ],
-    [busyKey, resetFlag, setFlag]
+    [busyKey, setFlag]
   );
 
   return (
@@ -162,8 +108,7 @@ export default function InstitutionFeatureFlagsPage() {
           <p className="eyebrow">Feature flags</p>
           <h1 className="page-title">{institution?.name ?? 'Feature flags'}</h1>
           <p className="body-copy">
-            Control staged product capabilities for this school without changing
-            global defaults.
+            Turn staged product capabilities on or off for this school.
           </p>
         </div>
         <ButtonLink href={`/admin/settings`} variant="secondary">

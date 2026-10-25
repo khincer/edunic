@@ -4,7 +4,7 @@ import { db } from '@edunic/source/db';
 import {
   emailDeliveries,
   guardianUserLinks,
-  institutionFeatureFlags,
+  featureFlags,
   institutions,
   studentGuardians,
 } from '@edunic/source/db/schema';
@@ -283,11 +283,10 @@ describe('EmailDeliveriesRepository', () => {
       senderIdentityConfigured: false,
     });
 
-    await db.insert(institutionFeatureFlags).values({
-      institutionId: institution.id,
-      featureKey: 'email_notifications',
-      enabled: true,
-    });
+    await db
+      .update(featureFlags)
+      .set({ defaultValue: true })
+      .where(eq(featureFlags.key, 'email_notifications'));
 
     await expect(repository.getState(institution.id)).resolves.toEqual({
       emailNotificationsEnabled: true,

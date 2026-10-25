@@ -146,10 +146,7 @@ export type InstitutionExtension = {
 
 export type FeatureFlag = {
   key: string;
-  defaultValue: boolean;
-  institutionEnabled: boolean | null;
   enabled: boolean;
-  source: 'default' | 'institution';
 };
 
 export type AuditLog = {
