@@ -41,7 +41,6 @@ type ExistsRow = {
 
 export type GradeRecord = {
   id: string;
-  institutionId: string;
   enrollmentId: string;
   subjectId: string;
   topicId: string | null;
@@ -52,7 +51,6 @@ export type GradeRecord = {
 };
 
 export type CreateGradeInput = {
-  institutionId: string;
   enrollmentId: string;
   subjectId: string;
   topicId?: string | null;
@@ -60,7 +58,6 @@ export type CreateGradeInput = {
 };
 
 export type UpdateGradeInput = {
-  institutionId: string;
   gradeId: string;
   subjectId?: string;
   topicId?: string | null;
@@ -68,7 +65,6 @@ export type UpdateGradeInput = {
 };
 
 export type ListGradesInput = ListGradesQuery & {
-  institutionId: string;
   filters?: FilterSpec[];
   sort?: SortSpec | null;
 };
@@ -88,7 +84,7 @@ export class GradesRepository {
   }
 
   async list(input: ListGradesInput): Promise<ListGradesResult> {
-    const filters: SQL[] = [sql`g.institution_id = ${input.institutionId}`];
+    const filters: SQL[] = [];
 
     if (input.search) {
       filters.push(sql`s.name ilike ${`%${input.search}%`}`);
@@ -112,7 +108,10 @@ export class GradesRepository {
       filters.push(plan.keyset);
     }
 
-    const whereClause = sql`where ${sql.join(filters, sql` and `)}`;
+    const whereClause =
+      filters.length > 0
+        ? sql`where ${sql.join(filters, sql` and `)}`
+        : sql``;
     const orderBy = plan.orderBy ?? this.legacyOrderBy(input);
     const offsetClause =
       plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
@@ -120,7 +119,6 @@ export class GradesRepository {
     const itemsQuery = sql`
       select
         g.id,
-        g.institution_id as "institutionId",
         g.enrollment_id as "enrollmentId",
         g.subject_id as "subjectId",
         g.topic_id as "topicId",
@@ -169,15 +167,10 @@ export class GradesRepository {
     return result.rows[0]?.subjectId ?? null;
   }
 
-  async findById(
-    institutionId: string,
-    gradeId: string,
-    executor: DbExecutor = this.db
-  ) {
+  async findById(gradeId: string, executor: DbExecutor = this.db) {
     const result = await executor.execute<GradeRecord>(sql`
       select
         g.id,
-        g.institution_id as "institutionId",
         g.enrollment_id as "enrollmentId",
         g.subject_id as "subjectId",
         g.topic_id as "topicId",
@@ -187,7 +180,6 @@ export class GradesRepository {
       from grades g
       join subjects s on s.id = g.subject_id
       where g.id = ${gradeId}
-        and g.institution_id = ${institutionId}
       limit 1
     `);
 
@@ -197,14 +189,12 @@ export class GradesRepository {
   async create(input: CreateGradeInput, executor: DbExecutor = this.db) {
     const result = await executor.execute<{ id: string }>(sql`
       insert into grades (
-        institution_id,
         enrollment_id,
         subject_id,
         topic_id,
         score
       )
       values (
-        ${input.institutionId},
         ${input.enrollmentId},
         ${input.subjectId},
         ${input.topicId ?? null},
@@ -232,37 +222,34 @@ export class GradesRepository {
     }
 
     if (assignments.length === 0) {
-      return this.findById(input.institutionId, input.gradeId);
+      return this.findById(input.gradeId);
     }
 
     const result = await this.db.execute<{ id: string }>(sql`
       update grades
       set ${sql.join(assignments, sql`, `)}
       where id = ${input.gradeId}
-        and institution_id = ${input.institutionId}
       returning id
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async delete(institutionId: string, gradeId: string) {
+  async delete(gradeId: string) {
     const result = await this.db.execute<{ id: string }>(sql`
       delete from grades
       where id = ${gradeId}
-        and institution_id = ${institutionId}
       returning id
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async findEnrollment(institutionId: string, enrollmentId: string) {
+  async findEnrollment(enrollmentId: string) {
     const result = await this.db.execute<ExistsRow>(sql`
       select id
       from enrollments
       where id = ${enrollmentId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 

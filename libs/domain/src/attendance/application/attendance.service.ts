@@ -37,7 +37,6 @@ export class AttendanceService {
 
   async listAttendance(
     input: ListAttendanceQuery & {
-      institutionId: string;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
     }
@@ -67,11 +66,8 @@ export class AttendanceService {
     };
   }
 
-  async getAttendance(institutionId: string, attendanceId: string) {
-    const attendance = await this.attendanceRepository.findById(
-      institutionId,
-      attendanceId
-    );
+  async getAttendance(attendanceId: string) {
+    const attendance = await this.attendanceRepository.findById(attendanceId);
 
     if (!attendance) {
       throw new AttendanceServiceError('Attendance record not found', 404);
@@ -84,13 +80,11 @@ export class AttendanceService {
 
   async createAttendance(
     input: CreateAttendanceBody & {
-      institutionId: string;
       role: string;
       userId: string;
     }
   ) {
     const enrollment = await this.attendanceRepository.findEnrollment(
-      input.institutionId,
       input.enrollmentId
     );
 
@@ -106,7 +100,6 @@ export class AttendanceService {
       async (tx) => {
         const createdAttendance = await this.attendanceRepository.create(
           {
-            institutionId: input.institutionId,
             enrollmentId: input.enrollmentId,
             date: input.date.trim(),
             status: input.status,
@@ -115,7 +108,6 @@ export class AttendanceService {
         );
 
         const record = await this.attendanceRepository.findById(
-          input.institutionId,
           createdAttendance.id,
           tx
         );
@@ -125,7 +117,6 @@ export class AttendanceService {
         }
 
         const event = createAttendanceMarkedEvent({
-          institutionId: input.institutionId,
           payload: {
             attendanceId: record.id,
             enrollmentId: record.enrollmentId,
@@ -152,14 +143,12 @@ export class AttendanceService {
 
   async updateAttendance(
     input: UpdateAttendanceBody & {
-      institutionId: string;
       attendanceId: string;
       role: string;
       userId: string;
     }
   ) {
     const existingAttendance = await this.attendanceRepository.findById(
-      input.institutionId,
       input.attendanceId
     );
 
@@ -173,7 +162,6 @@ export class AttendanceService {
     );
 
     const updatedAttendance = await this.attendanceRepository.update({
-      institutionId: input.institutionId,
       attendanceId: input.attendanceId,
       date: input.date?.trim(),
       status: input.status,
@@ -184,7 +172,6 @@ export class AttendanceService {
     }
 
     const attendance = await this.attendanceRepository.findById(
-      input.institutionId,
       input.attendanceId
     );
 
@@ -198,14 +185,10 @@ export class AttendanceService {
   }
 
   async deleteAttendance(
-    institutionId: string,
     attendanceId: string,
     actor: { role: string; userId: string }
   ) {
-    const attendance = await this.attendanceRepository.findById(
-      institutionId,
-      attendanceId
-    );
+    const attendance = await this.attendanceRepository.findById(attendanceId);
 
     if (!attendance) {
       throw new AttendanceServiceError('Attendance record not found', 404);
@@ -213,7 +196,7 @@ export class AttendanceService {
 
     await this.assertTeacherOwnsEnrollment(actor, attendance.enrollmentId);
 
-    await this.attendanceRepository.delete(institutionId, attendanceId);
+    await this.attendanceRepository.delete(attendanceId);
 
     return {
       data: {
@@ -239,7 +222,6 @@ export class AttendanceService {
   private toAttendanceResponse(attendance: AttendanceRecord) {
     return {
       id: attendance.id,
-      institutionId: attendance.institutionId,
       enrollmentId: attendance.enrollmentId,
       date: attendance.date,
       status: attendance.status,

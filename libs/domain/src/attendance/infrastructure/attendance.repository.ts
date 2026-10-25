@@ -44,7 +44,6 @@ type ExistsRow = {
 
 export type AttendanceRecord = {
   id: string;
-  institutionId: string;
   enrollmentId: string;
   date: Date;
   status: AttendanceStatus;
@@ -52,21 +51,18 @@ export type AttendanceRecord = {
 };
 
 export type CreateAttendanceInput = {
-  institutionId: string;
   enrollmentId: string;
   date: string;
   status: AttendanceStatus;
 };
 
 export type UpdateAttendanceInput = {
-  institutionId: string;
   attendanceId: string;
   date?: string;
   status?: AttendanceStatus;
 };
 
 export type ListAttendanceInput = ListAttendanceQuery & {
-  institutionId: string;
   filters?: FilterSpec[];
   sort?: SortSpec | null;
 };
@@ -86,7 +82,7 @@ export class AttendanceRepository {
   }
 
   async list(input: ListAttendanceInput): Promise<ListAttendanceResult> {
-    const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+    const filters: SQL[] = [];
 
     if (input.enrollmentId) {
       filters.push(sql`enrollment_id = ${input.enrollmentId}`);
@@ -110,7 +106,10 @@ export class AttendanceRepository {
       filters.push(plan.keyset);
     }
 
-    const whereClause = sql`where ${sql.join(filters, sql` and `)}`;
+    const whereClause =
+      filters.length > 0
+        ? sql`where ${sql.join(filters, sql` and `)}`
+        : sql``;
     const orderBy = plan.orderBy ?? this.legacyOrderBy(input);
     const offsetClause =
       plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
@@ -118,7 +117,6 @@ export class AttendanceRepository {
     const itemsQuery = sql`
       select
         id,
-        institution_id as "institutionId",
         enrollment_id as "enrollmentId",
         date,
         status,
@@ -150,22 +148,16 @@ export class AttendanceRepository {
     };
   }
 
-  async findById(
-    institutionId: string,
-    attendanceId: string,
-    executor: DbExecutor = this.db
-  ) {
+  async findById(attendanceId: string, executor: DbExecutor = this.db) {
     const result = await executor.execute<AttendanceRecord>(sql`
       select
         id,
-        institution_id as "institutionId",
         enrollment_id as "enrollmentId",
         date,
         status,
         created_at as "createdAt"
       from attendance
       where id = ${attendanceId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
@@ -175,13 +167,11 @@ export class AttendanceRepository {
   async create(input: CreateAttendanceInput, executor: DbExecutor = this.db) {
     const result = await executor.execute<{ id: string }>(sql`
       insert into attendance (
-        institution_id,
         enrollment_id,
         date,
         status
       )
       values (
-        ${input.institutionId},
         ${input.enrollmentId},
         ${input.date},
         ${input.status}
@@ -204,37 +194,34 @@ export class AttendanceRepository {
     }
 
     if (assignments.length === 0) {
-      return this.findById(input.institutionId, input.attendanceId);
+      return this.findById(input.attendanceId);
     }
 
     const result = await this.db.execute<{ id: string }>(sql`
       update attendance
       set ${sql.join(assignments, sql`, `)}
       where id = ${input.attendanceId}
-        and institution_id = ${input.institutionId}
       returning id
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async delete(institutionId: string, attendanceId: string) {
+  async delete(attendanceId: string) {
     const result = await this.db.execute<{ id: string }>(sql`
       delete from attendance
       where id = ${attendanceId}
-        and institution_id = ${institutionId}
       returning id
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async findEnrollment(institutionId: string, enrollmentId: string) {
+  async findEnrollment(enrollmentId: string) {
     const result = await this.db.execute<ExistsRow>(sql`
       select id
       from enrollments
       where id = ${enrollmentId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 

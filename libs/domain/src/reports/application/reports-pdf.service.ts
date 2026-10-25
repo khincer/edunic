@@ -22,7 +22,6 @@ type EnrollmentSummary = {
 };
 
 type StudentAcademicSummary = {
-  institutionId: string;
   year: number;
   student: {
     id: string;
@@ -77,7 +76,6 @@ export class ReportsPdfService {
       .fontSize(11)
       .text(`Student: ${summary.student.fullName}`)
       .text(`Student ID: ${summary.student.id}`)
-      .text(`Institution ID: ${summary.institutionId}`)
       .text(`Academic Year: ${summary.year}`);
 
     if (summary.student.dateOfBirth) {

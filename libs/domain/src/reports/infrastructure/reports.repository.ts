@@ -3,7 +3,6 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 export type StudentReportStudentRow = {
   id: string;
-  institutionId: string;
   firstName: string;
   lastName: string;
   dateOfBirth: string | null;
@@ -28,28 +27,22 @@ export type StudentReportEnrollmentRow = {
 export class ReportsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
-  async findStudent(institutionId: string, studentId: string) {
+  async findStudent(studentId: string) {
     const result = await this.db.execute<StudentReportStudentRow>(sql`
       select
         id,
-        institution_id as "institutionId",
         first_name as "firstName",
         last_name as "lastName",
         date_of_birth as "dateOfBirth"
       from students
       where id = ${studentId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async listStudentGrades(
-    institutionId: string,
-    studentId: string,
-    year: number
-  ) {
+  async listStudentGrades(studentId: string, year: number) {
     const result = await this.db.execute<StudentReportGradeRow>(sql`
       select
         s.name as subject,
@@ -62,12 +55,9 @@ export class ReportsRepository {
         on s.id = g.subject_id
       inner join enrollments e
         on e.id = g.enrollment_id
-       and e.institution_id = g.institution_id
       inner join academic_periods ap
         on ap.id = e.academic_period_id
-       and ap.institution_id = e.institution_id
-      where g.institution_id = ${institutionId}
-        and e.student_id = ${studentId}
+      where e.student_id = ${studentId}
         and ap.year = ${year}
       order by ap.term asc, s.name asc, g.created_at asc
     `);
@@ -75,11 +65,7 @@ export class ReportsRepository {
     return result.rows;
   }
 
-  async listStudentEnrollments(
-    institutionId: string,
-    studentId: string,
-    year: number
-  ) {
+  async listStudentEnrollments(studentId: string, year: number) {
     const result = await this.db.execute<StudentReportEnrollmentRow>(sql`
       select
         e.id as "enrollmentId",
@@ -90,9 +76,7 @@ export class ReportsRepository {
       from enrollments e
       inner join academic_periods ap
         on ap.id = e.academic_period_id
-       and ap.institution_id = e.institution_id
-      where e.institution_id = ${institutionId}
-        and e.student_id = ${studentId}
+      where e.student_id = ${studentId}
         and ap.year = ${year}
       order by ap.term asc, e.created_at asc
     `);
