@@ -99,6 +99,13 @@
       "when": 1792456700000,
       "tag": "0013_roles_director_drop_user_institution_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792456800000,
+      "tag": "0014_single_school_default",
+      "breakpoints": true
     }
   ]
 }

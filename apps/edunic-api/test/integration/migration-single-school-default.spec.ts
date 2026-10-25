@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { runMigrations, runMigrationsDown } from '@edunic/source/db';
+import { classrooms, students } from '@edunic/source/db/schema';
 
 // Migration 0014 is the expand step of the single-school contract: it adds
 // `single_school_id()` and makes it the DEFAULT of every `institution_id`
@@ -405,4 +407,33 @@ describe('migration 0014 single school default', () => {
     );
     expect(flag.rows).toEqual([{ default_value: false }]);
   }, 60_000);
+
+  it('the Drizzle schema lets code omit institutionId and the database fills it in', async () => {
+    await insertSchool(OLD_SCHOOL, '2020-01-01T00:00:00Z');
+    const orm = drizzle(db());
+
+    const [student] = await orm
+      .insert(students)
+      .values({ firstName: 'Typed', lastName: 'Insert' })
+      .returning();
+    const [classroom] = await orm
+      .insert(classrooms)
+      .values({ gradeLevel: 9, section: 'Z' })
+      .returning();
+
+    expect(student.institutionId).toBe(OLD_SCHOOL);
+    expect(classroom.institutionId).toBe(OLD_SCHOOL);
+
+    // Existing code passes the column explicitly and keeps working.
+    await insertSchool(NEW_SCHOOL, '2025-01-01T00:00:00Z');
+    const [explicit] = await orm
+      .insert(students)
+      .values({
+        firstName: 'Explicit',
+        lastName: 'Insert',
+        institutionId: NEW_SCHOOL,
+      })
+      .returning();
+    expect(explicit.institutionId).toBe(NEW_SCHOOL);
+  });
 });
