@@ -2,16 +2,22 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 import {
   ReportsService,
-  ReportsServiceError,
   ReportsPdfService,
   ReportsRepository,
   studentReportParamsSchema,
   studentReportQuerySchema,
 } from '@edunic/source/domain/reports';
-import { adminAnd } from '@edunic/source/domain/authorization';
+import {
+  AccessRepository,
+  AccessService,
+  adminAnd,
+} from '@edunic/source/domain/authorization';
 
 export async function reportRoutes(app: FastifyInstance) {
-  const reportsService = new ReportsService(new ReportsRepository(app.db));
+  const reportsService = new ReportsService(
+    new ReportsRepository(app.db),
+    new AccessService(new AccessRepository(app.db))
+  );
   const reportsPdfService = new ReportsPdfService();
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
@@ -26,6 +32,7 @@ export async function reportRoutes(app: FastifyInstance) {
       institutionId,
       studentId: params.studentId,
       year: query.year,
+      actor: actorOf(request),
     });
   });
 
@@ -38,6 +45,7 @@ export async function reportRoutes(app: FastifyInstance) {
       institutionId,
       studentId: params.studentId,
       year: query.year,
+      actor: actorOf(request),
     });
 
     const pdf = await reportsPdfService.renderStudentAcademicSummaryPdf(
@@ -52,4 +60,11 @@ export async function reportRoutes(app: FastifyInstance) {
       )
       .send(pdf);
   });
+}
+
+function actorOf(request: FastifyRequest) {
+  return {
+    role: request.user?.role ?? '',
+    userId: request.user?.id ?? '',
+  };
 }
