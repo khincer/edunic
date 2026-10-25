@@ -1,15 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import {
   ExtensionsService,
-  ExtensionsServiceError,
   ExtensionsRepository,
   createExtensionBodySchema,
   extensionParamsSchema,
-  institutionExtensionParamsSchema,
-  institutionExtensionsParamsSchema,
   listExtensionsQuerySchema,
   updateExtensionBodySchema,
-  upsertInstitutionExtensionBodySchema,
+  setExtensionConfigBodySchema,
 } from '@edunic/source/domain/extensions';
 import { parseWithSchema, parseFilterSort } from '@edunic/source/domain/shared';
 import { ADMIN_ROLES } from '@edunic/source/domain/authorization';
@@ -58,41 +55,19 @@ export async function extensionRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get('/institutions/:institutionId/extensions', adminOnly, async (request) => {
-    const params = parseWithSchema(
-      institutionExtensionsParamsSchema,
-      request.params
-    );
+  app.put('/extensions/:extensionKey/config', adminOnly, async (request) => {
+    const params = parseWithSchema(extensionParamsSchema, request.params);
+    const body = parseWithSchema(setExtensionConfigBodySchema, request.body ?? {});
 
-    return extensionsService.listInstitutionExtensions(params.institutionId);
-  });
-
-  app.put('/institutions/:institutionId/extensions/:extensionKey', adminOnly, async (request) => {
-    const params = parseWithSchema(
-      institutionExtensionParamsSchema,
-      request.params
-    );
-    const body = parseWithSchema(
-      upsertInstitutionExtensionBodySchema,
-      request.body
-    );
-
-    return extensionsService.upsertInstitutionExtension({
-      institutionId: params.institutionId,
+    return extensionsService.setConfig({
       extensionKey: params.extensionKey,
       ...body,
     });
   });
 
-  app.delete('/institutions/:institutionId/extensions/:extensionKey', adminOnly, async (request) => {
-    const params = parseWithSchema(
-      institutionExtensionParamsSchema,
-      request.params
-    );
+  app.delete('/extensions/:extensionKey/config', adminOnly, async (request) => {
+    const params = parseWithSchema(extensionParamsSchema, request.params);
 
-    return extensionsService.deleteInstitutionExtension(
-      params.institutionId,
-      params.extensionKey
-    );
+    return extensionsService.clearConfig(params.extensionKey);
   });
 }

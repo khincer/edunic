@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
-import { useSchool } from '@/lib/school';
 import { Button, ButtonLink } from '@/components/button';
 import { DataTable, type DataTableColumn } from '@/components/data-table';
 import {
@@ -11,52 +10,45 @@ import {
   type ApiSingleResponse,
   type Extension,
   type Institution,
-  type InstitutionExtension,
 } from '@/lib/api';
 
 export default function InstitutionExtensionsPage() {
-  const { school } = useSchool();
-  const institutionId = school?.id ?? '';
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [extensions, setExtensions] = useState<Extension[]>([]);
-  const [enabledExtensions, setEnabledExtensions] = useState<InstitutionExtension[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState('');
   const [error, setError] = useState('');
 
   const loadData = useCallback(async () => {
-    if (!institutionId) {
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
-      const [institutionResult, extensionsResult, enabledResult] = await Promise.all([
+      const [institutionResult, extensionsResult] = await Promise.all([
         apiRequest<ApiSingleResponse<Institution>>(`/school-profile`),
         apiRequest<ApiListResponse<Extension>>('/extensions?limit=100&offset=0&sortOrder=asc'),
-        apiRequest<ApiSingleResponse<InstitutionExtension[]> | { data: InstitutionExtension[] }>(
-          `/institutions/${institutionId}/extensions`
-        ),
       ]);
       setInstitution(institutionResult.data);
       setExtensions(extensionsResult.data);
-      setEnabledExtensions(enabledResult.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load extensions');
     } finally {
       setLoading(false);
     }
-  }, [institutionId]);
+  }, []);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
 
   const enabledKeys = useMemo(
-    () => new Set(enabledExtensions.map((extension) => extension.extensionKey)),
-    [enabledExtensions]
+    () =>
+      new Set(
+        extensions
+          .filter((extension) => extension.config !== null)
+          .map((extension) => extension.key)
+      ),
+    [extensions]
   );
 
   const toggleExtension = useCallback(async (extensionKey: string, enabled: boolean) => {
@@ -65,13 +57,13 @@ export default function InstitutionExtensionsPage() {
 
     try {
       if (enabled) {
-        await apiRequest<ApiSingleResponse<{ institutionId: string; extensionKey: string; deleted: boolean }>>(
-          `/institutions/${institutionId}/extensions/${extensionKey}`,
+        await apiRequest<ApiSingleResponse<Extension>>(
+          `/extensions/${extensionKey}/config`,
           { method: 'DELETE' }
         );
       } else {
-        await apiRequest<ApiSingleResponse<InstitutionExtension>>(
-          `/institutions/${institutionId}/extensions/${extensionKey}`,
+        await apiRequest<ApiSingleResponse<Extension>>(
+          `/extensions/${extensionKey}/config`,
           { method: 'PUT', body: { config: {} } }
         );
       }
@@ -82,7 +74,7 @@ export default function InstitutionExtensionsPage() {
     } finally {
       setBusyKey('');
     }
-  }, [institutionId, loadData]);
+  }, [loadData]);
 
   const columns = useMemo<DataTableColumn<Extension>[]>(
     () => [

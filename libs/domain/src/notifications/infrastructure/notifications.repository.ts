@@ -47,15 +47,14 @@ export type NotificationRecord = {
 export class NotificationsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
-  async isNotificationsExtensionEnabled(institutionId: string) {
+  // Extensions are global: turned on = enabled with a config (even {}).
+  async isNotificationsExtensionEnabled() {
     const result = await this.db.execute<CountRow>(sql`
       select count(*)::int as count
-      from institution_extensions
-      inner join extensions
-        on extensions.key = institution_extensions.extension_key
-      where institution_extensions.institution_id = ${institutionId}
-        and institution_extensions.extension_key = 'notifications'
-        and coalesce(extensions.enabled, false) = true
+      from extensions
+      where key = 'notifications'
+        and coalesce(enabled, false) = true
+        and config is not null
     `);
 
     return this.toCount(result.rows[0]?.count) > 0;

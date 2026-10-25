@@ -7,12 +7,11 @@ import type {
   CreateExtensionBody,
   ListExtensionsQuery,
   UpdateExtensionBody,
-  UpsertInstitutionExtensionBody,
+  SetExtensionConfigBody,
 } from '../schemas/extension.schemas.js';
 import {
   ExtensionsRepository,
   type ExtensionRecord,
-  type InstitutionExtensionRecord,
 } from '../infrastructure/extensions.repository.js';
 
 export class ExtensionsServiceError extends Error {
@@ -101,64 +100,29 @@ export class ExtensionsService {
     };
   }
 
-  async listInstitutionExtensions(institutionId: string) {
-    const extensions =
-      await this.extensionsRepository.listInstitutionExtensions(institutionId);
-
-    return {
-      data: extensions.map((extension) =>
-        this.toInstitutionExtensionResponse(extension)
-      ),
-    };
+  async setConfig(input: SetExtensionConfigBody & { extensionKey: string }) {
+    return this.writeConfig(input.extensionKey, input.config);
   }
 
-  async upsertInstitutionExtension(
-    input: UpsertInstitutionExtensionBody & {
-      institutionId: string;
-      extensionKey: string;
-    }
+  async clearConfig(extensionKey: string) {
+    return this.writeConfig(extensionKey, null);
+  }
+
+  private async writeConfig(
+    extensionKey: string,
+    config: Record<string, unknown> | null
   ) {
-    const extension = await this.extensionsRepository.findByKey(
-      input.extensionKey
+    const extension = await this.extensionsRepository.setConfig(
+      extensionKey,
+      config
     );
 
     if (!extension) {
       throw new ExtensionsServiceError('Extension not found', 404);
     }
 
-    const institutionExtension =
-      await this.extensionsRepository.upsertInstitutionExtension({
-        institutionId: input.institutionId,
-        extensionKey: input.extensionKey,
-        config: input.config,
-      });
-
-    if (!institutionExtension) {
-      throw new ExtensionsServiceError('Institution extension not found', 404);
-    }
-
     return {
-      data: this.toInstitutionExtensionResponse(institutionExtension),
-    };
-  }
-
-  async deleteInstitutionExtension(institutionId: string, extensionKey: string) {
-    const institutionExtension =
-      await this.extensionsRepository.deleteInstitutionExtension(
-        institutionId,
-        extensionKey
-      );
-
-    if (!institutionExtension) {
-      throw new ExtensionsServiceError('Institution extension not found', 404);
-    }
-
-    return {
-      data: {
-        institutionId,
-        extensionKey,
-        deleted: true,
-      },
+      data: this.toExtensionResponse(extension),
     };
   }
 
@@ -167,21 +131,7 @@ export class ExtensionsService {
       key: extension.key,
       name: extension.name,
       enabled: extension.enabled ?? false,
-    };
-  }
-
-  private toInstitutionExtensionResponse(
-    institutionExtension: InstitutionExtensionRecord
-  ) {
-    return {
-      institutionId: institutionExtension.institutionId,
-      extensionKey: institutionExtension.extensionKey,
-      config: institutionExtension.config ?? {},
-      extension: {
-        key: institutionExtension.extensionKey,
-        name: institutionExtension.extensionName,
-        enabled: institutionExtension.extensionEnabled ?? false,
-      },
+      config: extension.config ?? null,
     };
   }
 }

@@ -135,13 +135,8 @@ export type Extension = {
   key: string;
   name: string | null;
   enabled: boolean;
-};
-
-export type InstitutionExtension = {
-  institutionId: string;
-  extensionKey: string;
-  config: Record<string, unknown>;
-  extension: Extension;
+  // null = off for the school; an object (even {}) = on.
+  config: Record<string, unknown> | null;
 };
 
 export type FeatureFlag = {

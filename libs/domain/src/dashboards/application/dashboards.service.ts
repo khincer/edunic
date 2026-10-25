@@ -60,7 +60,7 @@ export class DashboardsService {
         activePeriod?.id ?? null
       ),
       this.dashboardsRepository.listFeatureStatuses(),
-      this.dashboardsRepository.listExtensionStatuses(institutionId),
+      this.dashboardsRepository.listExtensionStatuses(),
       this.dashboardsRepository.listRecentNotifications({
         institutionId,
         role: 'admin',
