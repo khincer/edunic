@@ -10,8 +10,6 @@ import {
 // E2E flow 2 (task 3.3, P3-R5): admin logs in, then runs the student
 // lifecycle through the API — create, read, update, list — with the
 // response envelope and the persisted DB rows asserted at each step.
-// The second case walks a second institution's admin through the same
-// journey and proves tenant scoping on read paths.
 async function countStudents() {
   const result = await db.execute(
     sql.raw('SELECT COUNT(*)::int AS count FROM students')
@@ -21,7 +19,6 @@ async function countStudents() {
 
 describe('E2E flow: students', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
-  let institutionId: string;
   let admin: { email: string; password: string };
 
   beforeAll(async () => {
@@ -31,11 +28,9 @@ describe('E2E flow: students', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture('Students Flow Institution');
-    institutionId = institution.id;
+    await createInstitutionFixture('Students Flow Institution');
 
     admin = await createUserFixture({
-      institutionId,
       role: 'director',
       email: 'e2e-admin@students-flow.test',
       password: 'admin1234',
@@ -50,14 +45,13 @@ describe('E2E flow: students', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/auth/login',
-      payload: { email: admin.email, password: admin.password, institutionId },
+      payload: { email: admin.email, password: admin.password },
     });
 
     expect(response.statusCode).toBe(200);
 
     return {
       authorization: `Bearer ${response.json().data.token}`,
-      'x-institution-id': institutionId,
     };
   }
 

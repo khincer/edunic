@@ -15,7 +15,6 @@ const FAKE_ENROLLMENT_ID = '00000000-0000-4000-8000-000000000000';
 
 describe('E2E flow: attendance', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
-  let institutionId: string;
   let admin: { email: string; password: string };
   let headers: Record<string, string>;
 
@@ -26,11 +25,9 @@ describe('E2E flow: attendance', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture('Attendance Flow Institution');
-    institutionId = institution.id;
+    await createInstitutionFixture('Attendance Flow Institution');
 
     admin = await createUserFixture({
-      institutionId,
       role: 'director',
       email: 'e2e-admin@attendance-flow.test',
       password: 'admin1234',
@@ -39,13 +36,12 @@ describe('E2E flow: attendance', () => {
     const login = await app.inject({
       method: 'POST',
       url: '/auth/login',
-      payload: { email: admin.email, password: admin.password, institutionId },
+      payload: { email: admin.email, password: admin.password },
     });
     expect(login.statusCode).toBe(200);
 
     headers = {
       authorization: `Bearer ${login.json().data.token}`,
-      'x-institution-id': institutionId,
     };
   });
 

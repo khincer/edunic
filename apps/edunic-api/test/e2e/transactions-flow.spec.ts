@@ -22,7 +22,6 @@ async function countRows(table: 'enrollments' | 'outbox_events') {
 
 describe('E2E flow: transactions', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
-  let institutionId: string;
   let headers: Record<string, string>;
   let studentId: string;
   let academicPeriodId: string;
@@ -34,11 +33,9 @@ describe('E2E flow: transactions', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture('Transactions Flow Institution');
-    institutionId = institution.id;
+    await createInstitutionFixture('Transactions Flow Institution');
 
     const admin = await createUserFixture({
-      institutionId,
       role: 'director',
       email: 'e2e-admin@transactions-flow.test',
       password: 'admin1234',
@@ -47,13 +44,12 @@ describe('E2E flow: transactions', () => {
     const login = await app.inject({
       method: 'POST',
       url: '/auth/login',
-      payload: { email: admin.email, password: admin.password, institutionId },
+      payload: { email: admin.email, password: admin.password },
     });
     expect(login.statusCode).toBe(200);
 
     headers = {
       authorization: `Bearer ${login.json().data.token}`,
-      'x-institution-id': institutionId,
     };
 
     const period = await app.inject({
@@ -113,10 +109,10 @@ describe('E2E flow: transactions', () => {
     expect(await countRows('outbox_events')).toBe(1);
 
     const outboxRow = await db.execute(
-      sql.raw(`SELECT event->>'name' AS name, event ? 'institutionId' AS "hasInstitutionId" FROM outbox_events`)
+      sql.raw(`SELECT event->>'name' AS name, event::text ILIKE '%institution%' AS "namesSchool" FROM outbox_events`)
     );
     expect(outboxRow.rows).toEqual([
-      { name: 'enrollment.created', hasInstitutionId: false },
+      { name: 'enrollment.created', namesSchool: false },
     ]);
   });
 

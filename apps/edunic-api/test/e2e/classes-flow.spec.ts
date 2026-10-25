@@ -20,7 +20,6 @@ async function countClassrooms() {
 
 describe('E2E flow: classes', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
-  let institutionId: string;
   let headers: Record<string, string>;
 
   beforeAll(async () => {
@@ -30,11 +29,9 @@ describe('E2E flow: classes', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture('Classes Flow Institution');
-    institutionId = institution.id;
+    await createInstitutionFixture('Classes Flow Institution');
 
     const admin = await createUserFixture({
-      institutionId,
       role: 'director',
       email: 'e2e-admin@classes-flow.test',
       password: 'admin1234',
@@ -43,13 +40,12 @@ describe('E2E flow: classes', () => {
     const login = await app.inject({
       method: 'POST',
       url: '/auth/login',
-      payload: { email: admin.email, password: admin.password, institutionId },
+      payload: { email: admin.email, password: admin.password },
     });
     expect(login.statusCode).toBe(200);
 
     headers = {
       authorization: `Bearer ${login.json().data.token}`,
-      'x-institution-id': institutionId,
     };
   });
 

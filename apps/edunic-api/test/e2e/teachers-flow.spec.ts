@@ -22,7 +22,6 @@ async function countStudents() {
 
 describe('E2E flow: teachers', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
-  let institutionId: string;
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -31,8 +30,7 @@ describe('E2E flow: teachers', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture('Teachers Flow Institution');
-    institutionId = institution.id;
+    await createInstitutionFixture('Teachers Flow Institution');
   });
 
   afterAll(async () => {
@@ -43,7 +41,7 @@ describe('E2E flow: teachers', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/auth/login',
-      payload: { email: user.email, password: user.password, institutionId },
+      payload: { email: user.email, password: user.password },
     });
 
     expect(response.statusCode).toBe(200);
@@ -51,26 +49,22 @@ describe('E2E flow: teachers', () => {
 
     return {
       authorization: `Bearer ${response.json().data.token}`,
-      'x-institution-id': institutionId,
     };
   }
 
   it('scopes the teacher to assigned classrooms and blocks the admin write', async () => {
     const assignedClassroom = await createClassroomFixture({
-      institutionId,
       gradeLevel: 6,
       section: 'A',
     });
-    await createClassroomFixture({ institutionId, gradeLevel: 7, section: 'B' });
+    await createClassroomFixture({ gradeLevel: 7, section: 'B' });
 
     const teacher = await createUserFixture({
-      institutionId,
       role: 'teacher',
       email: 'e2e-teacher@teachers-flow.test',
       password: 'teacher1234',
     });
     await createTeacherClassroomAssignmentFixture({
-      institutionId,
       teacherUserId: teacher.id,
       classroomId: assignedClassroom.id,
     });
@@ -101,25 +95,21 @@ describe('E2E flow: teachers', () => {
 
   it('shows the admin every classroom in the institution', async () => {
     const assignedClassroom = await createClassroomFixture({
-      institutionId,
       gradeLevel: 6,
       section: 'A',
     });
     const otherClassroom = await createClassroomFixture({
-      institutionId,
       gradeLevel: 7,
       section: 'B',
     });
 
-    const teacher = await createUserFixture({ institutionId, role: 'teacher' });
+    const teacher = await createUserFixture({ role: 'teacher' });
     await createTeacherClassroomAssignmentFixture({
-      institutionId,
       teacherUserId: teacher.id,
       classroomId: assignedClassroom.id,
     });
 
     const admin = await createUserFixture({
-      institutionId,
       role: 'director',
       email: 'e2e-admin@teachers-flow.test',
       password: 'admin1234',

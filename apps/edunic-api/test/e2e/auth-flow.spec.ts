@@ -19,7 +19,6 @@ async function countStudents() {
 
 describe('E2E flow: auth', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
-  let institutionId: string;
   let adminEmail: string;
   let adminPassword: string;
 
@@ -30,11 +29,9 @@ describe('E2E flow: auth', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture('Auth Flow Institution');
-    institutionId = institution.id;
+    await createInstitutionFixture('Auth Flow Institution');
 
     const admin = await createUserFixture({
-      institutionId,
       role: 'director',
       email: 'e2e-admin@auth-flow.test',
       password: 'admin1234',
@@ -82,7 +79,6 @@ describe('E2E flow: auth', () => {
 
     const headers = {
       authorization: `Bearer ${session.token}`,
-      'x-institution-id': institutionId,
     };
 
     const created = await app.inject({
@@ -109,7 +105,6 @@ describe('E2E flow: auth', () => {
 
   it('scopes login tokens by role: a teacher token cannot run the admin write', async () => {
     const teacher = await createUserFixture({
-      institutionId,
       role: 'teacher',
       email: 'e2e-teacher@auth-flow.test',
       password: 'teacher1234',
@@ -126,7 +121,6 @@ describe('E2E flow: auth', () => {
       url: '/students',
       headers: {
         authorization: `Bearer ${session.token}`,
-        'x-institution-id': institutionId,
       },
       payload: { firstName: 'Blocked', lastName: 'Write' },
     });
