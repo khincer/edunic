@@ -119,8 +119,29 @@ const ABSENCE_ASSERTION =
 
 // TEMPORARY allow-list: files S1.8a part 2 has not cleaned yet. Part 2 empties
 // it. A file listed here must still contain a reference (see the ratchet test
-// below), so a cleaned file cannot stay on the list.
-const TEST_PENDING: string[] = [];
+// below), so a cleaned file cannot stay on the list. The two helpers keep a
+// deprecated, ignored school parameter until the specs above stop passing it.
+const TEST_PENDING: string[] = [
+  'helpers/auth.ts',
+  'helpers/fixtures.ts',
+  'integration/guardians.spec.ts',
+  'integration/idempotency.spec.ts',
+  'integration/notifications.spec.ts',
+  'integration/outbox-atomicity.spec.ts',
+  'integration/pagination.spec.ts',
+  'integration/parent-feed.spec.ts',
+  'integration/payments.spec.ts',
+  'integration/reports-ownership.spec.ts',
+  'integration/reports-summary.spec.ts',
+  'integration/school-profile.spec.ts',
+  'integration/student-read-scoping.spec.ts',
+  'integration/students.spec.ts',
+  'integration/subjects.spec.ts',
+  'integration/teacher-scoping.spec.ts',
+  'integration/teachers.spec.ts',
+  'integration/validation.spec.ts',
+  'integration/workflows-scoping.spec.ts',
+];
 
 describe('single-school sweep guard (API test tree)', () => {
   const testFiles = listFiles(join(REPO_ROOT, TEST_ROOT))
