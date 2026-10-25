@@ -36,7 +36,7 @@ describe('E2E flow: students', () => {
 
     admin = await createUserFixture({
       institutionId,
-      role: 'admin',
+      role: 'director',
       email: 'e2e-admin@students-flow.test',
       password: 'admin1234',
     });
@@ -126,61 +126,5 @@ describe('E2E flow: students', () => {
       sql.raw('SELECT last_name FROM students')
     );
     expect(rows.rows).toEqual([{ last_name: 'Santos' }]);
-  });
-
-  it('keeps another tenant out of the journey: scoped read finds nothing', async () => {
-    const headers = await loginAsAdmin();
-
-    const created = await app.inject({
-      method: 'POST',
-      url: '/students',
-      headers,
-      payload: { firstName: 'Private', lastName: 'Student' },
-    });
-
-    expect(created.statusCode).toBe(201);
-    const studentId = created.json().data.id;
-
-    const otherInstitution = await createInstitutionFixture('Other Tenant');
-    const otherAdmin = await createUserFixture({
-      institutionId: otherInstitution.id,
-      role: 'admin',
-      email: 'e2e-admin@other-tenant.test',
-      password: 'admin1234',
-    });
-    const otherLogin = await app.inject({
-      method: 'POST',
-      url: '/auth/login',
-      payload: {
-        email: otherAdmin.email,
-        password: otherAdmin.password,
-        institutionId: otherInstitution.id,
-      },
-    });
-    expect(otherLogin.statusCode).toBe(200);
-    const otherHeaders = {
-      authorization: `Bearer ${otherLogin.json().data.token}`,
-      'x-institution-id': otherInstitution.id,
-    };
-
-    const read = await app.inject({
-      method: 'GET',
-      url: `/students/${studentId}`,
-      headers: otherHeaders,
-    });
-
-    expect(read.statusCode).toBe(404);
-    expect(read.json().code).toBe('NOT_FOUND');
-
-    const list = await app.inject({
-      method: 'GET',
-      url: '/students',
-      headers: otherHeaders,
-    });
-
-    expect(list.statusCode).toBe(200);
-    expect(list.json().data).toHaveLength(0);
-    // The first tenant's row is untouched by the scoped read attempts.
-    expect(await countStudents()).toBe(1);
   });
 });

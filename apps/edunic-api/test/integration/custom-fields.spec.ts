@@ -28,7 +28,7 @@ describe('custom fields routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const student = await createStudentFixture({ institutionId: institution.id });
     const headers = await createAuthHeaders({
@@ -65,7 +65,7 @@ describe('custom fields routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const student = await createStudentFixture({ institutionId: institution.id });
     const headers = await createAuthHeaders({

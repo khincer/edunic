@@ -90,7 +90,6 @@ export type MessageRecord = {
 
 export type UserRoleRecord = {
   userId: string;
-  institutionId: string;
   role: string;
 };
 
@@ -558,15 +557,13 @@ export class WorkflowsRepository {
     return this.toCount(result.rows[0]?.count) > 0;
   }
 
-  async findUserRole(institutionId: string, userId: string) {
+  async findUserRole(userId: string) {
     const result = await this.db.execute<UserRoleRecord>(sql`
       select
         user_id as "userId",
-        institution_id as "institutionId",
         role
-      from user_institution_roles
-      where institution_id = ${institutionId}
-        and user_id = ${userId}
+      from user_roles
+      where user_id = ${userId}
       limit 1
     `);
 

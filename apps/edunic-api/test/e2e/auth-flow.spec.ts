@@ -35,7 +35,7 @@ describe('E2E flow: auth', () => {
 
     const admin = await createUserFixture({
       institutionId,
-      role: 'admin',
+      role: 'director',
       email: 'e2e-admin@auth-flow.test',
       password: 'admin1234',
     });
@@ -74,7 +74,7 @@ describe('E2E flow: auth', () => {
     expect(typeof session.token).toBe('string');
     expect(session.user).toMatchObject({
       email: adminEmail,
-      role: 'admin',
+      role: 'director',
     });
     // The session no longer carries an institution: the school comes from
     // the user's own record, never from the client.

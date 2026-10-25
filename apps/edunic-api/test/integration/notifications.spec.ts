@@ -31,7 +31,7 @@ describe('notifications routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const student = await createStudentFixture({ institutionId: institution.id });
     const period = await createAcademicPeriodFixture({

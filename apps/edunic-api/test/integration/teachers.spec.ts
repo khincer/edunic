@@ -28,7 +28,7 @@ describe('teachers routes', () => {
     const institution = await createInstitutionFixture();
     const director = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     return {
@@ -249,9 +249,9 @@ describe('teachers routes', () => {
     const response = await client
       .patch(`/teachers/${teacher.id}/role`)
       .set(headers)
-      .send({ role: 'admin' });
+      .send({ role: 'vice_director' });
 
     expect(response.status).toBe(200);
-    expect(response.body.data.role).toBe('admin');
+    expect(response.body.data.role).toBe('vice_director');
   });
 });

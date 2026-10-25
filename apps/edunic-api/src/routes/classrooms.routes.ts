@@ -13,6 +13,7 @@ import {
   listClassroomsQuerySchema,
   updateClassroomBodySchema,
 } from '@edunic/source/domain/classrooms';
+import { ADMIN_ROLES, adminAnd } from '@edunic/source/domain/authorization';
 
 const CLASSROOM_FILTER_SORT_OPTIONS = {
   filterFields: ['gradeLevel', 'section'],
@@ -24,10 +25,10 @@ export async function classroomRoutes(app: FastifyInstance) {
     new ClassroomsRepository(app.db)
   );
   const readAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
   };
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
 
   app.get('/', readAccess, async (request, reply) => {

@@ -120,7 +120,7 @@ describe('E2E flow: teachers', () => {
 
     const admin = await createUserFixture({
       institutionId,
-      role: 'admin',
+      role: 'director',
       email: 'e2e-admin@teachers-flow.test',
       password: 'admin1234',
     });

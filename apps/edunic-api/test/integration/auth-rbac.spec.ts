@@ -30,7 +30,7 @@ describe('auth and RBAC routes', () => {
     const institution = await createInstitutionFixture();
     const user = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
       email: 'admin@example.com',
       password: 'admin1234',
     });
@@ -42,7 +42,7 @@ describe('auth and RBAC routes', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(response.body.data.user.role).toBe('admin');
+    expect(response.body.data.user.role).toBe('director');
     expect(typeof response.body.data.token).toBe('string');
   });
 
@@ -50,7 +50,7 @@ describe('auth and RBAC routes', () => {
     const institution = await createInstitutionFixture();
     await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
       email: 'admin@example.com',
       password: 'admin1234',
     });
@@ -68,7 +68,7 @@ describe('auth and RBAC routes', () => {
     const institution = await createInstitutionFixture();
     const user = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
       email: 'tenant-admin@example.com',
       password: 'admin1234',
     });
@@ -90,7 +90,7 @@ describe('auth and RBAC routes', () => {
     const institution = await createInstitutionFixture();
     const user = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
       email: 'locked-admin@example.com',
       password: 'admin1234',
     });
@@ -118,7 +118,7 @@ describe('auth and RBAC routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     const response = await client.get('/school-profile').set({

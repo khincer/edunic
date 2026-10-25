@@ -1,3 +1,4 @@
+import { toAudienceRole } from '@edunic/source/domain/authorization';
 import {
   buildCursorPage,
   type FilterSpec,
@@ -296,7 +297,6 @@ export class WorkflowsService {
     userId: string;
   }) {
     const recipient = await this.workflowsRepository.findUserRole(
-      input.institutionId,
       input.recipientUserId
     );
 
@@ -331,7 +331,7 @@ export class WorkflowsService {
       title: 'Message received',
       message: input.subject.trim(),
       metadata: {
-        audience: [recipient.role],
+        audience: [toAudienceRole(recipient.role)],
         recipientUserId: input.recipientUserId,
         messageId: message.id,
       },

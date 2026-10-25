@@ -11,6 +11,7 @@ import {
   studentGuardiansParamsSchema,
   updateGuardianBodySchema,
 } from '@edunic/source/domain/guardians';
+import { ADMIN_ROLES, adminAnd } from '@edunic/source/domain/authorization';
 
 const GUARDIAN_FILTER_SORT_OPTIONS = {
   filterFields: ['name', 'phone', 'email'],
@@ -20,10 +21,10 @@ const GUARDIAN_FILTER_SORT_OPTIONS = {
 export async function guardianRoutes(app: FastifyInstance) {
   const guardiansService = new GuardiansService(new GuardiansRepository(app.db));
   const readAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
   };
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
 
   app.get('/guardians', readAccess, async (request, reply) => {

@@ -103,7 +103,7 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
 
     const admin = await createUserFixture({
       institutionId,
-      role: 'admin',
+      role: 'director',
       email: 'workflow-admin@worker.test',
       password: 'admin1234',
     });

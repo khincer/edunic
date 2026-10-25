@@ -49,7 +49,6 @@ export async function resetTestDatabase() {
       institution_extensions,
       extensions,
       audit_logs,
-      user_institution_roles,
       students,
       users,
       institutions

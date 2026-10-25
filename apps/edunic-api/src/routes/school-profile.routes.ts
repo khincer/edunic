@@ -5,6 +5,7 @@ import {
   updateInstitutionBodySchema,
 } from '@edunic/source/domain/institutions';
 import { parseWithSchema } from '@edunic/source/domain/shared';
+import { ADMIN_ROLES } from '@edunic/source/domain/authorization';
 
 // The school is a single record: its name and the sender identity of the
 // outbound email. There is no list and no delete — one school, and deleting
@@ -14,7 +15,7 @@ export async function schoolProfileRoutes(app: FastifyInstance) {
     new InstitutionsRepository(app.db)
   );
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
 
   app.get('/', adminOnly, async () => {

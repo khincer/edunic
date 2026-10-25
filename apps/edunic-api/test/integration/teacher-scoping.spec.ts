@@ -79,7 +79,7 @@ describe('teacher write scoping', () => {
 
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     // The teacher teaches one materia, in their own classroom.
@@ -186,7 +186,7 @@ describe('teacher write scoping', () => {
 
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const adminHeaders = await createAuthHeaders({
       userId: admin.id,
@@ -217,7 +217,7 @@ describe('teacher write scoping', () => {
 
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const adminHeaders = await createAuthHeaders({
       userId: admin.id,

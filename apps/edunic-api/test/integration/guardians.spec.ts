@@ -29,7 +29,7 @@ describe('guardians routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const student = await createStudentFixture({ institutionId: institution.id });
     const headers = await createAuthHeaders({
@@ -99,7 +99,7 @@ describe('guardians routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
@@ -135,7 +135,7 @@ describe('guardians routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
@@ -170,7 +170,7 @@ describe('guardians routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,

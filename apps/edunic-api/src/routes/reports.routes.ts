@@ -8,12 +8,13 @@ import {
   studentReportParamsSchema,
   studentReportQuerySchema,
 } from '@edunic/source/domain/reports';
+import { adminAnd } from '@edunic/source/domain/authorization';
 
 export async function reportRoutes(app: FastifyInstance) {
   const reportsService = new ReportsService(new ReportsRepository(app.db));
   const reportsPdfService = new ReportsPdfService();
   const readAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
   };
 
   app.get('/students/:studentId/academic-summary', readAccess, async (request) => {

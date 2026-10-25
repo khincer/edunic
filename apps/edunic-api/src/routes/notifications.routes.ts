@@ -14,6 +14,7 @@ import {
   EmailDeliveriesRepository,
   listEmailDeliveriesQuerySchema,
 } from '@edunic/source/domain/notifications';
+import { ADMIN_ROLES, adminAnd, toAudienceRole } from '@edunic/source/domain/authorization';
 
 const NOTIFICATION_FILTER_SORT_OPTIONS = {
   filterFields: ['eventName', 'title', 'createdAt'],
@@ -33,11 +34,11 @@ export async function notificationRoutes(app: FastifyInstance) {
     new NotificationsRepository(app.db)
   );
   const readAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
   };
   // PN-R1/PN-R3: the panel is admin-only — rows carry family email addresses.
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
   // The API only reads the panel (design D1): no queue, no transport, no flag
   // writes, so the service is wired with the repository alone.
@@ -80,7 +81,7 @@ export async function notificationRoutes(app: FastifyInstance) {
 
     return notificationsService.listNotifications({
       institutionId,
-      role: user.role,
+      role: toAudienceRole(user.role),
       userId: user.id,
       ...query,
       filters,
@@ -96,7 +97,7 @@ export async function notificationRoutes(app: FastifyInstance) {
     return notificationsService.markNotificationRead({
       institutionId,
       notificationId: params.notificationId,
-      role: user.role,
+      role: toAudienceRole(user.role),
       userId: user.id,
     });
   });

@@ -706,7 +706,7 @@ describe('worker email delivery', () => {
     );
     const admin = await createUserFixture({
       institutionId: scenario.institutionId,
-      role: 'admin',
+      role: 'director',
       email: 'rsr1-admin@worker.test',
       password: 'admin1234',
     });

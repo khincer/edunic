@@ -32,7 +32,7 @@ describe('payments routes', () => {
     const institution = await createInstitutionFixture();
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const student = await createStudentFixture({
       institutionId: institution.id,

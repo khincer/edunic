@@ -21,7 +21,7 @@ describe('GradesService', () => {
     await expect(
       service.createGrade({
         institutionId: 'inst-1',
-      role: 'admin',
+      role: 'director',
       userId: 'user-1',
         enrollmentId: 'enrollment-1',
         subjectId: 'subject-1',
@@ -65,7 +65,7 @@ describe('GradesService', () => {
 
     const result = await service.createGrade({
       institutionId: 'inst-1',
-      role: 'admin',
+      role: 'director',
       userId: 'user-1',
       enrollmentId: 'enrollment-1',
       subjectId: 'subject-1',
@@ -111,7 +111,7 @@ describe('GradesService', () => {
     await expect(
       service.createGrade({
         institutionId: 'inst-1',
-      role: 'admin',
+      role: 'director',
       userId: 'user-1',
         enrollmentId: 'enrollment-1',
         subjectId: 'subject-1',
@@ -130,7 +130,7 @@ describe('GradesService', () => {
 
     const result = await service.createGrade({
       institutionId: 'inst-1',
-      role: 'admin',
+      role: 'director',
       userId: 'user-1',
       enrollmentId: 'enrollment-1',
       subjectId: 'subject-1',

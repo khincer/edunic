@@ -20,7 +20,7 @@ describe('AttendanceService', () => {
     await expect(
       service.createAttendance({
         institutionId: 'inst-1',
-      role: 'admin',
+      role: 'director',
       userId: 'user-1',
         enrollmentId: 'enrollment-1',
         date: '2026-02-01T08:00:00.000Z',
@@ -64,7 +64,7 @@ describe('AttendanceService', () => {
 
     const result = await service.createAttendance({
       institutionId: 'inst-1',
-      role: 'admin',
+      role: 'director',
       userId: 'user-1',
       enrollmentId: 'enrollment-1',
       date: '2026-02-01T08:00:00.000Z',
@@ -114,7 +114,7 @@ describe('AttendanceService', () => {
     await expect(
       service.createAttendance({
         institutionId: 'inst-1',
-      role: 'admin',
+      role: 'director',
       userId: 'user-1',
         enrollmentId: 'enrollment-1',
         date: '2026-02-01T08:00:00.000Z',
@@ -133,7 +133,7 @@ describe('AttendanceService', () => {
 
     const result = await service.createAttendance({
       institutionId: 'inst-1',
-      role: 'admin',
+      role: 'director',
       userId: 'user-1',
       enrollmentId: 'enrollment-1',
       date: '2026-02-01T08:00:00.000Z',

@@ -12,6 +12,7 @@ import {
   upsertInstitutionExtensionBodySchema,
 } from '@edunic/source/domain/extensions';
 import { parseWithSchema, parseFilterSort } from '@edunic/source/domain/shared';
+import { ADMIN_ROLES } from '@edunic/source/domain/authorization';
 
 const EXTENSION_FILTER_SORT_OPTIONS = {
   filterFields: ['key', 'name'],
@@ -23,7 +24,7 @@ export async function extensionRoutes(app: FastifyInstance) {
     new ExtensionsRepository(app.db)
   );
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
 
   app.get('/extensions', adminOnly, async (request, reply) => {

@@ -10,8 +10,9 @@ import {
   updateTeacherRoleBodySchema,
 } from '@edunic/source/domain/teachers';
 import { AppError, parseWithSchema } from '@edunic/source/domain/shared';
+import { ADMIN_ROLES, isAdminRole } from '@edunic/source/domain/authorization';
 
-// A teacher may read their own record; a director/vice-director may read anyone's.
+// A teacher may read their own record; the administrative group may read anyone's.
 const selfOrAdmin: preHandlerHookHandler = async (request: FastifyRequest) => {
   const user = request.user;
 
@@ -19,7 +20,7 @@ const selfOrAdmin: preHandlerHookHandler = async (request: FastifyRequest) => {
     throw new AppError('Authentication is required', 401);
   }
 
-  if (user.role === 'director' || user.role === 'vice_director' || user.role === 'subdirector') {
+  if (isAdminRole(user.role)) {
     return;
   }
 
@@ -36,7 +37,7 @@ const selfOrAdmin: preHandlerHookHandler = async (request: FastifyRequest) => {
 export async function teacherRoutes(app: FastifyInstance) {
   const teachersService = new TeachersService(new TeachersRepository(app.db));
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['director', 'vice_director', 'subdirector'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
   const selfOrAdminAccess = {
     preHandler: [app.authenticate, selfOrAdmin],

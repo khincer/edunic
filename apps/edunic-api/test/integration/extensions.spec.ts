@@ -27,7 +27,7 @@ describe('extensions routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,

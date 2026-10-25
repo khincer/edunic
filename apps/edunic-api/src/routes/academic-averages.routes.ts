@@ -7,13 +7,14 @@ import {
   studentAverageParamsSchema,
   studentAverageQuerySchema,
 } from '@edunic/source/domain/academic-averages';
+import { adminAnd } from '@edunic/source/domain/authorization';
 
 export async function academicAverageRoutes(app: FastifyInstance) {
   const academicAveragesService = new AcademicAveragesService(
     new AcademicAveragesRepository(app.db)
   );
   const readAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['director', 'vice_director', 'subdirector', 'teacher', 'parent'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
   };
 
   app.get('/students/:studentId', readAccess, async (request) => {

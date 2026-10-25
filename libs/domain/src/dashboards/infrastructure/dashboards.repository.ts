@@ -167,12 +167,12 @@ export class DashboardsRepository {
     `);
   }
 
-  async countUsersByRole(institutionId: string, role: string) {
+  // One school, one role per user: the count needs no institution.
+  async countUsersByRole(_institutionId: string, role: string) {
     return this.count(sql`
       select count(*)::int as count
-      from user_institution_roles
-      where institution_id = ${institutionId}
-        and role = ${role}
+      from user_roles
+      where role = ${role}
     `);
   }
 

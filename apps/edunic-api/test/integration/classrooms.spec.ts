@@ -32,7 +32,7 @@ describe('classrooms routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
@@ -105,7 +105,7 @@ describe('classrooms routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const classroom = await createClassroomFixture({ institutionId: institution.id });
     const student = await createStudentFixture({ institutionId: institution.id });

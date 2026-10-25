@@ -33,7 +33,7 @@ describe('feature flag routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
@@ -119,7 +119,7 @@ describe('feature flag routes', () => {
     const otherInstitution = await createInstitutionFixture('Other School');
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     const response = await client
@@ -142,7 +142,7 @@ describe('feature flag routes', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     const response = await client
