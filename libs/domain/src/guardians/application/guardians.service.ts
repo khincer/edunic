@@ -35,7 +35,6 @@ export class GuardiansService {
 
   async listGuardians(
     input: ListGuardiansQuery & {
-      institutionId: string;
       actor: ReadActor;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
@@ -67,17 +66,10 @@ export class GuardiansService {
     };
   }
 
-  async getGuardian(
-    institutionId: string,
-    guardianId: string,
-    actor: ReadActor
-  ) {
+  async getGuardian(guardianId: string, actor: ReadActor) {
     await this.access.assertCanReadGuardian(actor, guardianId);
 
-    const guardian = await this.guardiansRepository.findById(
-      institutionId,
-      guardianId
-    );
+    const guardian = await this.guardiansRepository.findById(guardianId);
 
     if (!guardian) {
       throw new GuardiansServiceError('Guardian not found', 404);
@@ -88,9 +80,8 @@ export class GuardiansService {
     };
   }
 
-  async createGuardian(input: CreateGuardianBody & { institutionId: string }) {
+  async createGuardian(input: CreateGuardianBody) {
     const guardian = await this.guardiansRepository.create({
-      institutionId: input.institutionId,
       name: input.name.trim(),
       phone:
         input.phone === undefined
@@ -107,22 +98,15 @@ export class GuardiansService {
   }
 
   async updateGuardian(
-    input: UpdateGuardianBody & {
-      institutionId: string;
-      guardianId: string;
-    }
+    input: UpdateGuardianBody & { guardianId: string }
   ) {
-    const existingGuardian = await this.guardiansRepository.findById(
-      input.institutionId,
-      input.guardianId
-    );
+    const existingGuardian = await this.guardiansRepository.findById(input.guardianId);
 
     if (!existingGuardian) {
       throw new GuardiansServiceError('Guardian not found', 404);
     }
 
     const updatedGuardian = await this.guardiansRepository.update({
-      institutionId: input.institutionId,
       guardianId: input.guardianId,
       name: input.name?.trim(),
       phone:
@@ -143,20 +127,14 @@ export class GuardiansService {
     };
   }
 
-  async deleteGuardian(institutionId: string, guardianId: string) {
-    const guardian = await this.guardiansRepository.findById(
-      institutionId,
-      guardianId
-    );
+  async deleteGuardian(guardianId: string) {
+    const guardian = await this.guardiansRepository.findById(guardianId);
 
     if (!guardian) {
       throw new GuardiansServiceError('Guardian not found', 404);
     }
 
-    const linkedStudentCount = await this.guardiansRepository.countLinkedStudents(
-      institutionId,
-      guardianId
-    );
+    const linkedStudentCount = await this.guardiansRepository.countLinkedStudents(guardianId);
 
     if (linkedStudentCount > 0) {
       throw new GuardiansServiceError(
@@ -165,7 +143,7 @@ export class GuardiansService {
       );
     }
 
-    await this.guardiansRepository.delete(institutionId, guardianId);
+    await this.guardiansRepository.delete(guardianId);
 
     return {
       data: {
@@ -175,57 +153,36 @@ export class GuardiansService {
     };
   }
 
-  async listStudentGuardians(
-    institutionId: string,
-    studentId: string,
-    actor: ReadActor
-  ) {
+  async listStudentGuardians(studentId: string, actor: ReadActor) {
     await this.access.assertCanReadStudent(actor, studentId);
 
-    const student = await this.guardiansRepository.findStudentById(
-      institutionId,
-      studentId
-    );
+    const student = await this.guardiansRepository.findStudentById(studentId);
 
     if (!student) {
       throw new GuardiansServiceError('Student not found', 404);
     }
 
-    const guardians = await this.guardiansRepository.listStudentGuardians(
-      institutionId,
-      studentId
-    );
+    const guardians = await this.guardiansRepository.listStudentGuardians(studentId);
 
     return {
       data: guardians.map((guardian) => this.toGuardianResponse(guardian)),
     };
   }
 
-  async linkGuardianToStudent(
-    institutionId: string,
-    studentId: string,
-    guardianId: string
-  ) {
-    const student = await this.guardiansRepository.findStudentById(
-      institutionId,
-      studentId
-    );
+  async linkGuardianToStudent(studentId: string, guardianId: string) {
+    const student = await this.guardiansRepository.findStudentById(studentId);
 
     if (!student) {
       throw new GuardiansServiceError('Student not found', 404);
     }
 
-    const guardian = await this.guardiansRepository.findById(
-      institutionId,
-      guardianId
-    );
+    const guardian = await this.guardiansRepository.findById(guardianId);
 
     if (!guardian) {
       throw new GuardiansServiceError('Guardian not found', 404);
     }
 
     const existingLink = await this.guardiansRepository.findStudentGuardianLink(
-      institutionId,
       studentId,
       guardianId
     );
@@ -247,31 +204,20 @@ export class GuardiansService {
     };
   }
 
-  async unlinkGuardianFromStudent(
-    institutionId: string,
-    studentId: string,
-    guardianId: string
-  ) {
-    const student = await this.guardiansRepository.findStudentById(
-      institutionId,
-      studentId
-    );
+  async unlinkGuardianFromStudent(studentId: string, guardianId: string) {
+    const student = await this.guardiansRepository.findStudentById(studentId);
 
     if (!student) {
       throw new GuardiansServiceError('Student not found', 404);
     }
 
-    const guardian = await this.guardiansRepository.findById(
-      institutionId,
-      guardianId
-    );
+    const guardian = await this.guardiansRepository.findById(guardianId);
 
     if (!guardian) {
       throw new GuardiansServiceError('Guardian not found', 404);
     }
 
     const existingLink = await this.guardiansRepository.findStudentGuardianLink(
-      institutionId,
       studentId,
       guardianId
     );
@@ -284,7 +230,6 @@ export class GuardiansService {
     }
 
     await this.guardiansRepository.removeGuardianFromStudent(
-      institutionId,
       studentId,
       guardianId
     );
@@ -301,7 +246,6 @@ export class GuardiansService {
   private toGuardianResponse(guardian: GuardianRecord) {
     return {
       id: guardian.id,
-      institutionId: guardian.institutionId,
       name: guardian.name,
       phone: guardian.phone,
       email: guardian.email,

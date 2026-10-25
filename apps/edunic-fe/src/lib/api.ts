@@ -57,7 +57,6 @@ export type EmailDeliveryState = {
 
 export type Student = {
   id: string;
-  institutionId: string;
   firstName: string;
   lastName: string;
   fullName: string;

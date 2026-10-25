@@ -77,8 +77,8 @@ describe('E2E flow: students', () => {
       firstName: 'Sofia',
       lastName: 'Ramirez',
       dateOfBirth: '2014-02-10',
-      institutionId,
     });
+    expect(student).not.toHaveProperty('institutionId');
 
     const fetched = await app.inject({
       method: 'GET',

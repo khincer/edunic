@@ -35,7 +35,6 @@ export class StudentsService {
 
   async listStudents(
     input: ListStudentsQuery & {
-      institutionId: string;
       actor: ReadActor;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
@@ -67,17 +66,10 @@ export class StudentsService {
     };
   }
 
-  async getStudent(
-    institutionId: string,
-    studentId: string,
-    actor: ReadActor
-  ) {
+  async getStudent(studentId: string, actor: ReadActor) {
     await this.access.assertCanReadStudent(actor, studentId);
 
-    const student = await this.studentsRepository.findById(
-      institutionId,
-      studentId
-    );
+    const student = await this.studentsRepository.findById(studentId);
 
     if (!student) {
       throw new StudentsServiceError('Student not found', 404);
@@ -88,9 +80,8 @@ export class StudentsService {
     };
   }
 
-  async createStudent(input: CreateStudentBody & { institutionId: string }) {
+  async createStudent(input: CreateStudentBody) {
     const student = await this.studentsRepository.create({
-      institutionId: input.institutionId,
       firstName: input.firstName.trim(),
       lastName: input.lastName.trim(),
       dateOfBirth: input.dateOfBirth?.trim() || null,
@@ -101,12 +92,8 @@ export class StudentsService {
     };
   }
 
-  async updateStudent(input: UpdateStudentBody & {
-    institutionId: string;
-    studentId: string;
-  }) {
+  async updateStudent(input: UpdateStudentBody & { studentId: string }) {
     const existingStudent = await this.studentsRepository.findById(
-      input.institutionId,
       input.studentId
     );
 
@@ -115,7 +102,6 @@ export class StudentsService {
     }
 
     const updatedStudent = await this.studentsRepository.update({
-      institutionId: input.institutionId,
       studentId: input.studentId,
       firstName: input.firstName?.trim(),
       lastName: input.lastName?.trim(),
@@ -134,20 +120,14 @@ export class StudentsService {
     };
   }
 
-  async deleteStudent(institutionId: string, studentId: string) {
-    const student = await this.studentsRepository.findById(
-      institutionId,
-      studentId
-    );
+  async deleteStudent(studentId: string) {
+    const student = await this.studentsRepository.findById(studentId);
 
     if (!student) {
       throw new StudentsServiceError('Student not found', 404);
     }
 
-    const enrollmentCount = await this.studentsRepository.countEnrollments(
-      institutionId,
-      studentId
-    );
+    const enrollmentCount = await this.studentsRepository.countEnrollments(studentId);
 
     if (enrollmentCount > 0) {
       throw new StudentsServiceError(
@@ -156,7 +136,7 @@ export class StudentsService {
       );
     }
 
-    await this.studentsRepository.delete(institutionId, studentId);
+    await this.studentsRepository.delete(studentId);
 
     return {
       data: {
@@ -169,7 +149,6 @@ export class StudentsService {
   private toStudentResponse(student: StudentRecord) {
     return {
       id: student.id,
-      institutionId: student.institutionId,
       firstName: student.firstName,
       lastName: student.lastName,
       fullName: `${student.firstName} ${student.lastName}`.trim(),
