@@ -33,7 +33,6 @@ export const STUDENT_LIST_COLUMNS = {
 
 export type StudentRecord = {
   id: string;
-  institutionId: string;
   firstName: string;
   lastName: string;
   dateOfBirth: string | null;
@@ -45,14 +44,12 @@ type CountRow = {
 };
 
 export type CreateStudentInput = {
-  institutionId: string;
   firstName: string;
   lastName: string;
   dateOfBirth?: string | null;
 };
 
 export type UpdateStudentInput = {
-  institutionId: string;
   studentId: string;
   firstName?: string;
   lastName?: string;
@@ -60,7 +57,6 @@ export type UpdateStudentInput = {
 };
 
 export type ListStudentsInput = ListStudentsQuery & {
-  institutionId: string;
   // Restricts the list to these students; undefined means unscoped.
   studentIds?: string[];
   filters?: FilterSpec[];
@@ -76,7 +72,7 @@ export class StudentsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
   async list(input: ListStudentsInput): Promise<ListStudentsResult> {
-    const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+    const filters: SQL[] = [];
 
     const scope = buildStudentIdCondition('id', input.studentIds);
 
@@ -101,7 +97,10 @@ export class StudentsRepository {
       filters.push(plan.keyset);
     }
 
-    const whereClause = sql`where ${sql.join(filters, sql` and `)}`;
+    const whereClause =
+      filters.length > 0
+        ? sql`where ${sql.join(filters, sql` and `)}`
+        : sql``;
     const orderBy = plan.orderBy ?? this.legacyOrderBy(input);
     const offsetClause =
       plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
@@ -109,7 +108,6 @@ export class StudentsRepository {
     const itemsQuery = sql`
       select
         id,
-        institution_id as "institutionId",
         first_name as "firstName",
         last_name as "lastName",
         date_of_birth as "dateOfBirth",
@@ -141,18 +139,16 @@ export class StudentsRepository {
     };
   }
 
-  async findById(institutionId: string, studentId: string) {
+  async findById(studentId: string) {
     const result = await this.db.execute<StudentRecord>(sql`
       select
         id,
-        institution_id as "institutionId",
         first_name as "firstName",
         last_name as "lastName",
         date_of_birth as "dateOfBirth",
         created_at as "createdAt"
       from students
       where id = ${studentId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
@@ -162,20 +158,17 @@ export class StudentsRepository {
   async create(input: CreateStudentInput) {
     const result = await this.db.execute<StudentRecord>(sql`
       insert into students (
-        institution_id,
         first_name,
         last_name,
         date_of_birth
       )
       values (
-        ${input.institutionId},
         ${input.firstName},
         ${input.lastName},
         ${input.dateOfBirth ?? null}
       )
       returning
         id,
-        institution_id as "institutionId",
         first_name as "firstName",
         last_name as "lastName",
         date_of_birth as "dateOfBirth",
@@ -201,17 +194,15 @@ export class StudentsRepository {
     }
 
     if (assignments.length === 0) {
-      return this.findById(input.institutionId, input.studentId);
+      return this.findById(input.studentId);
     }
 
     const result = await this.db.execute<StudentRecord>(sql`
       update students
       set ${sql.join(assignments, sql`, `)}
       where id = ${input.studentId}
-        and institution_id = ${input.institutionId}
       returning
         id,
-        institution_id as "institutionId",
         first_name as "firstName",
         last_name as "lastName",
         date_of_birth as "dateOfBirth",
@@ -221,14 +212,12 @@ export class StudentsRepository {
     return result.rows[0] ?? null;
   }
 
-  async delete(institutionId: string, studentId: string) {
+  async delete(studentId: string) {
     const result = await this.db.execute<StudentRecord>(sql`
       delete from students
       where id = ${studentId}
-        and institution_id = ${institutionId}
       returning
         id,
-        institution_id as "institutionId",
         first_name as "firstName",
         last_name as "lastName",
         date_of_birth as "dateOfBirth",
@@ -238,12 +227,11 @@ export class StudentsRepository {
     return result.rows[0] ?? null;
   }
 
-  async countEnrollments(institutionId: string, studentId: string) {
+  async countEnrollments(studentId: string) {
     const result = await this.db.execute<CountRow>(sql`
       select count(*)::int as count
       from enrollments
-      where institution_id = ${institutionId}
-        and student_id = ${studentId}
+      where student_id = ${studentId}
     `);
 
     return this.toCount(result.rows[0]?.count);
