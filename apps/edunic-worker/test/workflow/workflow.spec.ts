@@ -28,7 +28,8 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
   let redis: Redis;
   let runtime: ReturnType<typeof bootstrapWorker>;
   let consumer: ReturnType<typeof bootstrapWorker>['consumer'];
-  let institutionId: string;
+  // Only the old-shape test reads it: a queued legacy event still carries it.
+  let legacyInstitutionId: string;
   let headers: Record<string, string>;
   let studentId: string;
   let academicPeriodId: string;
@@ -100,10 +101,9 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
     await consumer.ensureGroup();
 
     const institution = await createInstitutionFixture('Workflow Institution');
-    institutionId = institution.id;
+    legacyInstitutionId = institution.id;
 
     const admin = await createUserFixture({
-      institutionId,
       role: 'director',
       email: 'workflow-admin@worker.test',
       password: 'admin1234',
@@ -115,14 +115,12 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
       payload: {
         email: admin.email,
         password: admin.password,
-        institutionId,
       },
     });
     expect(login.statusCode).toBe(200);
 
     headers = {
       authorization: `Bearer ${login.json().data.token}`,
-      'x-institution-id': institutionId,
     };
 
     const period = await app.inject({
@@ -260,7 +258,7 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
       // A fresh id per run: the consumer's `processed:<id>` marker lives in
       // Redis across runs, so a fixed id would be skipped as a duplicate.
       id: randomUUID(),
-      institutionId: institutionId,
+      institutionId: legacyInstitutionId,
     };
     await redis.xadd(STREAM, '*', 'event', JSON.stringify(oldShape));
 

@@ -50,7 +50,7 @@ export async function createInstitutionFixture(name = 'Test Institution') {
 }
 
 export async function createStudentFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   firstName?: string;
   lastName?: string;
   dateOfBirth?: string | null;
@@ -70,7 +70,7 @@ export async function createStudentFixture(input: {
 }
 
 export async function createGuardianFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   name?: string;
   phone?: string | null;
   email?: string | null;
@@ -90,7 +90,7 @@ export async function createGuardianFixture(input: {
 }
 
 export async function createUserFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   role: UserRole;
   email?: string;
   password?: string;
@@ -123,7 +123,7 @@ export async function createUserFixture(input: {
 }
 
 export async function createAcademicPeriodFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   year?: number;
   term?: number;
   startDate?: Date | null;
@@ -145,7 +145,7 @@ export async function createAcademicPeriodFixture(input: {
 }
 
 export async function createClassroomFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   gradeLevel?: number;
   section?: string | null;
 }) {
@@ -181,7 +181,7 @@ export async function createTeacherClassroomAssignmentFixture(input: {
 }
 
 export async function createEnrollmentFixture(input: {
-  institutionId: string;
+  institutionId?: string;
   studentId: string;
   academicPeriodId: string;
   classroomId?: string | null;
