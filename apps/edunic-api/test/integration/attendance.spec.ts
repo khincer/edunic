@@ -77,19 +77,11 @@ describe('attendance routes', () => {
     expect(deleteResponse.status).toBe(200);
   });
 
-  it('returns 404 when enrollment is outside the institution', async () => {
+  it('returns 404 when the enrollment does not exist', async () => {
     const institution = await createInstitutionFixture();
     const teacherUser = await createUserFixture({
       institutionId: institution.id,
       role: 'teacher',
-    });
-    const otherInstitution = await createInstitutionFixture('Other');
-    const student = await createStudentFixture({ institutionId: otherInstitution.id });
-    const period = await createAcademicPeriodFixture({ institutionId: otherInstitution.id });
-    const enrollment = await createEnrollmentFixture({
-      institutionId: otherInstitution.id,
-      studentId: student.id,
-      academicPeriodId: period.id,
     });
 
     const response = await client
@@ -101,11 +93,62 @@ describe('attendance routes', () => {
         })
       )
       .send({
-        enrollmentId: enrollment.id,
+        enrollmentId: '99999999-9999-4999-8999-999999999999',
         date: '2026-02-05T08:00:00.000Z',
         status: 'present',
       });
 
     expect(response.status).toBe(404);
+  });
+
+  it('answers without institutionId and keeps one mark per enrollment and date', async () => {
+    const institution = await createInstitutionFixture();
+    const admin = await createUserFixture({
+      institutionId: institution.id,
+      role: 'director',
+    });
+    const student = await createStudentFixture({ institutionId: institution.id });
+    const period = await createAcademicPeriodFixture({ institutionId: institution.id });
+    const enrollment = await createEnrollmentFixture({
+      institutionId: institution.id,
+      studentId: student.id,
+      academicPeriodId: period.id,
+    });
+    const headers = await createAuthHeaders({
+      userId: admin.id,
+      institutionId: institution.id,
+    });
+    const body = {
+      enrollmentId: enrollment.id,
+      date: '2026-02-05T08:00:00.000Z',
+      status: 'present',
+    };
+
+    const created = await client.post('/attendance').set(headers).send(body);
+    expect(created.status).toBe(201);
+    expect(created.body.data).not.toHaveProperty('institutionId');
+
+    const fetched = await client
+      .get(`/attendance/${created.body.data.id}`)
+      .set(headers);
+    expect(fetched.status).toBe(200);
+    expect(fetched.body.data).not.toHaveProperty('institutionId');
+
+    const listed = await client.get('/attendance').set(headers);
+    expect(listed.status).toBe(200);
+    expect(listed.body.data).toHaveLength(1);
+    expect(listed.body.data[0]).not.toHaveProperty('institutionId');
+
+    // UNIQUE (enrollment_id, date) has no school column: a second mark of
+    // the same day is still refused and leaves a single row.
+    const duplicate = await client.post('/attendance').set(headers).send(body);
+    expect(duplicate.status).toBeGreaterThanOrEqual(400);
+    const after = await client.get('/attendance').set(headers);
+    expect(after.body.data).toHaveLength(1);
+
+    const missing = await client
+      .get('/attendance/99999999-9999-4999-8999-999999999999')
+      .set(headers);
+    expect(missing.status).toBe(404);
   });
 });

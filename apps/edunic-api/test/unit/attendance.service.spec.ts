@@ -19,7 +19,6 @@ describe('AttendanceService', () => {
 
     await expect(
       service.createAttendance({
-        institutionId: 'inst-1',
       role: 'director',
       userId: 'user-1',
         enrollmentId: 'enrollment-1',
@@ -36,7 +35,6 @@ describe('AttendanceService', () => {
 
   const attendanceRecord = {
     id: 'attendance-1',
-    institutionId: 'inst-1',
     enrollmentId: 'enrollment-1',
     date: new Date('2026-02-01T08:00:00.000Z'),
     status: 'present',
@@ -63,7 +61,6 @@ describe('AttendanceService', () => {
     } as never);
 
     const result = await service.createAttendance({
-      institutionId: 'inst-1',
       role: 'director',
       userId: 'user-1',
       enrollmentId: 'enrollment-1',
@@ -79,10 +76,10 @@ describe('AttendanceService', () => {
       expect.objectContaining({ enrollmentId: 'enrollment-1', status: 'present' }),
       tx
     );
-    expect(repository.findById).toHaveBeenCalledWith(
-      'inst-1',
-      'attendance-1',
-      tx
+    expect(repository.findById).toHaveBeenCalledWith('attendance-1', tx);
+    expect(repository.findEnrollment).toHaveBeenCalledWith('enrollment-1');
+    expect(repository.create.mock.calls[0][0]).not.toHaveProperty(
+      'institutionId'
     );
     // Executor calls on the transaction come only from the outbox helpers:
     // insert (before publish), then mark published (after publish).
@@ -93,6 +90,9 @@ describe('AttendanceService', () => {
       payload: Record<string, unknown>;
     };
     expect(event.name).toBe('attendance.marked');
+    // AUTH-05: a newly emitted event does not name a school.
+    expect(event).not.toHaveProperty('institutionId');
+    expect(result.data).not.toHaveProperty('institutionId');
     expect(event.payload).toEqual(
       expect.objectContaining({ attendanceId: 'attendance-1', status: 'present' })
     );
@@ -113,7 +113,6 @@ describe('AttendanceService', () => {
 
     await expect(
       service.createAttendance({
-        institutionId: 'inst-1',
       role: 'director',
       userId: 'user-1',
         enrollmentId: 'enrollment-1',
@@ -132,7 +131,6 @@ describe('AttendanceService', () => {
     const service = new AttendanceService(repository as never, undefined, access);
 
     const result = await service.createAttendance({
-      institutionId: 'inst-1',
       role: 'director',
       userId: 'user-1',
       enrollmentId: 'enrollment-1',

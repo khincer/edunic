@@ -20,7 +20,6 @@ describe('GradesService', () => {
 
     await expect(
       service.createGrade({
-        institutionId: 'inst-1',
       role: 'director',
       userId: 'user-1',
         enrollmentId: 'enrollment-1',
@@ -37,7 +36,6 @@ describe('GradesService', () => {
 
   const gradeRecord = {
     id: 'grade-1',
-    institutionId: 'inst-1',
     enrollmentId: 'enrollment-1',
     subject: 'Science',
     score: 90,
@@ -64,7 +62,6 @@ describe('GradesService', () => {
     } as never, access);
 
     const result = await service.createGrade({
-      institutionId: 'inst-1',
       role: 'director',
       userId: 'user-1',
       enrollmentId: 'enrollment-1',
@@ -80,7 +77,11 @@ describe('GradesService', () => {
       expect.objectContaining({ enrollmentId: 'enrollment-1', score: 90 }),
       tx
     );
-    expect(repository.findById).toHaveBeenCalledWith('inst-1', 'grade-1', tx);
+    expect(repository.findById).toHaveBeenCalledWith('grade-1', tx);
+    expect(repository.findEnrollment).toHaveBeenCalledWith('enrollment-1');
+    expect(repository.create.mock.calls[0][0]).not.toHaveProperty(
+      'institutionId'
+    );
     // Executor calls on the transaction come only from the outbox helpers:
     // insert (before publish), then mark published (after publish).
     expect(tx.execute).toHaveBeenCalledTimes(2);
@@ -90,6 +91,9 @@ describe('GradesService', () => {
       payload: Record<string, unknown>;
     };
     expect(event.name).toBe('grade.submitted');
+    // AUTH-05: a newly emitted event does not name a school.
+    expect(event).not.toHaveProperty('institutionId');
+    expect(result.data).not.toHaveProperty('institutionId');
     expect(event.payload).toEqual(
       expect.objectContaining({ gradeId: 'grade-1', score: 90 })
     );
@@ -110,7 +114,6 @@ describe('GradesService', () => {
 
     await expect(
       service.createGrade({
-        institutionId: 'inst-1',
       role: 'director',
       userId: 'user-1',
         enrollmentId: 'enrollment-1',
@@ -129,7 +132,6 @@ describe('GradesService', () => {
     const service = new GradesService(repository as never, undefined, access);
 
     const result = await service.createGrade({
-      institutionId: 'inst-1',
       role: 'director',
       userId: 'user-1',
       enrollmentId: 'enrollment-1',

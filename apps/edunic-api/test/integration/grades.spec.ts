@@ -87,19 +87,11 @@ describe('grades routes', () => {
     expect(deleteResponse.status).toBe(200);
   });
 
-  it('returns 404 when enrollment is outside the institution', async () => {
+  it('returns 404 when the enrollment does not exist', async () => {
     const institution = await createInstitutionFixture();
     const teacherUser = await createUserFixture({
       institutionId: institution.id,
       role: 'teacher',
-    });
-    const otherInstitution = await createInstitutionFixture('Other');
-    const student = await createStudentFixture({ institutionId: otherInstitution.id });
-    const period = await createAcademicPeriodFixture({ institutionId: otherInstitution.id });
-    const enrollment = await createEnrollmentFixture({
-      institutionId: otherInstitution.id,
-      studentId: student.id,
-      academicPeriodId: period.id,
     });
 
     const response = await client
@@ -111,11 +103,60 @@ describe('grades routes', () => {
         })
       )
       .send({
-        enrollmentId: enrollment.id,
+        enrollmentId: '99999999-9999-4999-8999-999999999999',
         subjectId: (await createSubjectFixture('Science')).id,
         score: 95,
       });
 
     expect(response.status).toBe(404);
+  });
+
+  it('answers without institutionId and keeps naming the materia', async () => {
+    const institution = await createInstitutionFixture();
+    const admin = await createUserFixture({
+      institutionId: institution.id,
+      role: 'director',
+    });
+    const student = await createStudentFixture({ institutionId: institution.id });
+    const period = await createAcademicPeriodFixture({ institutionId: institution.id });
+    const enrollment = await createEnrollmentFixture({
+      institutionId: institution.id,
+      studentId: student.id,
+      academicPeriodId: period.id,
+    });
+    const headers = await createAuthHeaders({
+      userId: admin.id,
+      institutionId: institution.id,
+    });
+    const subject = await createSubjectFixture('Science');
+
+    const created = await client.post('/grades').set(headers).send({
+      enrollmentId: enrollment.id,
+      subjectId: subject.id,
+      score: 77,
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.data).not.toHaveProperty('institutionId');
+    expect(created.body.data).toMatchObject({
+      subjectId: subject.id,
+      subject: 'Science',
+    });
+
+    const fetched = await client
+      .get(`/grades/${created.body.data.id}`)
+      .set(headers);
+    expect(fetched.status).toBe(200);
+    expect(fetched.body.data).not.toHaveProperty('institutionId');
+
+    const listed = await client.get('/grades').set(headers);
+    expect(listed.status).toBe(200);
+    expect(listed.body.data).toHaveLength(1);
+    expect(listed.body.data[0]).not.toHaveProperty('institutionId');
+    expect(listed.body.data[0].subject).toBe('Science');
+
+    const missing = await client
+      .get('/grades/99999999-9999-4999-8999-999999999999')
+      .set(headers);
+    expect(missing.status).toBe(404);
   });
 });
