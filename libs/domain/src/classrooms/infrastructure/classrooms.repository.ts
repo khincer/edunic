@@ -35,26 +35,22 @@ type CountRow = {
 
 export type ClassroomRecord = {
   id: string;
-  institutionId: string;
   gradeLevel: number;
   section: string | null;
 };
 
 export type CreateClassroomInput = {
-  institutionId: string;
   gradeLevel: number;
   section?: string | null;
 };
 
 export type UpdateClassroomInput = {
-  institutionId: string;
   classroomId: string;
   gradeLevel?: number;
   section?: string | null;
 };
 
 export type ListClassroomsInput = ListClassroomsQuery & {
-  institutionId: string;
   teacherUserId?: string;
   filters?: FilterSpec[];
   sort?: SortSpec | null;
@@ -69,12 +65,11 @@ export class ClassroomsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
   async list(input: ListClassroomsInput): Promise<ListClassroomsResult> {
-    const filters: SQL[] = [sql`classrooms.institution_id = ${input.institutionId}`];
+    const filters: SQL[] = [sql`true`];
     const assignmentJoin = input.teacherUserId
       ? sql`
         inner join teacher_classroom_assignments tca
           on tca.classroom_id = classrooms.id
-         and tca.institution_id = classrooms.institution_id
          and tca.teacher_user_id = ${input.teacherUserId}
       `
       : sql``;
@@ -105,7 +100,6 @@ export class ClassroomsRepository {
     const itemsQuery = sql`
       select
         classrooms.id,
-        classrooms.institution_id as "institutionId",
         classrooms.grade_level as "gradeLevel",
         classrooms.section
       from classrooms
@@ -137,16 +131,14 @@ export class ClassroomsRepository {
     };
   }
 
-  async findById(institutionId: string, classroomId: string) {
+  async findById(classroomId: string) {
     const result = await this.db.execute<ClassroomRecord>(sql`
       select
         id,
-        institution_id as "institutionId",
         grade_level as "gradeLevel",
         section
       from classrooms
       where id = ${classroomId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
@@ -154,7 +146,6 @@ export class ClassroomsRepository {
   }
 
   async findByGradeAndSection(
-    institutionId: string,
     gradeLevel: number,
     section: string | null,
     excludeClassroomId?: string
@@ -168,8 +159,7 @@ export class ClassroomsRepository {
     const result = await this.db.execute<{ id: string }>(sql`
       select id
       from classrooms
-      where institution_id = ${institutionId}
-        and grade_level = ${gradeLevel}
+      where grade_level = ${gradeLevel}
         and ${sectionClause}
         ${excludeClause}
       limit 1
@@ -181,12 +171,10 @@ export class ClassroomsRepository {
   async create(input: CreateClassroomInput) {
     const result = await this.db.execute<{ id: string }>(sql`
       insert into classrooms (
-        institution_id,
         grade_level,
         section
       )
       values (
-        ${input.institutionId},
         ${input.gradeLevel},
         ${input.section ?? null}
       )
@@ -208,37 +196,34 @@ export class ClassroomsRepository {
     }
 
     if (assignments.length === 0) {
-      return this.findById(input.institutionId, input.classroomId);
+      return this.findById(input.classroomId);
     }
 
     const result = await this.db.execute<{ id: string }>(sql`
       update classrooms
       set ${sql.join(assignments, sql`, `)}
       where id = ${input.classroomId}
-        and institution_id = ${input.institutionId}
       returning id
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async delete(institutionId: string, classroomId: string) {
+  async delete(classroomId: string) {
     const result = await this.db.execute<{ id: string }>(sql`
       delete from classrooms
       where id = ${classroomId}
-        and institution_id = ${institutionId}
       returning id
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async countEnrollments(institutionId: string, classroomId: string) {
+  async countEnrollments(classroomId: string) {
     const result = await this.db.execute<CountRow>(sql`
       select count(*)::int as count
       from enrollments
-      where institution_id = ${institutionId}
-        and classroom_id = ${classroomId}
+      where classroom_id = ${classroomId}
     `);
 
     return this.toCount(result.rows[0]?.count);

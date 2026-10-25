@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import {
   parseWithSchema,
-  getInstitutionId,
   parseFilterSort,
 } from '@edunic/source/domain/shared';
 import {
@@ -32,7 +31,6 @@ export async function classroomRoutes(app: FastifyInstance) {
   };
 
   app.get('/', readAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listClassroomsQuerySchema, request.query);
     const { filters, sort } = parseFilterSort(
       request.query as { filter?: string | string[]; sort?: string },
@@ -44,7 +42,6 @@ export async function classroomRoutes(app: FastifyInstance) {
     }
 
     return classroomsService.listClassrooms({
-      institutionId,
       teacherUserId: request.user?.role === 'teacher' ? request.user.id : undefined,
       ...query,
       filters,
@@ -53,17 +50,14 @@ export async function classroomRoutes(app: FastifyInstance) {
   });
 
   app.get('/:classroomId', readAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(classroomParamsSchema, request.params);
 
-    return classroomsService.getClassroom(institutionId, params.classroomId);
+    return classroomsService.getClassroom(params.classroomId);
   });
 
   app.post('/', adminOnly, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createClassroomBodySchema, request.body);
     const result = await classroomsService.createClassroom({
-      institutionId,
       ...body,
     });
 
@@ -71,21 +65,18 @@ export async function classroomRoutes(app: FastifyInstance) {
   });
 
   app.patch('/:classroomId', adminOnly, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(classroomParamsSchema, request.params);
     const body = parseWithSchema(updateClassroomBodySchema, request.body);
 
     return classroomsService.updateClassroom({
-      institutionId,
       classroomId: params.classroomId,
       ...body,
     });
   });
 
   app.delete('/:classroomId', adminOnly, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(classroomParamsSchema, request.params);
 
-    return classroomsService.deleteClassroom(institutionId, params.classroomId);
+    return classroomsService.deleteClassroom(params.classroomId);
   });
 }

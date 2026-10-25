@@ -69,8 +69,8 @@ describe('E2E flow: classes', () => {
     expect(created.json().data).toMatchObject({
       gradeLevel: 7,
       section: 'B',
-      institutionId,
     });
+    expect(created.json().data).not.toHaveProperty('institutionId');
     const classroomId = created.json().data.id;
     expect(await countClassrooms()).toBe(1);
 

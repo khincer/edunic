@@ -19,6 +19,16 @@ const SWEPT: string[] = [
   'libs/domain/src/notifications',
   'apps/edunic-api/src/routes/notifications.routes.ts',
   'apps/edunic-worker/src/bootstrap.ts',
+  // S1.4d-1: academic periods, classrooms and academic averages. Their
+  // UNIQUE (institution_id, year, term) / (institution_id, grade_level,
+  // section) keys keep the column until 0015: with one school they behave as
+  // (year, term) / (grade_level, section) and the 409 checks stay in the app.
+  'libs/domain/src/academic-periods',
+  'apps/edunic-api/src/routes/academic-periods.routes.ts',
+  'libs/domain/src/classrooms',
+  'apps/edunic-api/src/routes/classrooms.routes.ts',
+  'libs/domain/src/academic-averages',
+  'apps/edunic-api/src/routes/academic-averages.routes.ts',
 ];
 
 // Also the per-school tables, which stay in the DB only until 0015.
