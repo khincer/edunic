@@ -11,7 +11,13 @@ import {
   studentGuardiansParamsSchema,
   updateGuardianBodySchema,
 } from '@edunic/source/domain/guardians';
-import { ADMIN_ROLES, adminAnd } from '@edunic/source/domain/authorization';
+import {
+  AccessRepository,
+  AccessService,
+  ADMIN_ROLES,
+  adminAnd,
+} from '@edunic/source/domain/authorization';
+import { actorOf } from './actor.js';
 
 const GUARDIAN_FILTER_SORT_OPTIONS = {
   filterFields: ['name', 'phone', 'email'],
@@ -19,7 +25,10 @@ const GUARDIAN_FILTER_SORT_OPTIONS = {
 };
 
 export async function guardianRoutes(app: FastifyInstance) {
-  const guardiansService = new GuardiansService(new GuardiansRepository(app.db));
+  const guardiansService = new GuardiansService(
+    new GuardiansRepository(app.db),
+    new AccessService(new AccessRepository(app.db))
+  );
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
   };
@@ -41,6 +50,7 @@ export async function guardianRoutes(app: FastifyInstance) {
 
     return guardiansService.listGuardians({
       institutionId,
+      actor: actorOf(request),
       ...query,
       filters,
       sort,
@@ -51,7 +61,11 @@ export async function guardianRoutes(app: FastifyInstance) {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(guardianParamsSchema, request.params);
 
-    return guardiansService.getGuardian(institutionId, params.guardianId);
+    return guardiansService.getGuardian(
+      institutionId,
+      params.guardianId,
+      actorOf(request)
+    );
   });
 
   app.post('/guardians', adminOnly, async (request, reply) => {
@@ -90,7 +104,8 @@ export async function guardianRoutes(app: FastifyInstance) {
 
     return guardiansService.listStudentGuardians(
       institutionId,
-      params.studentId
+      params.studentId,
+      actorOf(request)
     );
   });
 

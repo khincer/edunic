@@ -14,7 +14,12 @@ import {
   listEnrollmentsQuerySchema,
   updateEnrollmentBodySchema,
 } from '@edunic/source/domain/enrollments';
-import { adminAnd } from '@edunic/source/domain/authorization';
+import {
+  AccessRepository,
+  AccessService,
+  adminAnd,
+} from '@edunic/source/domain/authorization';
+import { actorOf } from './actor.js';
 
 const ENROLLMENT_FILTER_SORT_OPTIONS = {
   filterFields: [
@@ -30,6 +35,7 @@ const ENROLLMENT_FILTER_SORT_OPTIONS = {
 export async function enrollmentRoutes(app: FastifyInstance) {
   const enrollmentsService = new EnrollmentsService(
     new EnrollmentsRepository(app.db),
+    new AccessService(new AccessRepository(app.db)),
     app.eventBus
   );
   const readAccess = {
@@ -53,7 +59,7 @@ export async function enrollmentRoutes(app: FastifyInstance) {
 
     return enrollmentsService.listEnrollments({
       institutionId,
-      teacherUserId: request.user?.role === 'teacher' ? request.user.id : undefined,
+      actor: actorOf(request),
       ...query,
       filters,
       sort,
@@ -64,7 +70,11 @@ export async function enrollmentRoutes(app: FastifyInstance) {
     const institutionId = getInstitutionId(request);
     const params = parseWithSchema(enrollmentParamsSchema, request.params);
 
-    return enrollmentsService.getEnrollment(institutionId, params.enrollmentId);
+    return enrollmentsService.getEnrollment(
+      institutionId,
+      params.enrollmentId,
+      actorOf(request)
+    );
   });
 
   app.post('/', academicWriteAccess, async (request, reply) => {

@@ -8,6 +8,10 @@ import type {
   ListGuardiansQuery,
   UpdateGuardianBody,
 } from '../schemas/guardian.schemas.js';
+import type {
+  AccessService,
+  ReadActor,
+} from '@edunic/source/domain/authorization';
 import {
   GuardiansRepository,
   type GuardianRecord,
@@ -24,17 +28,24 @@ export class GuardiansServiceError extends Error {
 }
 
 export class GuardiansService {
-  constructor(private readonly guardiansRepository: GuardiansRepository) {}
+  constructor(
+    private readonly guardiansRepository: GuardiansRepository,
+    private readonly access: AccessService
+  ) {}
 
   async listGuardians(
     input: ListGuardiansQuery & {
       institutionId: string;
+      actor: ReadActor;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
     }
   ) {
+    const { actor, ...query } = input;
+    const readable = await this.access.resolveReadableStudents(actor);
     const result = await this.guardiansRepository.list({
-      ...input,
+      ...query,
+      studentIds: readable.all ? undefined : readable.studentIds,
       search: input.search?.trim() || undefined,
     });
 
@@ -56,7 +67,13 @@ export class GuardiansService {
     };
   }
 
-  async getGuardian(institutionId: string, guardianId: string) {
+  async getGuardian(
+    institutionId: string,
+    guardianId: string,
+    actor: ReadActor
+  ) {
+    await this.access.assertCanReadGuardian(actor, guardianId);
+
     const guardian = await this.guardiansRepository.findById(
       institutionId,
       guardianId
@@ -158,7 +175,13 @@ export class GuardiansService {
     };
   }
 
-  async listStudentGuardians(institutionId: string, studentId: string) {
+  async listStudentGuardians(
+    institutionId: string,
+    studentId: string,
+    actor: ReadActor
+  ) {
+    await this.access.assertCanReadStudent(actor, studentId);
+
     const student = await this.guardiansRepository.findStudentById(
       institutionId,
       studentId

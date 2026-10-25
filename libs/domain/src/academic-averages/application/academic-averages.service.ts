@@ -3,6 +3,10 @@ import {
   buildSubjectAverages,
 } from '@edunic/source/domain/shared';
 import {
+  AccessService,
+  type ReadActor,
+} from '@edunic/source/domain/authorization';
+import {
   AcademicAveragesRepository,
   type StudentGradeRow,
 } from '../infrastructure/academic-averages.repository.js';
@@ -19,13 +23,17 @@ export class AcademicAveragesServiceError extends Error {
 
 export class AcademicAveragesService {
   constructor(
-    private readonly academicAveragesRepository: AcademicAveragesRepository
+    private readonly academicAveragesRepository: AcademicAveragesRepository,
+    private readonly access: AccessService
   ) {}
 
   async getStudentAverages(input: {
     studentId: string;
     year: number;
+    actor: ReadActor;
   }) {
+    await this.access.assertCanReadStudent(input.actor, input.studentId);
+
     const student = await this.academicAveragesRepository.findStudent(input.studentId);
 
     if (!student) {

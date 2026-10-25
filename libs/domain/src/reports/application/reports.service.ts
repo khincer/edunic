@@ -2,10 +2,7 @@ import {
   computeAverage,
   buildSubjectAverages,
 } from '@edunic/source/domain/shared';
-import {
-  AccessService,
-  isAdminRole,
-} from '@edunic/source/domain/authorization';
+import { AccessService } from '@edunic/source/domain/authorization';
 import {
   ReportsRepository,
   type StudentReportEnrollmentRow,

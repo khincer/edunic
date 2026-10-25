@@ -21,6 +21,8 @@ export {
 
 export { PROMOTION_THRESHOLD } from './constants.js';
 
+export { buildStudentIdCondition } from './student-scope.js';
+
 export {
   ErrorCode,
   createEnvelope,
