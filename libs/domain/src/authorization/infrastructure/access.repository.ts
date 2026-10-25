@@ -64,6 +64,22 @@ export class AccessRepository {
     return result.rows.length > 0;
   }
 
+  // A teacher teaches a student when the student is enrolled in one of the
+  // teacher's classrooms.
+  async isTeacherTeachesStudent(teacherUserId: string, studentId: string) {
+    const result = await this.db.execute(sql`
+      select 1
+      from enrollments e
+      inner join teacher_classroom_assignments tca
+        on tca.classroom_id = e.classroom_id
+      where tca.teacher_user_id = ${teacherUserId}
+        and e.student_id = ${studentId}
+      limit 1
+    `);
+
+    return result.rows.length > 0;
+  }
+
   // The classroom an enrollment belongs to. NULL means the student is not in
   // a classroom, so no teacher owns that record.
   async findEnrollmentClassroomId(enrollmentId: string) {

@@ -52,6 +52,23 @@ export class AccessService {
     }
   }
 
+  async assertTeacherTeachesStudent(
+    teacherUserId: string,
+    studentId: string
+  ): Promise<void> {
+    const teaches = await this.accessRepository.isTeacherTeachesStudent(
+      teacherUserId,
+      studentId
+    );
+
+    if (!teaches) {
+      throw new AppError(
+        'The student is not in a classroom of this teacher',
+        403
+      );
+    }
+  }
+
   async assertTeacherOwnsSubject(
     teacherUserId: string,
     subjectId: string
