@@ -23,28 +23,22 @@ export class AcademicAveragesService {
   ) {}
 
   async getStudentAverages(input: {
-    institutionId: string;
     studentId: string;
     year: number;
   }) {
-    const student = await this.academicAveragesRepository.findStudent(
-      input.institutionId,
-      input.studentId
-    );
+    const student = await this.academicAveragesRepository.findStudent(input.studentId);
 
     if (!student) {
       throw new AcademicAveragesServiceError('Student not found', 404);
     }
 
     const grades = await this.academicAveragesRepository.listStudentGrades(
-      input.institutionId,
       input.studentId,
       input.year
     );
 
     return {
       data: {
-        institutionId: input.institutionId,
         studentId: input.studentId,
         year: input.year,
         annualAverage: computeAverage(grades),

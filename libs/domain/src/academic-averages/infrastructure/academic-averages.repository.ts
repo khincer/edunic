@@ -16,23 +16,18 @@ export type StudentGradeRow = {
 export class AcademicAveragesRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
-  async findStudent(institutionId: string, studentId: string) {
+  async findStudent(studentId: string) {
     const result = await this.db.execute<ExistsRow>(sql`
       select id
       from students
       where id = ${studentId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async listStudentGrades(
-    institutionId: string,
-    studentId: string,
-    year: number
-  ) {
+  async listStudentGrades(studentId: string, year: number) {
     const result = await this.db.execute<StudentGradeRow>(sql`
       select
         subjects.name as subject,
@@ -42,14 +37,9 @@ export class AcademicAveragesRepository {
         ap.term
       from grades g
       inner join subjects on subjects.id = g.subject_id
-      inner join enrollments e
-        on e.id = g.enrollment_id
-       and e.institution_id = g.institution_id
-      inner join academic_periods ap
-        on ap.id = e.academic_period_id
-       and ap.institution_id = e.institution_id
-      where g.institution_id = ${institutionId}
-        and e.student_id = ${studentId}
+      inner join enrollments e on e.id = g.enrollment_id
+      inner join academic_periods ap on ap.id = e.academic_period_id
+      where e.student_id = ${studentId}
         and ap.year = ${year}
       order by ap.term asc, subjects.name asc, g.created_at asc
     `);

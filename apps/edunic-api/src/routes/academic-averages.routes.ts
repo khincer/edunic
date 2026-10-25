@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import { parseWithSchema } from '@edunic/source/domain/shared';
 import {
   AcademicAveragesService,
   AcademicAveragesServiceError,
@@ -18,12 +18,10 @@ export async function academicAverageRoutes(app: FastifyInstance) {
   };
 
   app.get('/students/:studentId', readAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentAverageParamsSchema, request.params);
     const query = parseWithSchema(studentAverageQuerySchema, request.query);
 
     return academicAveragesService.getStudentAverages({
-      institutionId,
       studentId: params.studentId,
       year: query.year,
     });
