@@ -28,7 +28,6 @@ export class ClassroomsService {
 
   async listClassrooms(
     input: ListClassroomsQuery & {
-      institutionId: string;
       teacherUserId?: string;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
@@ -57,11 +56,8 @@ export class ClassroomsService {
     };
   }
 
-  async getClassroom(institutionId: string, classroomId: string) {
-    const classroom = await this.classroomsRepository.findById(
-      institutionId,
-      classroomId
-    );
+  async getClassroom(classroomId: string) {
+    const classroom = await this.classroomsRepository.findById(classroomId);
 
     if (!classroom) {
       throw new ClassroomsServiceError('Classroom not found', 404);
@@ -72,14 +68,10 @@ export class ClassroomsService {
     };
   }
 
-  async createClassroom(input: CreateClassroomBody & { institutionId: string }) {
+  async createClassroom(input: CreateClassroomBody) {
     const section = input.section?.trim() || null;
     const existingClassroom =
-      await this.classroomsRepository.findByGradeAndSection(
-        input.institutionId,
-        input.gradeLevel,
-        section
-      );
+      await this.classroomsRepository.findByGradeAndSection(input.gradeLevel, section);
 
     if (existingClassroom) {
       throw new ClassroomsServiceError(
@@ -89,15 +81,11 @@ export class ClassroomsService {
     }
 
     const createdClassroom = await this.classroomsRepository.create({
-      institutionId: input.institutionId,
       gradeLevel: input.gradeLevel,
       section,
     });
 
-    const classroom = await this.classroomsRepository.findById(
-      input.institutionId,
-      createdClassroom.id
-    );
+    const classroom = await this.classroomsRepository.findById(createdClassroom.id);
 
     if (!classroom) {
       throw new ClassroomsServiceError('Classroom not found', 404);
@@ -109,15 +97,9 @@ export class ClassroomsService {
   }
 
   async updateClassroom(
-    input: UpdateClassroomBody & {
-      institutionId: string;
-      classroomId: string;
-    }
+    input: UpdateClassroomBody & { classroomId: string }
   ) {
-    const existingClassroom = await this.classroomsRepository.findById(
-      input.institutionId,
-      input.classroomId
-    );
+    const existingClassroom = await this.classroomsRepository.findById(input.classroomId);
 
     if (!existingClassroom) {
       throw new ClassroomsServiceError('Classroom not found', 404);
@@ -131,7 +113,6 @@ export class ClassroomsService {
 
     const duplicateClassroom =
       await this.classroomsRepository.findByGradeAndSection(
-        input.institutionId,
         nextGradeLevel,
         nextSection,
         input.classroomId
@@ -145,7 +126,6 @@ export class ClassroomsService {
     }
 
     const updatedClassroom = await this.classroomsRepository.update({
-      institutionId: input.institutionId,
       classroomId: input.classroomId,
       gradeLevel: input.gradeLevel,
       section: input.section === undefined ? undefined : nextSection,
@@ -155,10 +135,7 @@ export class ClassroomsService {
       throw new ClassroomsServiceError('Classroom not found', 404);
     }
 
-    const classroom = await this.classroomsRepository.findById(
-      input.institutionId,
-      input.classroomId
-    );
+    const classroom = await this.classroomsRepository.findById(input.classroomId);
 
     if (!classroom) {
       throw new ClassroomsServiceError('Classroom not found', 404);
@@ -169,20 +146,14 @@ export class ClassroomsService {
     };
   }
 
-  async deleteClassroom(institutionId: string, classroomId: string) {
-    const classroom = await this.classroomsRepository.findById(
-      institutionId,
-      classroomId
-    );
+  async deleteClassroom(classroomId: string) {
+    const classroom = await this.classroomsRepository.findById(classroomId);
 
     if (!classroom) {
       throw new ClassroomsServiceError('Classroom not found', 404);
     }
 
-    const enrollmentCount = await this.classroomsRepository.countEnrollments(
-      institutionId,
-      classroomId
-    );
+    const enrollmentCount = await this.classroomsRepository.countEnrollments(classroomId);
 
     if (enrollmentCount > 0) {
       throw new ClassroomsServiceError(
@@ -191,7 +162,7 @@ export class ClassroomsService {
       );
     }
 
-    await this.classroomsRepository.delete(institutionId, classroomId);
+    await this.classroomsRepository.delete(classroomId);
 
     return {
       data: {
@@ -204,7 +175,6 @@ export class ClassroomsService {
   private toClassroomResponse(classroom: ClassroomRecord) {
     return {
       id: classroom.id,
-      institutionId: classroom.institutionId,
       gradeLevel: classroom.gradeLevel,
       section: classroom.section,
       name: this.getClassroomName(classroom),
