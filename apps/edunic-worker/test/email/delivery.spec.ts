@@ -319,6 +319,31 @@ describe('worker email delivery', () => {
     expect(job?.opts.removeOnFail).toEqual({ age: EMAIL_JOB_KEEP_FAILED_MS });
   });
 
+  // Entries queued before the sweep carry institutionId. They must still turn
+  // into exactly one delivery, and the field must not change the outcome.
+  it('delivers for an old-shape enrollment.welcomed that still carries institutionId (TEN-07)', async () => {
+    const scenario = await createScenario();
+    await addGuardian(scenario.institutionId, scenario.studentId, 'old@example.com');
+
+    const event = createEnrollmentWelcomedEvent({
+      payload: {
+        enrollmentId: scenario.enrollmentId,
+        studentId: scenario.studentId,
+      },
+    });
+    await publish({ ...event, institutionId: scenario.institutionId });
+
+    expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
+
+    const rows = await waitForDeliveries(scenario.institutionId, {
+      status: 'sent',
+      count: 1,
+    });
+    expect(rows.map((row) => row.recipientAddress)).toEqual(['old@example.com']);
+    expect(fake.calls).toBe(1);
+    expect(fake.sent[0].fromName).toBe('Central School');
+  });
+
   it('sends a grade notice for grade.submitted using the institution reply-to (EV-R1, SI-R1)', async () => {
     const scenario = await createScenario({
       senderName: 'North School',

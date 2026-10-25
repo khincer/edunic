@@ -244,4 +244,29 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
 
     expect(await welcomesFor(enrollment.id)).toHaveLength(1);
   });
+
+  // Events already on the stream when the sweep deploys still carry the
+  // tenant field. The consumer must handle and ack them, and the side effect
+  // must not propagate the field (TEN-07).
+  it('consumes an old-shape enrollment.created that still carries institutionId', async () => {
+    const enrollment = await createEnrollment();
+    const created = (await readStream())[0];
+    await redis.del(STREAM);
+    await consumer.ensureGroup();
+
+    const oldShape = {
+      ...created,
+      id: 'old-shape-event-queued-before-the-sweep',
+      institutionId: institutionId,
+    };
+    await redis.xadd(STREAM, '*', 'event', JSON.stringify(oldShape));
+
+    expect(await consumer.pollOnce({ blockMs: 0 })).toBe(1);
+
+    const welcomes = await welcomesFor(enrollment.id);
+    expect(welcomes).toHaveLength(1);
+    expect(welcomes[0]).not.toHaveProperty('institutionId');
+    expect(await redis.exists(`processed:${oldShape.id}`)).toBe(1);
+    expect(await pendingEntryIds()).toEqual([]);
+  });
 });
