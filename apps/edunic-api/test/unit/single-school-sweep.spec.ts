@@ -51,6 +51,16 @@ const SWEPT: string[] = [
   // on the event types until S1.4h).
   'libs/domain/src/enrollments',
   'apps/edunic-api/src/routes/enrollments.routes.ts',
+  // S1.4f: attendance, grades and reports. UNIQUE (enrollment_id, date) on
+  // attendance never included institution_id; grades has no unique key. The
+  // grade.submitted / attendance.marked events stop carrying institutionId
+  // (the optional field stays on the event types until S1.4h).
+  'libs/domain/src/attendance',
+  'apps/edunic-api/src/routes/attendance.routes.ts',
+  'libs/domain/src/grades',
+  'apps/edunic-api/src/routes/grades.routes.ts',
+  'libs/domain/src/reports',
+  'apps/edunic-api/src/routes/reports.routes.ts',
 ];
 
 // Also the per-school tables, which stay in the DB only until 0015.

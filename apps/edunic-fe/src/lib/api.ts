@@ -102,7 +102,6 @@ export type AttendanceStatus = 'present' | 'absent' | 'late';
 
 export type AttendanceRecord = {
   id: string;
-  institutionId: string;
   enrollmentId: string;
   date: string;
   status: AttendanceStatus;
@@ -120,7 +119,6 @@ export type Subject = {
 
 export type Grade = {
   id: string;
-  institutionId: string;
   enrollmentId: string;
   subjectId: string;
   topicId: string | null;

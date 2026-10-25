@@ -119,7 +119,7 @@ describe('E2E flow: attendance', () => {
       // The published event reached the bus with the created row's identity.
       expect(received).toHaveLength(1);
       expect(received[0].name).toBe('attendance.marked');
-      expect(received[0].institutionId).toBe(institutionId);
+      expect(received[0]).not.toHaveProperty('institutionId');
       expect(received[0].payload).toMatchObject({
         attendanceId,
         enrollmentId,

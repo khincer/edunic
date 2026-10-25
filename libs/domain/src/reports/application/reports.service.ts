@@ -26,7 +26,6 @@ export class ReportsService {
   ) {}
 
   async getStudentAcademicSummary(input: {
-    institutionId: string;
     studentId: string;
     year: number;
     actor: { role: string; userId: string };
@@ -35,31 +34,19 @@ export class ReportsService {
     // does not reveal whether the student exists.
     await this.accessService.assertCanReadStudent(input.actor, input.studentId);
 
-    const student = await this.reportsRepository.findStudent(
-      input.institutionId,
-      input.studentId
-    );
+    const student = await this.reportsRepository.findStudent(input.studentId);
 
     if (!student) {
       throw new ReportsServiceError('Student not found', 404);
     }
 
     const [grades, enrollments] = await Promise.all([
-      this.reportsRepository.listStudentGrades(
-        input.institutionId,
-        input.studentId,
-        input.year
-      ),
-      this.reportsRepository.listStudentEnrollments(
-        input.institutionId,
-        input.studentId,
-        input.year
-      ),
+      this.reportsRepository.listStudentGrades(input.studentId, input.year),
+      this.reportsRepository.listStudentEnrollments(input.studentId, input.year),
     ]);
 
     return {
       data: {
-        institutionId: input.institutionId,
         year: input.year,
         student: {
           id: student.id,

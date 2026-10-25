@@ -37,7 +37,6 @@ export class GradesService {
 
   async listGrades(
     input: ListGradesQuery & {
-      institutionId: string;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
     }
@@ -67,8 +66,8 @@ export class GradesService {
     };
   }
 
-  async getGrade(institutionId: string, gradeId: string) {
-    const grade = await this.gradesRepository.findById(institutionId, gradeId);
+  async getGrade(gradeId: string) {
+    const grade = await this.gradesRepository.findById(gradeId);
 
     if (!grade) {
       throw new GradesServiceError('Grade not found', 404);
@@ -81,13 +80,11 @@ export class GradesService {
 
   async createGrade(
     input: CreateGradeBody & {
-      institutionId: string;
       role: string;
       userId: string;
     }
   ) {
     const enrollment = await this.gradesRepository.findEnrollment(
-      input.institutionId,
       input.enrollmentId
     );
 
@@ -103,7 +100,6 @@ export class GradesService {
     const grade = await this.gradesRepository.transaction(async (tx) => {
       const createdGrade = await this.gradesRepository.create(
         {
-          institutionId: input.institutionId,
           enrollmentId: input.enrollmentId,
           subjectId: input.subjectId,
           topicId: input.topicId ?? null,
@@ -112,18 +108,13 @@ export class GradesService {
         tx
       );
 
-      const record = await this.gradesRepository.findById(
-        input.institutionId,
-        createdGrade.id,
-        tx
-      );
+      const record = await this.gradesRepository.findById(createdGrade.id, tx);
 
       if (!record) {
         throw new GradesServiceError('Grade not found', 404);
       }
 
       const event = createGradeSubmittedEvent({
-        institutionId: input.institutionId,
         payload: {
           gradeId: record.id,
           enrollmentId: record.enrollmentId,
@@ -148,13 +139,11 @@ export class GradesService {
   }
 
   async updateGrade(input: UpdateGradeBody & {
-    institutionId: string;
     gradeId: string;
     role: string;
     userId: string;
   }) {
     const existingGrade = await this.gradesRepository.findById(
-      input.institutionId,
       input.gradeId
     );
 
@@ -179,7 +168,6 @@ export class GradesService {
         : input.topicId;
 
     const updatedGrade = await this.gradesRepository.update({
-      institutionId: input.institutionId,
       gradeId: input.gradeId,
       subjectId,
       topicId,
@@ -191,7 +179,6 @@ export class GradesService {
     }
 
     const grade = await this.gradesRepository.findById(
-      input.institutionId,
       input.gradeId
     );
 
@@ -205,11 +192,10 @@ export class GradesService {
   }
 
   async deleteGrade(
-    institutionId: string,
     gradeId: string,
     actor: { role: string; userId: string }
   ) {
-    const grade = await this.gradesRepository.findById(institutionId, gradeId);
+    const grade = await this.gradesRepository.findById(gradeId);
 
     if (!grade) {
       throw new GradesServiceError('Grade not found', 404);
@@ -217,7 +203,7 @@ export class GradesService {
 
     await this.assertTeacherOwnsEnrollment(actor, grade.enrollmentId);
 
-    await this.gradesRepository.delete(institutionId, gradeId);
+    await this.gradesRepository.delete(gradeId);
 
     return {
       data: {
@@ -277,7 +263,6 @@ export class GradesService {
   private toGradeResponse(grade: GradeRecord) {
     return {
       id: grade.id,
-      institutionId: grade.institutionId,
       enrollmentId: grade.enrollmentId,
       subjectId: grade.subjectId,
       topicId: grade.topicId,

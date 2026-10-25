@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import {
   parseWithSchema,
-  getInstitutionId,
   parseFilterSort,
 } from '@edunic/source/domain/shared';
 import { AccessRepository, AccessService, adminAnd } from '@edunic/source/domain/authorization';
@@ -34,7 +33,6 @@ export async function gradeRoutes(app: FastifyInstance) {
   };
 
   app.get('/', readAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listGradesQuerySchema, request.query);
     const { filters, sort } = parseFilterSort(
       request.query as { filter?: string | string[]; sort?: string },
@@ -46,7 +44,6 @@ export async function gradeRoutes(app: FastifyInstance) {
     }
 
     return gradesService.listGrades({
-      institutionId,
       ...query,
       filters,
       sort,
@@ -54,17 +51,14 @@ export async function gradeRoutes(app: FastifyInstance) {
   });
 
   app.get('/:gradeId', readAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(gradeParamsSchema, request.params);
 
-    return gradesService.getGrade(institutionId, params.gradeId);
+    return gradesService.getGrade(params.gradeId);
   });
 
   app.post('/', academicWriteAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createGradeBodySchema, request.body);
     const result = await gradesService.createGrade({
-      institutionId,
       role: request.user?.role ?? '',
       userId: request.user?.id ?? '',
       ...body,
@@ -74,12 +68,10 @@ export async function gradeRoutes(app: FastifyInstance) {
   });
 
   app.patch('/:gradeId', academicWriteAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(gradeParamsSchema, request.params);
     const body = parseWithSchema(updateGradeBodySchema, request.body);
 
     return gradesService.updateGrade({
-      institutionId,
       gradeId: params.gradeId,
       role: request.user?.role ?? '',
       userId: request.user?.id ?? '',
@@ -88,10 +80,9 @@ export async function gradeRoutes(app: FastifyInstance) {
   });
 
   app.delete('/:gradeId', academicWriteAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(gradeParamsSchema, request.params);
 
-    return gradesService.deleteGrade(institutionId, params.gradeId, {
+    return gradesService.deleteGrade(params.gradeId, {
       role: request.user?.role ?? '',
       userId: request.user?.id ?? '',
     });

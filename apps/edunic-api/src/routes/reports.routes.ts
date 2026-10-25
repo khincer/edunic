@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import { parseWithSchema } from '@edunic/source/domain/shared';
 import {
   ReportsService,
   ReportsPdfService,
@@ -24,12 +24,10 @@ export async function reportRoutes(app: FastifyInstance) {
   };
 
   app.get('/students/:studentId/academic-summary', readAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentReportParamsSchema, request.params);
     const query = parseWithSchema(studentReportQuerySchema, request.query);
 
     return reportsService.getStudentAcademicSummary({
-      institutionId,
       studentId: params.studentId,
       year: query.year,
       actor: actorOf(request),
@@ -37,12 +35,10 @@ export async function reportRoutes(app: FastifyInstance) {
   });
 
   app.get('/students/:studentId/academic-summary/pdf', readAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(studentReportParamsSchema, request.params);
     const query = parseWithSchema(studentReportQuerySchema, request.query);
 
     const result = await reportsService.getStudentAcademicSummary({
-      institutionId,
       studentId: params.studentId,
       year: query.year,
       actor: actorOf(request),
