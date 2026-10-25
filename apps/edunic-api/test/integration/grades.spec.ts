@@ -31,30 +31,24 @@ describe('grades routes', () => {
   });
 
   it('supports CRUD for grades', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const teacherUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
-    const classroom = await createClassroomFixture({
-      institutionId: institution.id,
-    });
+    const classroom = await createClassroomFixture({});
     await createTeacherClassroomAssignmentFixture({
-      institutionId: institution.id,
       teacherUserId: teacherUser.id,
       classroomId: classroom.id,
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
-    const period = await createAcademicPeriodFixture({ institutionId: institution.id });
+    const student = await createStudentFixture({});
+    const period = await createAcademicPeriodFixture({});
     const enrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
       classroomId: classroom.id,
     });
     const headers = await createAuthHeaders({
       userId: teacherUser.id,
-      institutionId: institution.id,
     });
 
     // The teacher owns the materia of their classroom.
@@ -88,9 +82,8 @@ describe('grades routes', () => {
   });
 
   it('returns 404 when the enrollment does not exist', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const teacherUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
 
@@ -99,7 +92,6 @@ describe('grades routes', () => {
       .set(
         await createAuthHeaders({
           userId: teacherUser.id,
-          institutionId: institution.id,
         })
       )
       .send({
@@ -111,22 +103,19 @@ describe('grades routes', () => {
     expect(response.status).toBe(404);
   });
 
-  it('answers without institutionId and keeps naming the materia', async () => {
-    const institution = await createInstitutionFixture();
+  it('answers without a school field and keeps naming the materia', async () => {
+    await createInstitutionFixture();
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
-    const period = await createAcademicPeriodFixture({ institutionId: institution.id });
+    const student = await createStudentFixture({});
+    const period = await createAcademicPeriodFixture({});
     const enrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
-      institutionId: institution.id,
     });
     const subject = await createSubjectFixture('Science');
 
