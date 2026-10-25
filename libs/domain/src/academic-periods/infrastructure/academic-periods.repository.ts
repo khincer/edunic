@@ -38,7 +38,6 @@ type CountRow = {
 
 export type AcademicPeriodRecord = {
   id: string;
-  institutionId: string;
   year: number;
   term: number;
   startDate: Date | null;
@@ -47,7 +46,6 @@ export type AcademicPeriodRecord = {
 };
 
 export type CreateAcademicPeriodInput = {
-  institutionId: string;
   year: number;
   term: number;
   startDate?: string;
@@ -55,7 +53,6 @@ export type CreateAcademicPeriodInput = {
 };
 
 export type UpdateAcademicPeriodInput = {
-  institutionId: string;
   academicPeriodId: string;
   year?: number;
   term?: number;
@@ -64,7 +61,6 @@ export type UpdateAcademicPeriodInput = {
 };
 
 export type ListAcademicPeriodsInput = ListAcademicPeriodsQuery & {
-  institutionId: string;
   filters?: FilterSpec[];
   sort?: SortSpec | null;
 };
@@ -78,7 +74,7 @@ export class AcademicPeriodsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
   async list(input: ListAcademicPeriodsInput): Promise<ListAcademicPeriodsResult> {
-    const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+    const filters: SQL[] = [sql`true`];
 
     if (input.year !== undefined) {
       filters.push(sql`year = ${input.year}`);
@@ -109,7 +105,6 @@ export class AcademicPeriodsRepository {
     const itemsQuery = sql`
       select
         id,
-        institution_id as "institutionId",
         year,
         term,
         start_date as "startDate",
@@ -142,11 +137,10 @@ export class AcademicPeriodsRepository {
     };
   }
 
-  async findById(institutionId: string, academicPeriodId: string) {
+  async findById(academicPeriodId: string) {
     const result = await this.db.execute<AcademicPeriodRecord>(sql`
       select
         id,
-        institution_id as "institutionId",
         year,
         term,
         start_date as "startDate",
@@ -154,7 +148,6 @@ export class AcademicPeriodsRepository {
         created_at as "createdAt"
       from academic_periods
       where id = ${academicPeriodId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
@@ -162,7 +155,6 @@ export class AcademicPeriodsRepository {
   }
 
   async findByYearAndTerm(
-    institutionId: string,
     year: number,
     term: number,
     excludeAcademicPeriodId?: string
@@ -174,8 +166,7 @@ export class AcademicPeriodsRepository {
     const result = await this.db.execute<{ id: string }>(sql`
       select id
       from academic_periods
-      where institution_id = ${institutionId}
-        and year = ${year}
+      where year = ${year}
         and term = ${term}
         ${excludeClause}
       limit 1
@@ -187,14 +178,12 @@ export class AcademicPeriodsRepository {
   async create(input: CreateAcademicPeriodInput) {
     const result = await this.db.execute<{ id: string }>(sql`
       insert into academic_periods (
-        institution_id,
         year,
         term,
         start_date,
         end_date
       )
       values (
-        ${input.institutionId},
         ${input.year},
         ${input.term},
         ${input.startDate ?? null},
@@ -226,37 +215,34 @@ export class AcademicPeriodsRepository {
     }
 
     if (assignments.length === 0) {
-      return this.findById(input.institutionId, input.academicPeriodId);
+      return this.findById(input.academicPeriodId);
     }
 
     const result = await this.db.execute<{ id: string }>(sql`
       update academic_periods
       set ${sql.join(assignments, sql`, `)}
       where id = ${input.academicPeriodId}
-        and institution_id = ${input.institutionId}
       returning id
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async delete(institutionId: string, academicPeriodId: string) {
+  async delete(academicPeriodId: string) {
     const result = await this.db.execute<{ id: string }>(sql`
       delete from academic_periods
       where id = ${academicPeriodId}
-        and institution_id = ${institutionId}
       returning id
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async countEnrollments(institutionId: string, academicPeriodId: string) {
+  async countEnrollments(academicPeriodId: string) {
     const result = await this.db.execute<CountRow>(sql`
       select count(*)::int as count
       from enrollments
-      where institution_id = ${institutionId}
-        and academic_period_id = ${academicPeriodId}
+      where academic_period_id = ${academicPeriodId}
     `);
 
     return this.toCount(result.rows[0]?.count);

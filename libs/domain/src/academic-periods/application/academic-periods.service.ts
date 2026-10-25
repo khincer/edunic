@@ -30,7 +30,6 @@ export class AcademicPeriodsService {
 
   async listAcademicPeriods(
     input: ListAcademicPeriodsQuery & {
-      institutionId: string;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
     }
@@ -57,11 +56,8 @@ export class AcademicPeriodsService {
     };
   }
 
-  async getAcademicPeriod(institutionId: string, academicPeriodId: string) {
-    const academicPeriod = await this.academicPeriodsRepository.findById(
-      institutionId,
-      academicPeriodId
-    );
+  async getAcademicPeriod(academicPeriodId: string) {
+    const academicPeriod = await this.academicPeriodsRepository.findById(academicPeriodId);
 
     if (!academicPeriod) {
       throw new AcademicPeriodsServiceError('Academic period not found', 404);
@@ -73,14 +69,10 @@ export class AcademicPeriodsService {
   }
 
   async createAcademicPeriod(
-    input: CreateAcademicPeriodBody & { institutionId: string }
+    input: CreateAcademicPeriodBody
   ) {
     const existingAcademicPeriod =
-      await this.academicPeriodsRepository.findByYearAndTerm(
-        input.institutionId,
-        input.year,
-        input.term
-      );
+      await this.academicPeriodsRepository.findByYearAndTerm(input.year, input.term);
 
     if (existingAcademicPeriod) {
       throw new AcademicPeriodsServiceError(
@@ -90,17 +82,13 @@ export class AcademicPeriodsService {
     }
 
     const createdAcademicPeriod = await this.academicPeriodsRepository.create({
-      institutionId: input.institutionId,
       year: input.year,
       term: input.term,
       startDate: input.startDate,
       endDate: input.endDate,
     });
 
-    const academicPeriod = await this.academicPeriodsRepository.findById(
-      input.institutionId,
-      createdAcademicPeriod.id
-    );
+    const academicPeriod = await this.academicPeriodsRepository.findById(createdAcademicPeriod.id);
 
     if (!academicPeriod) {
       throw new AcademicPeriodsServiceError('Academic period not found', 404);
@@ -112,15 +100,9 @@ export class AcademicPeriodsService {
   }
 
   async updateAcademicPeriod(
-    input: UpdateAcademicPeriodBody & {
-      institutionId: string;
-      academicPeriodId: string;
-    }
+    input: UpdateAcademicPeriodBody & { academicPeriodId: string }
   ) {
-    const existingAcademicPeriod = await this.academicPeriodsRepository.findById(
-      input.institutionId,
-      input.academicPeriodId
-    );
+    const existingAcademicPeriod = await this.academicPeriodsRepository.findById(input.academicPeriodId);
 
     if (!existingAcademicPeriod) {
       throw new AcademicPeriodsServiceError('Academic period not found', 404);
@@ -154,7 +136,6 @@ export class AcademicPeriodsService {
 
     const duplicateAcademicPeriod =
       await this.academicPeriodsRepository.findByYearAndTerm(
-        input.institutionId,
         nextYear,
         nextTerm,
         input.academicPeriodId
@@ -168,7 +149,6 @@ export class AcademicPeriodsService {
     }
 
     const updatedAcademicPeriod = await this.academicPeriodsRepository.update({
-      institutionId: input.institutionId,
       academicPeriodId: input.academicPeriodId,
       year: input.year,
       term: input.term,
@@ -181,10 +161,7 @@ export class AcademicPeriodsService {
       throw new AcademicPeriodsServiceError('Academic period not found', 404);
     }
 
-    const academicPeriod = await this.academicPeriodsRepository.findById(
-      input.institutionId,
-      input.academicPeriodId
-    );
+    const academicPeriod = await this.academicPeriodsRepository.findById(input.academicPeriodId);
 
     if (!academicPeriod) {
       throw new AcademicPeriodsServiceError('Academic period not found', 404);
@@ -195,20 +172,14 @@ export class AcademicPeriodsService {
     };
   }
 
-  async deleteAcademicPeriod(institutionId: string, academicPeriodId: string) {
-    const academicPeriod = await this.academicPeriodsRepository.findById(
-      institutionId,
-      academicPeriodId
-    );
+  async deleteAcademicPeriod(academicPeriodId: string) {
+    const academicPeriod = await this.academicPeriodsRepository.findById(academicPeriodId);
 
     if (!academicPeriod) {
       throw new AcademicPeriodsServiceError('Academic period not found', 404);
     }
 
-    const enrollmentCount = await this.academicPeriodsRepository.countEnrollments(
-      institutionId,
-      academicPeriodId
-    );
+    const enrollmentCount = await this.academicPeriodsRepository.countEnrollments(academicPeriodId);
 
     if (enrollmentCount > 0) {
       throw new AcademicPeriodsServiceError(
@@ -217,7 +188,7 @@ export class AcademicPeriodsService {
       );
     }
 
-    await this.academicPeriodsRepository.delete(institutionId, academicPeriodId);
+    await this.academicPeriodsRepository.delete(academicPeriodId);
 
     return {
       data: {
@@ -230,7 +201,6 @@ export class AcademicPeriodsService {
   private toAcademicPeriodResponse(academicPeriod: AcademicPeriodRecord) {
     return {
       id: academicPeriod.id,
-      institutionId: academicPeriod.institutionId,
       year: academicPeriod.year,
       term: academicPeriod.term,
       startDate: academicPeriod.startDate,
