@@ -104,7 +104,18 @@ const TEST_EXCLUDED: RegExp[] = [
   /^integration\/single-school-request-context\.spec\.ts$/,
   /^integration\/dashboards-school-context\.spec\.ts$/,
   /^unit\/single-school-sweep\.spec\.ts$/,
+  // Legacy-payload tolerance: events and idempotency scopes queued by an
+  // instance that still sends the school must keep being accepted (rolling
+  // deploy), so these specs name the field on purpose.
+  /^unit\/(event-bus|email-delivery\.service|notifications\.service|idempotency)\.spec\.ts$/,
+  // TRUNCATE names the two per-school tables that migration 0015 drops.
+  /^helpers\/db\.ts$/,
 ];
+
+// An assertion that a value does NOT carry the field proves the contract is
+// free of the school, so it is allowed (it survives the column drop).
+const ABSENCE_ASSERTION =
+  /not\s*\.(toHaveProperty|toContain|toMatch)\(\s*(?:'[\w.]*'|\/[\w|.]*\/)\s*\)/g;
 
 // TEMPORARY allow-list: files S1.8a part 2 has not cleaned yet. Part 2 empties
 // it. A file listed here must still contain a reference (see the ratchet test
@@ -124,6 +135,7 @@ describe('single-school sweep guard (API test tree)', () => {
 
   const offendingLines = (file: string) =>
     readFileSync(file, 'utf8')
+      .replace(ABSENCE_ASSERTION, (match) => match.replace(/[^\n]/g, ''))
       .split('\n')
       .map((line, index) => ({ line, number: index + 1 }))
       .filter(({ line }) => FORBIDDEN.test(line))
