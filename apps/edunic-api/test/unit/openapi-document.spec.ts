@@ -46,7 +46,7 @@ describe('OpenAPI document (single school)', () => {
     }
   });
 
-  it('has no institutionId anywhere', () => {
+  it('has no school identifier anywhere', () => {
     expect(text).not.toContain('institutionId');
   });
 

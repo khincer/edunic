@@ -25,7 +25,7 @@ describe('AcademicPeriodsService', () => {
     expect(repository.findByYearAndTerm).toHaveBeenCalledWith(2026, 1);
   });
 
-  it('looks periods up without a school and returns no institutionId', async () => {
+  it('looks periods up without a school and returns no school field', async () => {
     const repository = {
       findById: jest.fn().mockResolvedValue({
         id: 'period-1',

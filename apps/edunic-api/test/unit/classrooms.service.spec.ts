@@ -47,7 +47,7 @@ describe('ClassroomsService', () => {
     );
   });
 
-  it('looks classrooms up without a school and returns no institutionId', async () => {
+  it('looks classrooms up without a school and returns no school field', async () => {
     const repository = {
       findById: jest.fn().mockResolvedValue({
         id: 'classroom-1',
