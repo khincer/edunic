@@ -186,7 +186,8 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
     // ...and its side effect, enrollment.welcomed, lands on the same stream.
     const welcomes = await welcomesFor(enrollment.id);
     expect(welcomes).toHaveLength(1);
-    expect(welcomes[0].institutionId).toBe(institutionId);
+    // New side effects no longer carry the field (S1.4c).
+    expect(welcomes[0]).not.toHaveProperty('institutionId');
     expect(welcomes[0].payload).toMatchObject({
       enrollmentId: enrollment.id,
       studentId,

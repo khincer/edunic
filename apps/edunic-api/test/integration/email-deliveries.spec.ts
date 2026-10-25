@@ -16,7 +16,6 @@ import {
 } from '../helpers/fixtures.js';
 
 async function stageDelivery(input: {
-  institutionId: string;
   address: string;
   eventName?: string;
   status?: string;
@@ -24,7 +23,6 @@ async function stageDelivery(input: {
 }) {
   await db.insert(emailDeliveries).values({
     id: randomUUID(),
-    institutionId: input.institutionId,
     eventId: randomUUID(),
     eventName: input.eventName ?? 'grade.submitted',
     recipientAddress: input.address,
@@ -83,7 +81,7 @@ describe('email deliveries admin panel', () => {
     await app.close();
   });
 
-  it('lists the institution ledger newest-first with the CursorPage envelope', async () => {
+  it('lists the ledger newest-first with the CursorPage envelope', async () => {
     const institution = await createInstitutionFixture();
     const admin = await createUserFixture({
       institutionId: institution.id,
@@ -95,17 +93,14 @@ describe('email deliveries admin panel', () => {
     });
 
     await stageDelivery({
-      institutionId: institution.id,
       address: 'oldest@example.com',
       createdAt: new Date('2026-02-01T00:00:00.000Z'),
     });
     await stageDelivery({
-      institutionId: institution.id,
       address: 'middle@example.com',
       createdAt: new Date('2026-02-02T00:00:00.000Z'),
     });
     await stageDelivery({
-      institutionId: institution.id,
       address: 'newest@example.com',
       eventName: 'attendance.marked',
       status: 'failed',
@@ -132,9 +127,9 @@ describe('email deliveries admin panel', () => {
         status: 'failed',
         attemptCount: 0,
         recipientSource: 'guardian',
-        institutionId: institution.id,
       })
     );
+    expect(offsetResponse.body.data[0]).not.toHaveProperty('institutionId');
 
     const firstPage = await client
       .get('/notifications/deliveries?limit=2&cursor=start')
@@ -175,12 +170,10 @@ describe('email deliveries admin panel', () => {
     });
 
     await stageDelivery({
-      institutionId: institution.id,
       address: 'grade@example.com',
       createdAt: new Date('2026-02-01T00:00:00.000Z'),
     });
     await stageDelivery({
-      institutionId: institution.id,
       address: 'failed@example.com',
       eventName: 'attendance.marked',
       status: 'failed',
@@ -283,43 +276,6 @@ describe('email deliveries admin panel', () => {
     }
   });
 
-  it('never exposes another institution rows', async () => {
-    const institution = await createInstitutionFixture('School A');
-    const otherInstitution = await createInstitutionFixture('School B');
-    const admin = await createUserFixture({
-      institutionId: institution.id,
-      role: 'director',
-    });
-    const headers = await createAuthHeaders({
-      userId: admin.id,
-      institutionId: institution.id,
-    });
-
-    await stageDelivery({
-      institutionId: institution.id,
-      address: 'own@example.com',
-      createdAt: new Date('2026-02-01T00:00:00.000Z'),
-    });
-    await stageDelivery({
-      institutionId: otherInstitution.id,
-      address: 'foreign@example.com',
-      createdAt: new Date('2026-02-02T00:00:00.000Z'),
-    });
-
-    const response = await client
-      .get('/notifications/deliveries')
-      .set(headers);
-
-    expect(response.status).toBe(200);
-    expect(
-      response.body.data.map(
-        (row: { recipientAddress: string }) => row.recipientAddress
-      )
-    ).toEqual(['own@example.com']);
-    expect(response.body.meta.total).toBe(1);
-    expect(JSON.stringify(response.body)).not.toContain('foreign@example.com');
-  });
-
   it('keeps the panel visible and lists rows while the flag is off', async () => {
     const institution = await createInstitutionFixture();
     const admin = await createUserFixture({
@@ -332,7 +288,6 @@ describe('email deliveries admin panel', () => {
     });
 
     await stageDelivery({
-      institutionId: institution.id,
       address: 'queued@example.com',
       status: 'queued',
       createdAt: new Date('2026-02-01T00:00:00.000Z'),

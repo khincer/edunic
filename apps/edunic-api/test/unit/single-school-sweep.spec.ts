@@ -13,6 +13,12 @@ const SWEPT: string[] = [
   // S1.4b-2: extensions are global
   'libs/domain/src/extensions',
   'apps/edunic-api/src/routes/extensions.routes.ts',
+  // S1.4c: notifications and email delivery. libs/domain/src/events.ts and
+  // libs/events keep an OPTIONAL institutionId (events already queued still
+  // carry it) until S1.4h, so they are deliberately not listed yet.
+  'libs/domain/src/notifications',
+  'apps/edunic-api/src/routes/notifications.routes.ts',
+  'apps/edunic-worker/src/bootstrap.ts',
 ];
 
 // Also the per-school tables, which stay in the DB only until 0015.
