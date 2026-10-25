@@ -172,7 +172,8 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
     expect(onStream).toHaveLength(1);
     expect(onStream[0].name).toBe('enrollment.created');
     const created = onStream[0];
-    expect(created.institutionId).toBe(institutionId);
+    // New enrollment.created events no longer carry the field (S1.4e-2).
+    expect(created).not.toHaveProperty('institutionId');
     expect(created.payload).toMatchObject({
       enrollmentId: enrollment.id,
       studentId,

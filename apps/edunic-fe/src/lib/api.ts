@@ -84,7 +84,6 @@ export type Classroom = {
 
 export type Enrollment = {
   id: string;
-  institutionId: string;
   studentId: string;
   academicPeriodId: string;
   classroomId: string | null;

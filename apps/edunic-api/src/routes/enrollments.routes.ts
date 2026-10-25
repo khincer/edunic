@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import {
   parseWithSchema,
-  getInstitutionId,
   parseFilterSort,
 } from '@edunic/source/domain/shared';
 import {
@@ -46,7 +45,6 @@ export async function enrollmentRoutes(app: FastifyInstance) {
   };
 
   app.get('/', readAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listEnrollmentsQuerySchema, request.query);
     const { filters, sort } = parseFilterSort(
       request.query as { filter?: string | string[]; sort?: string },
@@ -58,7 +56,6 @@ export async function enrollmentRoutes(app: FastifyInstance) {
     }
 
     return enrollmentsService.listEnrollments({
-      institutionId,
       actor: actorOf(request),
       ...query,
       filters,
@@ -67,59 +64,43 @@ export async function enrollmentRoutes(app: FastifyInstance) {
   });
 
   app.get('/:enrollmentId', readAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(enrollmentParamsSchema, request.params);
 
     return enrollmentsService.getEnrollment(
-      institutionId,
       params.enrollmentId,
       actorOf(request)
     );
   });
 
   app.post('/', academicWriteAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createEnrollmentBodySchema, request.body);
-    const result = await enrollmentsService.createEnrollment({
-      institutionId,
-      ...body,
-    });
+    const result = await enrollmentsService.createEnrollment(body);
 
     return reply.status(201).send(result);
   });
 
   app.patch('/:enrollmentId', academicWriteAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(enrollmentParamsSchema, request.params);
     const body = parseWithSchema(updateEnrollmentBodySchema, request.body);
 
     return enrollmentsService.updateEnrollment({
-      institutionId,
       enrollmentId: params.enrollmentId,
       ...body,
     });
   });
 
   app.delete('/:enrollmentId', academicWriteAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(enrollmentParamsSchema, request.params);
 
-    return enrollmentsService.deleteEnrollment(
-      institutionId,
-      params.enrollmentId
-    );
+    return enrollmentsService.deleteEnrollment(params.enrollmentId);
   });
 
   app.post('/:enrollmentId/promotion', academicWriteAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(
       evaluatePromotionParamsSchema,
       request.params
     );
 
-    return enrollmentsService.evaluatePromotion(
-      institutionId,
-      params.enrollmentId
-    );
+    return enrollmentsService.evaluatePromotion(params.enrollmentId);
   });
 }

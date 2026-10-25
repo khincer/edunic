@@ -51,7 +51,6 @@ type AverageRow = {
 
 export type EnrollmentRecord = {
   id: string;
-  institutionId: string;
   studentId: string;
   academicPeriodId: string;
   classroomId: string | null;
@@ -63,7 +62,6 @@ export type EnrollmentRecord = {
 };
 
 export type CreateEnrollmentInput = {
-  institutionId: string;
   studentId: string;
   academicPeriodId: string;
   classroomId?: string | null;
@@ -72,7 +70,6 @@ export type CreateEnrollmentInput = {
 };
 
 export type UpdateEnrollmentInput = {
-  institutionId: string;
   enrollmentId: string;
   classroomId?: string | null;
   status?: EnrollmentStatus;
@@ -80,7 +77,6 @@ export type UpdateEnrollmentInput = {
 };
 
 export type ListEnrollmentsInput = ListEnrollmentsQuery & {
-  institutionId: string;
   // Restricts the list to these students; undefined means unscoped.
   studentIds?: string[];
   filters?: FilterSpec[];
@@ -102,7 +98,7 @@ export class EnrollmentsRepository {
   }
 
   async list(input: ListEnrollmentsInput): Promise<ListEnrollmentsResult> {
-    const filters: SQL[] = [sql`e.institution_id = ${input.institutionId}`];
+    const filters: SQL[] = [];
     const scope = buildStudentIdCondition('e.student_id', input.studentIds);
 
     if (scope) {
@@ -142,7 +138,10 @@ export class EnrollmentsRepository {
       filters.push(plan.keyset);
     }
 
-    const whereClause = sql`where ${sql.join(filters, sql` and `)}`;
+    const whereClause =
+      filters.length > 0
+        ? sql`where ${sql.join(filters, sql` and `)}`
+        : sql``;
     const orderBy = plan.orderBy ?? this.legacyOrderBy(input);
     const offsetClause =
       plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
@@ -150,7 +149,6 @@ export class EnrollmentsRepository {
     const itemsQuery = sql`
       select
         e.id,
-        e.institution_id as "institutionId",
         e.student_id as "studentId",
         e.academic_period_id as "academicPeriodId",
         e.classroom_id as "classroomId",
@@ -188,15 +186,10 @@ export class EnrollmentsRepository {
     };
   }
 
-  async findById(
-    institutionId: string,
-    enrollmentId: string,
-    executor: DbExecutor = this.db
-  ) {
+  async findById(enrollmentId: string, executor: DbExecutor = this.db) {
     const result = await executor.execute<EnrollmentRecord>(sql`
       select
         e.id,
-        e.institution_id as "institutionId",
         e.student_id as "studentId",
         e.academic_period_id as "academicPeriodId",
         e.classroom_id as "classroomId",
@@ -208,7 +201,6 @@ export class EnrollmentsRepository {
       from enrollments e
       inner join students s on s.id = e.student_id
       where e.id = ${enrollmentId}
-        and e.institution_id = ${institutionId}
       limit 1
     `);
 
@@ -218,7 +210,6 @@ export class EnrollmentsRepository {
   async create(input: CreateEnrollmentInput, executor: DbExecutor = this.db) {
     const result = await executor.execute<{ id: string }>(sql`
       insert into enrollments (
-        institution_id,
         student_id,
         academic_period_id,
         classroom_id,
@@ -226,7 +217,6 @@ export class EnrollmentsRepository {
         promotion_status
       )
       values (
-        ${input.institutionId},
         ${input.studentId},
         ${input.academicPeriodId},
         ${input.classroomId ?? null},
@@ -255,97 +245,89 @@ export class EnrollmentsRepository {
     }
 
     if (assignments.length === 0) {
-      return this.findById(input.institutionId, input.enrollmentId);
+      return this.findById(input.enrollmentId);
     }
 
     const result = await this.db.execute<{ id: string }>(sql`
       update enrollments
       set ${sql.join(assignments, sql`, `)}
       where id = ${input.enrollmentId}
-        and institution_id = ${input.institutionId}
       returning id
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async delete(institutionId: string, enrollmentId: string) {
+  async delete(enrollmentId: string) {
     const result = await this.db.execute<{ id: string }>(sql`
       delete from enrollments
       where id = ${enrollmentId}
-        and institution_id = ${institutionId}
       returning id
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async findStudent(institutionId: string, studentId: string) {
+  async findStudent(studentId: string) {
     const result = await this.db.execute<ExistsRow>(sql`
       select id
       from students
       where id = ${studentId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async findAcademicPeriod(institutionId: string, academicPeriodId: string) {
+  async findAcademicPeriod(academicPeriodId: string) {
     const result = await this.db.execute<ExistsRow>(sql`
       select id
       from academic_periods
       where id = ${academicPeriodId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async findClassroom(institutionId: string, classroomId: string) {
+  async findClassroom(classroomId: string) {
     const result = await this.db.execute<ExistsRow>(sql`
       select id
       from classrooms
       where id = ${classroomId}
-        and institution_id = ${institutionId}
       limit 1
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async countGrades(institutionId: string, enrollmentId: string) {
+  async countGrades(enrollmentId: string) {
     const result = await this.db.execute<CountRow>(sql`
       select count(*)::int as count
       from grades
-      where institution_id = ${institutionId}
-        and enrollment_id = ${enrollmentId}
+      where enrollment_id = ${enrollmentId}
     `);
 
     return this.toCount(result.rows[0]?.count);
   }
 
-  async countAttendance(institutionId: string, enrollmentId: string) {
+  async countAttendance(enrollmentId: string) {
     const result = await this.db.execute<CountRow>(sql`
       select count(*)::int as count
       from attendance
-      where institution_id = ${institutionId}
-        and enrollment_id = ${enrollmentId}
+      where enrollment_id = ${enrollmentId}
     `);
 
     return this.toCount(result.rows[0]?.count);
   }
 
-  async getEnrollmentAverage(institutionId: string, enrollmentId: string) {
+  async getEnrollmentAverage(enrollmentId: string) {
     const result = await this.db.execute<AverageRow>(sql`
       select
         avg(score)::numeric(10,2) as average,
         count(*)::int as "gradeCount"
       from grades
-      where institution_id = ${institutionId}
-        and enrollment_id = ${enrollmentId}
+      where enrollment_id = ${enrollmentId}
     `);
 
     const row = result.rows[0];

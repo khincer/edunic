@@ -48,7 +48,6 @@ export class EnrollmentsService {
 
   async listEnrollments(
     input: ListEnrollmentsQuery & {
-      institutionId: string;
       actor: ReadActor;
       filters?: FilterSpec[];
       sort?: SortSpec | null;
@@ -83,17 +82,10 @@ export class EnrollmentsService {
     };
   }
 
-  async getEnrollment(
-    institutionId: string,
-    enrollmentId: string,
-    actor: ReadActor
-  ) {
+  async getEnrollment(enrollmentId: string, actor: ReadActor) {
     await this.access.assertCanReadEnrollment(actor, enrollmentId);
 
-    const enrollment = await this.enrollmentsRepository.findById(
-      institutionId,
-      enrollmentId
-    );
+    const enrollment = await this.enrollmentsRepository.findById(enrollmentId);
 
     if (!enrollment) {
       throw new EnrollmentsServiceError('Enrollment not found', 404);
@@ -104,9 +96,8 @@ export class EnrollmentsService {
     };
   }
 
-  async createEnrollment(input: CreateEnrollmentBody & { institutionId: string }) {
+  async createEnrollment(input: CreateEnrollmentBody) {
     await this.assertRelationsExist(
-      input.institutionId,
       input.studentId,
       input.academicPeriodId,
       input.classroomId ?? undefined
@@ -119,7 +110,6 @@ export class EnrollmentsService {
         async (tx) => {
           const createdEnrollment = await this.enrollmentsRepository.create(
             {
-              institutionId: input.institutionId,
               studentId: input.studentId,
               academicPeriodId: input.academicPeriodId,
               classroomId: input.classroomId ?? null,
@@ -130,7 +120,6 @@ export class EnrollmentsService {
           );
 
           const record = await this.enrollmentsRepository.findById(
-            input.institutionId,
             createdEnrollment.id,
             tx
           );
@@ -140,7 +129,6 @@ export class EnrollmentsService {
           }
 
           const event = createEnrollmentCreatedEvent({
-            institutionId: input.institutionId,
             payload: {
               enrollmentId: record.id,
               studentId: record.studentId,
@@ -169,11 +157,9 @@ export class EnrollmentsService {
   }
 
   async updateEnrollment(input: UpdateEnrollmentBody & {
-    institutionId: string;
     enrollmentId: string;
   }) {
     const existingEnrollment = await this.enrollmentsRepository.findById(
-      input.institutionId,
       input.enrollmentId
     );
 
@@ -183,7 +169,6 @@ export class EnrollmentsService {
 
     if (input.classroomId) {
       const classroom = await this.enrollmentsRepository.findClassroom(
-        input.institutionId,
         input.classroomId
       );
 
@@ -193,7 +178,6 @@ export class EnrollmentsService {
     }
 
     const updatedEnrollment = await this.enrollmentsRepository.update({
-      institutionId: input.institutionId,
       enrollmentId: input.enrollmentId,
       classroomId: input.classroomId,
       status: input.status,
@@ -208,7 +192,6 @@ export class EnrollmentsService {
     }
 
     const enrollment = await this.enrollmentsRepository.findById(
-      input.institutionId,
       input.enrollmentId
     );
 
@@ -221,19 +204,16 @@ export class EnrollmentsService {
     };
   }
 
-  async deleteEnrollment(institutionId: string, enrollmentId: string) {
-    const enrollment = await this.enrollmentsRepository.findById(
-      institutionId,
-      enrollmentId
-    );
+  async deleteEnrollment(enrollmentId: string) {
+    const enrollment = await this.enrollmentsRepository.findById(enrollmentId);
 
     if (!enrollment) {
       throw new EnrollmentsServiceError('Enrollment not found', 404);
     }
 
     const [gradeCount, attendanceCount] = await Promise.all([
-      this.enrollmentsRepository.countGrades(institutionId, enrollmentId),
-      this.enrollmentsRepository.countAttendance(institutionId, enrollmentId),
+      this.enrollmentsRepository.countGrades(enrollmentId),
+      this.enrollmentsRepository.countAttendance(enrollmentId),
     ]);
 
     if (gradeCount > 0 || attendanceCount > 0) {
@@ -243,7 +223,7 @@ export class EnrollmentsService {
       );
     }
 
-    await this.enrollmentsRepository.delete(institutionId, enrollmentId);
+    await this.enrollmentsRepository.delete(enrollmentId);
 
     return {
       data: {
@@ -253,21 +233,15 @@ export class EnrollmentsService {
     };
   }
 
-  async evaluatePromotion(institutionId: string, enrollmentId: string) {
-    const enrollment = await this.enrollmentsRepository.findById(
-      institutionId,
-      enrollmentId
-    );
+  async evaluatePromotion(enrollmentId: string) {
+    const enrollment = await this.enrollmentsRepository.findById(enrollmentId);
 
     if (!enrollment) {
       throw new EnrollmentsServiceError('Enrollment not found', 404);
     }
 
     const { average, gradeCount } =
-      await this.enrollmentsRepository.getEnrollmentAverage(
-        institutionId,
-        enrollmentId
-      );
+      await this.enrollmentsRepository.getEnrollmentAverage(enrollmentId);
 
     const promotionStatus =
       average === null
@@ -277,7 +251,6 @@ export class EnrollmentsService {
           : 'retained';
 
     const updatedEnrollment = await this.enrollmentsRepository.update({
-      institutionId,
       enrollmentId,
       promotionStatus,
     });
@@ -300,19 +273,15 @@ export class EnrollmentsService {
   }
 
   private async assertRelationsExist(
-    institutionId: string,
     studentId: string,
     academicPeriodId: string,
     classroomId?: string
   ) {
     const [student, academicPeriod, classroom] = await Promise.all([
-      this.enrollmentsRepository.findStudent(institutionId, studentId),
-      this.enrollmentsRepository.findAcademicPeriod(
-        institutionId,
-        academicPeriodId
-      ),
+      this.enrollmentsRepository.findStudent(studentId),
+      this.enrollmentsRepository.findAcademicPeriod(academicPeriodId),
       classroomId
-        ? this.enrollmentsRepository.findClassroom(institutionId, classroomId)
+        ? this.enrollmentsRepository.findClassroom(classroomId)
         : Promise.resolve(null),
     ]);
 
@@ -345,7 +314,6 @@ export class EnrollmentsService {
   private toEnrollmentResponse(enrollment: EnrollmentRecord) {
     return {
       id: enrollment.id,
-      institutionId: enrollment.institutionId,
       studentId: enrollment.studentId,
       academicPeriodId: enrollment.academicPeriodId,
       classroomId: enrollment.classroomId,
