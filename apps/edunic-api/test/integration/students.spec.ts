@@ -45,6 +45,7 @@ describe('students routes', () => {
 
     expect(createResponse.status).toBe(201);
     expect(createResponse.body.data.fullName).toBe('Ana Lopez');
+    expect(createResponse.body.data).not.toHaveProperty('institutionId');
     const studentId = createResponse.body.data.id;
 
     const listResponse = await client.get('/students').set(tenantHeaders);
@@ -56,6 +57,8 @@ describe('students routes', () => {
       .set(tenantHeaders);
     expect(detailResponse.status).toBe(200);
     expect(detailResponse.body.data.id).toBe(studentId);
+    expect(detailResponse.body.data).not.toHaveProperty('institutionId');
+    expect(listResponse.body.data[0]).not.toHaveProperty('institutionId');
 
     const updateResponse = await client
       .patch(`/students/${studentId}`)
@@ -63,6 +66,7 @@ describe('students routes', () => {
       .send({ firstName: 'Andrea' });
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body.data.firstName).toBe('Andrea');
+    expect(updateResponse.body.data).not.toHaveProperty('institutionId');
 
     const deleteResponse = await client
       .delete(`/students/${studentId}`)

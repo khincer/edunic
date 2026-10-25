@@ -45,6 +45,7 @@ describe('guardians routes', () => {
     });
 
     expect(createResponse.status).toBe(201);
+    expect(createResponse.body.data).not.toHaveProperty('institutionId');
     const guardianId = createResponse.body.data.id;
 
     const linkResponse = await client
@@ -52,12 +53,25 @@ describe('guardians routes', () => {
       .set(headers)
       .send();
     expect(linkResponse.status).toBe(201);
+    expect(linkResponse.body.data.guardian).not.toHaveProperty('institutionId');
+
+    const duplicateLinkResponse = await client
+      .post(`/students/${student.id}/guardians/${guardianId}`)
+      .set(headers)
+      .send();
+    expect(duplicateLinkResponse.status).toBe(409);
 
     const listResponse = await client
       .get(`/students/${student.id}/guardians`)
       .set(headers);
     expect(listResponse.status).toBe(200);
     expect(listResponse.body.data).toHaveLength(1);
+    expect(listResponse.body.data[0]).not.toHaveProperty('institutionId');
+
+    const guardianList = await client.get('/guardians').set(headers);
+    expect(guardianList.status).toBe(200);
+    expect(guardianList.body.data).toHaveLength(1);
+    expect(guardianList.body.data[0]).not.toHaveProperty('institutionId');
 
     const deleteWhileLinkedResponse = await client
       .delete(`/guardians/${guardianId}`)
@@ -68,6 +82,11 @@ describe('guardians routes', () => {
       .delete(`/students/${student.id}/guardians/${guardianId}`)
       .set(headers);
     expect(unlinkResponse.status).toBe(200);
+
+    const unlinkAgainResponse = await client
+      .delete(`/students/${student.id}/guardians/${guardianId}`)
+      .set(headers);
+    expect(unlinkAgainResponse.status).toBe(404);
 
     const deleteResponse = await client
       .delete(`/guardians/${guardianId}`)
