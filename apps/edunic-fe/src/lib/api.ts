@@ -146,7 +146,6 @@ export type FeatureFlag = {
 
 export type AuditLog = {
   id: string;
-  institutionId: string;
   userId: string | null;
   action: 'create' | 'update' | 'delete';
   entity: string;

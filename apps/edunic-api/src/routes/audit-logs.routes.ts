@@ -7,7 +7,6 @@ import {
 } from '@edunic/source/domain/audit-logs';
 import {
   parseWithSchema,
-  getInstitutionId,
   parseFilterSort,
 } from '@edunic/source/domain/shared';
 import { ADMIN_ROLES } from '@edunic/source/domain/authorization';
@@ -24,7 +23,6 @@ export async function auditLogRoutes(app: FastifyInstance) {
   };
 
   app.get('/audit-logs', adminOnly, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listAuditLogsQuerySchema, request.query);
     const { filters, sort } = parseFilterSort(
       request.query as { filter?: string | string[]; sort?: string },
@@ -36,7 +34,6 @@ export async function auditLogRoutes(app: FastifyInstance) {
     }
 
     return auditLogsService.listAuditLogs({
-      institutionId,
       ...query,
       filters,
       sort,

@@ -35,7 +35,6 @@ export const AUDIT_LOG_LIST_COLUMNS = {
 
 export type AuditLogRecord = {
   id: string;
-  institutionId: string;
   userId: string | null;
   action: string;
   entity: string;
@@ -46,7 +45,6 @@ export type AuditLogRecord = {
 };
 
 export type CreateAuditLogInput = {
-  institutionId: string;
   userId?: string | null;
   action: string;
   entity: string;
@@ -56,7 +54,6 @@ export type CreateAuditLogInput = {
 };
 
 export type ListAuditLogsInput = ListAuditLogsQuery & {
-  institutionId: string;
   filters?: FilterSpec[];
   sort?: SortSpec | null;
 };
@@ -72,7 +69,6 @@ export class AuditLogsRepository {
   async create(input: CreateAuditLogInput) {
     const result = await this.db.execute<AuditLogRecord>(sql`
       insert into audit_logs (
-        institution_id,
         user_id,
         action,
         entity,
@@ -81,7 +77,6 @@ export class AuditLogsRepository {
         after
       )
       values (
-        ${input.institutionId},
         ${input.userId ?? null},
         ${input.action},
         ${input.entity},
@@ -91,7 +86,6 @@ export class AuditLogsRepository {
       )
       returning
         id,
-        institution_id as "institutionId",
         user_id as "userId",
         action,
         entity,
@@ -105,7 +99,7 @@ export class AuditLogsRepository {
   }
 
   async list(input: ListAuditLogsInput): Promise<ListAuditLogsResult> {
-    const filters: SQL[] = [sql`institution_id = ${input.institutionId}`];
+    const filters: SQL[] = [sql`true`];
 
     if (input.entity) {
       filters.push(sql`entity = ${input.entity}`);
@@ -137,7 +131,6 @@ export class AuditLogsRepository {
     const itemsQuery = sql`
       select
         id,
-        institution_id as "institutionId",
         user_id as "userId",
         action,
         entity,
