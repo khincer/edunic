@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import {
   parseWithSchema,
-  getInstitutionId,
   parseFilterSort,
 } from '@edunic/source/domain/shared';
 import {
@@ -47,7 +46,6 @@ export async function notificationRoutes(app: FastifyInstance) {
   });
 
   app.get('/notifications/deliveries', adminOnly, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const query = parseWithSchema(
       listEmailDeliveriesQuerySchema,
       request.query
@@ -57,17 +55,14 @@ export async function notificationRoutes(app: FastifyInstance) {
       reply.header('X-Pagination-Deprecated', 'offset');
     }
 
-    return emailDeliveryService.listDeliveries({ institutionId, ...query });
+    return emailDeliveryService.listDeliveries(query);
   });
 
-  app.get('/notifications/deliveries/state', adminOnly, async (request) => {
-    const institutionId = getInstitutionId(request);
-
-    return emailDeliveryService.getState(institutionId);
+  app.get('/notifications/deliveries/state', adminOnly, async () => {
+    return emailDeliveryService.getState();
   });
 
   app.get('/notifications', readAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listNotificationsQuerySchema, request.query);
     const user = getAuthenticatedUser(request);
     const { filters, sort } = parseFilterSort(
@@ -80,7 +75,6 @@ export async function notificationRoutes(app: FastifyInstance) {
     }
 
     return notificationsService.listNotifications({
-      institutionId,
       role: toAudienceRole(user.role),
       userId: user.id,
       ...query,
@@ -90,12 +84,10 @@ export async function notificationRoutes(app: FastifyInstance) {
   });
 
   app.patch('/notifications/:notificationId/read', readAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(notificationParamsSchema, request.params);
     const user = getAuthenticatedUser(request);
 
     return notificationsService.markNotificationRead({
-      institutionId,
       notificationId: params.notificationId,
       role: toAudienceRole(user.role),
       userId: user.id,

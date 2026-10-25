@@ -103,7 +103,7 @@ export class EmailDeliveryService {
   }
 
   // EV-R1/RC-R1/RC-R2/RC-R3/FL-R2/SI-R3. Order matters: the flag is the first
-  // statement, so a disabled institution reads no recipients and writes nothing.
+  // statement, so a disabled flag reads no recipients and writes nothing.
   async enqueueForEvent(event: EmailTriggerEvent): Promise<void> {
     const sendDeps = this.sender;
 
@@ -111,9 +111,7 @@ export class EmailDeliveryService {
       return;
     }
 
-    const sender = await this.deps.repository.findSenderIdentity(
-      event.institutionId
-    );
+    const sender = await this.deps.repository.findSenderIdentity();
 
     // SI-R3: no sender identity, no send and no platform fallback.
     if (!sender?.senderName) {
@@ -121,7 +119,6 @@ export class EmailDeliveryService {
     }
 
     const student = await this.deps.repository.findDeliveryTarget({
-      institutionId: event.institutionId,
       enrollmentId: event.payload.enrollmentId,
     });
 
@@ -130,7 +127,6 @@ export class EmailDeliveryService {
     }
 
     const recipients = await this.deps.repository.resolveRecipients(
-      event.institutionId,
       student.studentId
     );
 
@@ -147,7 +143,6 @@ export class EmailDeliveryService {
     // still attempted for every recipient so a crash between the two is healed
     // by the deterministic job id.
     await this.deps.repository.insertPending({
-      institutionId: event.institutionId,
       eventId: event.id,
       eventName: event.name,
       studentId: student.studentId,
@@ -156,7 +151,6 @@ export class EmailDeliveryService {
 
     for (const recipient of recipients) {
       const job: EmailDeliveryJob = {
-        institutionId: event.institutionId,
         eventId: event.id,
         recipientAddress: recipient.address,
         from: sendDeps.fromAddress,
@@ -179,7 +173,6 @@ export class EmailDeliveryService {
   // rethrows a retryable provider failure so BullMQ retries the same job id.
   async handleDeliveryJob(job: EmailDeliveryJob): Promise<void> {
     const claim = await this.deps.repository.claimDelivery({
-      institutionId: job.institutionId,
       eventId: job.eventId,
       recipientAddress: job.recipientAddress,
     });
@@ -207,7 +200,7 @@ export class EmailDeliveryService {
         text: job.text,
         // P10: the provider's dedupe key, and the third layer of the
         // once-only guarantee. It is the claim's own row id — one row per
-        // (institution, event, recipient), minted once and never rewritten, so
+        // (event, recipient), minted once and never rewritten, so
         // the original attempt and every reclaim or retry of that row derive
         // the same key while a different event or address derives a different
         // one. The deadline below bounds a send that is still in flight; this
@@ -271,8 +264,8 @@ export class EmailDeliveryService {
 
   // PN-R3/SI-R3: the flag and sender-identity state the panel banner reads. Not
   // gated by the flag: the panel stays visible when email is off.
-  async getState(institutionId: string) {
-    const state = await this.deps.repository.getState(institutionId);
+  async getState() {
+    const state = await this.deps.repository.getState();
 
     if (!state) {
       throw new EmailDeliveryServiceError('Institution not found', 404);
@@ -295,7 +288,6 @@ export class EmailDeliveryService {
     completion: EmailDeliveryCompletion
   ): Promise<void> {
     await this.deps.repository.completeDelivery({
-      institutionId: job.institutionId,
       eventId: job.eventId,
       recipientAddress: job.recipientAddress,
       completion,

@@ -22,20 +22,11 @@ async function linkStudentGuardian(studentId: string, guardianId: string) {
   await db.insert(studentGuardians).values({ studentId, guardianId });
 }
 
-async function linkGuardianUser(
-  institutionId: string,
-  guardianId: string,
-  userId: string
-) {
-  await db.insert(guardianUserLinks).values({
-    institutionId,
-    guardianId,
-    userId,
-  });
+async function linkGuardianUser(guardianId: string, userId: string) {
+  await db.insert(guardianUserLinks).values({ guardianId, userId });
 }
 
 async function stageDelivery(input: {
-  institutionId: string;
   address: string;
   eventName?: string;
   eventId?: string;
@@ -44,7 +35,6 @@ async function stageDelivery(input: {
 }) {
   await db.insert(emailDeliveries).values({
     id: randomUUID(),
-    institutionId: input.institutionId,
     eventId: input.eventId ?? randomUUID(),
     eventName: input.eventName ?? 'grade.submitted',
     recipientAddress: input.address,
@@ -71,13 +61,9 @@ describe('EmailDeliveriesRepository', () => {
     await app.close();
   });
 
-  it('resolves the institution-scoped recipient union, normalized and deduped', async () => {
+  it('resolves the recipient union, normalized and deduped', async () => {
     const institution = await createInstitutionFixture();
-    const otherInstitution = await createInstitutionFixture('Other Institution');
     const student = await createStudentFixture({ institutionId: institution.id });
-    const otherStudent = await createStudentFixture({
-      institutionId: otherInstitution.id,
-    });
 
     const guardianWithEmail = await createGuardianFixture({
       institutionId: institution.id,
@@ -101,27 +87,15 @@ describe('EmailDeliveriesRepository', () => {
       role: 'parent',
       email: ' Dad@Example.com',
     });
-    const foreignGuardian = await createGuardianFixture({
-      institutionId: otherInstitution.id,
-      email: 'foreign@example.com',
-    });
 
     await linkStudentGuardian(student.id, guardianWithEmail.id);
     await linkStudentGuardian(student.id, guardianWithoutEmail.id);
     await linkStudentGuardian(student.id, secondGuardianWithEmail.id);
-    await linkStudentGuardian(otherStudent.id, foreignGuardian.id);
 
-    await linkGuardianUser(institution.id, guardianWithEmail.id, linkedUser.id);
-    await linkGuardianUser(
-      institution.id,
-      guardianWithoutEmail.id,
-      secondLinkedUser.id
-    );
+    await linkGuardianUser(guardianWithEmail.id, linkedUser.id);
+    await linkGuardianUser(guardianWithoutEmail.id, secondLinkedUser.id);
 
-    const recipients = await repository.resolveRecipients(
-      institution.id,
-      student.id
-    );
+    const recipients = await repository.resolveRecipients(student.id);
 
     expect(recipients).toEqual([
       { address: 'dad@example.com', source: 'user' },
@@ -135,7 +109,6 @@ describe('EmailDeliveriesRepository', () => {
     const student = await createStudentFixture({ institutionId: institution.id });
     const eventId = randomUUID();
     const input = {
-      institutionId: institution.id,
       eventId,
       eventName: 'grade.submitted',
       studentId: student.id,
@@ -151,7 +124,6 @@ describe('EmailDeliveriesRepository', () => {
     const firstEventRows = await db
       .select()
       .from(emailDeliveries)
-      .where(eq(emailDeliveries.institutionId, institution.id))
       .orderBy(emailDeliveries.recipientAddress);
 
     expect(firstEventRows).toHaveLength(2);
@@ -186,7 +158,6 @@ describe('EmailDeliveriesRepository', () => {
 
     await expect(
       repository.insertPending({
-        institutionId: institution.id,
         eventId: randomUUID(),
         eventName: 'grade.submitted',
         studentId: student.id,
@@ -197,35 +168,26 @@ describe('EmailDeliveriesRepository', () => {
     expect(await db.select().from(emailDeliveries)).toHaveLength(0);
   });
 
-  it('lists a tenant-scoped newest-first page with status and event filters', async () => {
-    const institution = await createInstitutionFixture();
-    const otherInstitution = await createInstitutionFixture('Other Institution');
+  it('lists a newest-first page with status and event filters', async () => {
+    // The 0014 default fills institution_id, so a bare insert needs the school.
+    await createInstitutionFixture();
 
     await stageDelivery({
-      institutionId: institution.id,
       address: 'oldest@example.com',
       createdAt: new Date('2026-02-01T00:00:00.000Z'),
     });
     await stageDelivery({
-      institutionId: institution.id,
       address: 'middle@example.com',
       createdAt: new Date('2026-02-02T00:00:00.000Z'),
     });
     await stageDelivery({
-      institutionId: institution.id,
       address: 'newest@example.com',
       eventName: 'attendance.marked',
       status: 'failed',
       createdAt: new Date('2026-02-03T00:00:00.000Z'),
     });
-    await stageDelivery({
-      institutionId: otherInstitution.id,
-      address: 'foreign@example.com',
-      createdAt: new Date('2026-02-04T00:00:00.000Z'),
-    });
 
     const offsetPage = await repository.list({
-      institutionId: institution.id,
       limit: 2,
       offset: 0,
     });
@@ -238,7 +200,6 @@ describe('EmailDeliveriesRepository', () => {
 
     // Keyset mode fetches one sentinel row past the limit (pagination.ts).
     const cursorPage = await repository.list({
-      institutionId: institution.id,
       limit: 2,
       cursor: 'start',
       offset: 0,
@@ -252,7 +213,6 @@ describe('EmailDeliveriesRepository', () => {
     expect(cursorPage.total).toBeUndefined();
 
     const failedPage = await repository.list({
-      institutionId: institution.id,
       limit: 25,
       offset: 0,
       status: 'failed',
@@ -263,7 +223,6 @@ describe('EmailDeliveriesRepository', () => {
     ]);
 
     const eventPage = await repository.list({
-      institutionId: institution.id,
       limit: 25,
       offset: 0,
       eventName: 'grade.submitted',
@@ -275,10 +234,12 @@ describe('EmailDeliveriesRepository', () => {
     ]);
   });
 
-  it('reports the effective flag and sender-identity state per institution', async () => {
+  it('reports the effective flag and sender-identity state of the single school', async () => {
+    await expect(repository.getState()).resolves.toBeNull();
+
     const institution = await createInstitutionFixture();
 
-    await expect(repository.getState(institution.id)).resolves.toEqual({
+    await expect(repository.getState()).resolves.toEqual({
       emailNotificationsEnabled: false,
       senderIdentityConfigured: false,
     });
@@ -288,7 +249,7 @@ describe('EmailDeliveriesRepository', () => {
       .set({ defaultValue: true })
       .where(eq(featureFlags.key, 'email_notifications'));
 
-    await expect(repository.getState(institution.id)).resolves.toEqual({
+    await expect(repository.getState()).resolves.toEqual({
       emailNotificationsEnabled: true,
       senderIdentityConfigured: false,
     });
@@ -298,11 +259,9 @@ describe('EmailDeliveriesRepository', () => {
       .set({ senderName: 'Colegio Las Flores' })
       .where(eq(institutions.id, institution.id));
 
-    await expect(repository.getState(institution.id)).resolves.toEqual({
+    await expect(repository.getState()).resolves.toEqual({
       emailNotificationsEnabled: true,
       senderIdentityConfigured: true,
     });
-
-    await expect(repository.getState(randomUUID())).resolves.toBeNull();
   });
 });
