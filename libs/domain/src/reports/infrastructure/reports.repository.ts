@@ -52,12 +52,14 @@ export class ReportsRepository {
   ) {
     const result = await this.db.execute<StudentReportGradeRow>(sql`
       select
-        g.subject,
+        s.name as subject,
         g.score,
         ap.id as "academicPeriodId",
         ap.year,
         ap.term
       from grades g
+      inner join subjects s
+        on s.id = g.subject_id
       inner join enrollments e
         on e.id = g.enrollment_id
        and e.institution_id = g.institution_id
@@ -67,7 +69,7 @@ export class ReportsRepository {
       where g.institution_id = ${institutionId}
         and e.student_id = ${studentId}
         and ap.year = ${year}
-      order by ap.term asc, g.subject asc, g.created_at asc
+      order by ap.term asc, s.name asc, g.created_at asc
     `);
 
     return result.rows;
