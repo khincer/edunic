@@ -25,9 +25,7 @@ export class NotificationsService {
 
   async handleDomainEvent(event: AcademicDomainEvent) {
     const enabled =
-      await this.notificationsRepository.isNotificationsExtensionEnabled(
-        event.institutionId
-      );
+      await this.notificationsRepository.isNotificationsExtensionEnabled();
 
     if (!enabled) {
       return;

@@ -36,14 +36,8 @@ export type ExtensionRecord = {
   key: string;
   name: string | null;
   enabled: boolean | null;
-};
-
-export type InstitutionExtensionRecord = {
-  institutionId: string;
-  extensionKey: string;
+  // null = not turned on for the school; an object (even {}) = turned on.
   config: Record<string, unknown> | null;
-  extensionName: string | null;
-  extensionEnabled: boolean | null;
 };
 
 export type CreateExtensionInput = {
@@ -102,7 +96,8 @@ export class ExtensionsRepository {
       select
         key,
         name,
-        enabled
+        enabled,
+        config
       from extensions
       ${whereClause}
       order by ${orderBy}
@@ -135,7 +130,8 @@ export class ExtensionsRepository {
       select
         key,
         name,
-        enabled
+        enabled,
+        config
       from extensions
       where key = ${key}
       limit 1
@@ -159,7 +155,8 @@ export class ExtensionsRepository {
       returning
         key,
         name,
-        enabled
+        enabled,
+        config
     `);
 
     return result.rows[0];
@@ -187,83 +184,23 @@ export class ExtensionsRepository {
       returning
         key,
         name,
-        enabled
-    `);
-
-    return result.rows[0] ?? null;
-  }
-
-  async listInstitutionExtensions(institutionId: string) {
-    const result = await this.db.execute<InstitutionExtensionRecord>(sql`
-      select
-        institution_extensions.institution_id as "institutionId",
-        institution_extensions.extension_key as "extensionKey",
-        institution_extensions.config,
-        extensions.name as "extensionName",
-        extensions.enabled as "extensionEnabled"
-      from institution_extensions
-      inner join extensions
-        on extensions.key = institution_extensions.extension_key
-      where institution_extensions.institution_id = ${institutionId}
-      order by institution_extensions.extension_key asc
-    `);
-
-    return result.rows;
-  }
-
-  async findInstitutionExtension(institutionId: string, extensionKey: string) {
-    const result = await this.db.execute<InstitutionExtensionRecord>(sql`
-      select
-        institution_extensions.institution_id as "institutionId",
-        institution_extensions.extension_key as "extensionKey",
-        institution_extensions.config,
-        extensions.name as "extensionName",
-        extensions.enabled as "extensionEnabled"
-      from institution_extensions
-      inner join extensions
-        on extensions.key = institution_extensions.extension_key
-      where institution_extensions.institution_id = ${institutionId}
-        and institution_extensions.extension_key = ${extensionKey}
-      limit 1
-    `);
-
-    return result.rows[0] ?? null;
-  }
-
-  async upsertInstitutionExtension(input: {
-    institutionId: string;
-    extensionKey: string;
-    config: Record<string, unknown>;
-  }) {
-    await this.db.execute(sql`
-      insert into institution_extensions (
-        institution_id,
-        extension_key,
+        enabled,
         config
-      )
-      values (
-        ${input.institutionId},
-        ${input.extensionKey},
-        ${JSON.stringify(input.config)}::jsonb
-      )
-      on conflict (institution_id, extension_key)
-      do update set config = excluded.config
     `);
 
-    return this.findInstitutionExtension(input.institutionId, input.extensionKey);
+    return result.rows[0] ?? null;
   }
 
-  async deleteInstitutionExtension(institutionId: string, extensionKey: string) {
-    const result = await this.db.execute<InstitutionExtensionRecord>(sql`
-      delete from institution_extensions
-      where institution_id = ${institutionId}
-        and extension_key = ${extensionKey}
+  async setConfig(key: string, config: Record<string, unknown> | null) {
+    const result = await this.db.execute<ExtensionRecord>(sql`
+      update extensions
+      set config = ${config === null ? null : JSON.stringify(config)}::jsonb
+      where key = ${key}
       returning
-        institution_id as "institutionId",
-        extension_key as "extensionKey",
-        config,
-        null as "extensionName",
-        null as "extensionEnabled"
+        key,
+        name,
+        enabled,
+        config
     `);
 
     return result.rows[0] ?? null;

@@ -10,9 +10,14 @@ const SWEPT: string[] = [
   // S1.4b-1: feature flags are global
   'libs/domain/src/feature-flags',
   'apps/edunic-api/src/routes/feature-flags.routes.ts',
+  // S1.4b-2: extensions are global
+  'libs/domain/src/extensions',
+  'apps/edunic-api/src/routes/extensions.routes.ts',
 ];
 
-const FORBIDDEN = /institutionId|institution_id|getInstitutionId/;
+// Also the per-school tables, which stay in the DB only until 0015.
+const FORBIDDEN =
+  /institutionId|institution_id|getInstitutionId|institution_feature_flags|institutionFeatureFlags|institution_extensions|institutionExtensions/;
 
 function listFiles(path: string): string[] {
   if (!statSync(path).isDirectory()) {
@@ -26,7 +31,7 @@ describe('single-school sweep guard', () => {
   const files = SWEPT.flatMap((path) => listFiles(join(REPO_ROOT, path)));
 
   it('scans real files', () => {
-    expect(files.length).toBeGreaterThanOrEqual(5);
+    expect(files.length).toBeGreaterThanOrEqual(10);
   });
 
   it.each(files.map((file) => [relative(REPO_ROOT, file), file]))(

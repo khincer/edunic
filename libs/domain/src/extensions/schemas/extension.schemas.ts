@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { uuidSchema } from '@edunic/source/domain/shared';
 const extensionKeySchema = z
   .string()
   .trim()
@@ -13,15 +12,6 @@ const configSchema = z
 
 export const extensionParamsSchema = z.object({
   extensionKey: extensionKeySchema,
-});
-
-export const institutionExtensionParamsSchema = z.object({
-  institutionId: uuidSchema,
-  extensionKey: extensionKeySchema,
-});
-
-export const institutionExtensionsParamsSchema = z.object({
-  institutionId: uuidSchema,
 });
 
 export const listExtensionsQuerySchema = z.object({
@@ -48,13 +38,13 @@ export const updateExtensionBodySchema = z
     message: 'At least one field must be provided',
   });
 
-export const upsertInstitutionExtensionBodySchema = z.object({
+export const setExtensionConfigBodySchema = z.object({
   config: configSchema,
 });
 
 export type ListExtensionsQuery = z.infer<typeof listExtensionsQuerySchema>;
 export type CreateExtensionBody = z.infer<typeof createExtensionBodySchema>;
 export type UpdateExtensionBody = z.infer<typeof updateExtensionBodySchema>;
-export type UpsertInstitutionExtensionBody = z.infer<
-  typeof upsertInstitutionExtensionBodySchema
+export type SetExtensionConfigBody = z.infer<
+  typeof setExtensionConfigBodySchema
 >;

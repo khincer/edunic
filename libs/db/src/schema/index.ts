@@ -569,6 +569,7 @@ export const extensions = pgTable('extensions', {
   key: text('key').primaryKey(),
   name: text('name'),
   enabled: boolean('enabled').default(true),
+  config: jsonb('config'),
 });
 
 export const institutionExtensions = pgTable(

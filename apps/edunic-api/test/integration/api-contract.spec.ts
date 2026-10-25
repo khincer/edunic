@@ -31,7 +31,6 @@ const PROTECTED_GET_ROUTES = [
   `/guardians/${FAKE_ID}`,
   `/students/${FAKE_ID}/guardians`,
     `/school-profile`,
-  `/institutions/${FAKE_ID}/extensions`,
   `/audit-logs`,
   `/custom-fields`,
   `/custom-fields/values/student/${FAKE_ID}`,

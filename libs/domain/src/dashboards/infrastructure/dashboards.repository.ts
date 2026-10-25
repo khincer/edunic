@@ -309,20 +309,14 @@ export class DashboardsRepository {
     return result.rows.filter((flag) => flag.key !== 'billing_module');
   }
 
-  async listExtensionStatuses(institutionId: string) {
+  async listExtensionStatuses() {
     const result = await this.db.execute<ExtensionStatusRow>(sql`
       select
-        extensions.key,
-        extensions.name,
-        (
-          extensions.enabled = true
-          and institution_extensions.institution_id is not null
-        ) as enabled
+        key,
+        name,
+        (coalesce(enabled, false) and config is not null) as enabled
       from extensions
-      left join institution_extensions
-        on institution_extensions.extension_key = extensions.key
-       and institution_extensions.institution_id = ${institutionId}
-      order by extensions.key asc
+      order by key asc
     `);
 
     return result.rows;
