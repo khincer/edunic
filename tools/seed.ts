@@ -18,8 +18,6 @@ import {
   classroomSubjects,
   grades,
   guardianUserLinks,
-  institutionFeatureFlags,
-  institutionExtensions,
   institutions,
   messages,
   messageThreads,
@@ -36,42 +34,33 @@ import {
 } from '../libs/db/src/schema/index.js';
 
 const ids = {
-  institutions: {
-    central: '00000000-0000-0000-0000-000000000001',
-    north: '00000000-0000-0000-0000-000000000002',
-  },
+  institution: '00000000-0000-0000-0000-000000000001',
   users: {
     centralAdmin: '70000000-0000-0000-0000-000000000001',
     centralTeacher: '70000000-0000-0000-0000-000000000002',
     centralParent: '70000000-0000-0000-0000-000000000003',
-    northAdmin: '70000000-0000-0000-0000-000000000004',
   },
   userRoles: {
     centralAdmin: '72000000-0000-0000-0000-000000000001',
     centralTeacher: '72000000-0000-0000-0000-000000000002',
     centralParent: '72000000-0000-0000-0000-000000000003',
-    northAdmin: '72000000-0000-0000-0000-000000000004',
   },
   academicPeriods: {
     centralTerm1: '10000000-0000-0000-0000-000000000001',
     centralTerm2: '10000000-0000-0000-0000-000000000002',
-    northTerm1: '10000000-0000-0000-0000-000000000003',
     centralTerm3: '10000000-0000-0000-0000-000000000004',
   },
   classrooms: {
     central5A: '20000000-0000-0000-0000-000000000001',
     central5B: '20000000-0000-0000-0000-000000000002',
-    north6A: '20000000-0000-0000-0000-000000000003',
   },
   students: {
     johnDoe: '30000000-0000-0000-0000-000000000001',
     janeSmith: '30000000-0000-0000-0000-000000000002',
-    mariaLopez: '30000000-0000-0000-0000-000000000003',
   },
   enrollments: {
     johnCentralT1: '40000000-0000-0000-0000-000000000001',
     janeCentralT1: '40000000-0000-0000-0000-000000000002',
-    mariaNorthT1: '40000000-0000-0000-0000-000000000003',
     johnCentralT3: '40000000-0000-0000-0000-000000000004',
     janeCentralT3: '40000000-0000-0000-0000-000000000005',
   },
@@ -84,7 +73,6 @@ const ids = {
   grades: {
     johnMath: '50000000-0000-0000-0000-000000000001',
     janeScience: '50000000-0000-0000-0000-000000000002',
-    mariaHistory: '50000000-0000-0000-0000-000000000003',
     johnScience: '50000000-0000-0000-0000-000000000004',
     johnReading: '50000000-0000-0000-0000-000000000005',
     janeMath: '50000000-0000-0000-0000-000000000006',
@@ -93,7 +81,6 @@ const ids = {
   attendance: {
     johnPresent: '60000000-0000-0000-0000-000000000001',
     janeLate: '60000000-0000-0000-0000-000000000002',
-    mariaAbsent: '60000000-0000-0000-0000-000000000003',
     johnTodayPresent: '60000000-0000-0000-0000-000000000004',
     janeTodayAbsent: '60000000-0000-0000-0000-000000000005',
     johnYesterdayLate: '60000000-0000-0000-0000-000000000006',
@@ -142,23 +129,18 @@ export async function seedDatabase() {
   const hashedTeacherPassword = hashPassword('37WTW9BZm2gnQkYn');
   const hashedParentPassword = hashPassword('NP7rLvCv7HjUTM5a');
 
+  // The single configuration row (name and sender identity). It goes first:
+  // every other insert omits the school column and relies on its column
+  // default (migration 0014), which resolves to this row.
   await db
     .insert(institutions)
-    .values([
-      {
-        id: ids.institutions.central,
-        name: 'Colegio Central',
-        // SI-R1: per-institution sender identity, so the demo schools can send.
-        senderName: 'Colegio Central',
-        replyToEmail: 'office@central.example.com',
-      },
-      {
-        id: ids.institutions.north,
-        name: 'Instituto del Norte',
-        senderName: 'Instituto del Norte',
-        replyToEmail: 'office@north.example.com',
-      },
-    ])
+    .values({
+      id: ids.institution,
+      name: 'Colegio Central',
+      // SI-R1: the school's sender identity, so the demo school can send.
+      senderName: 'Colegio Central',
+      replyToEmail: 'office@central.example.com',
+    })
     .onConflictDoNothing();
 
   await db
@@ -178,11 +160,6 @@ export async function seedDatabase() {
         id: ids.users.centralParent,
         email: 'parent@central.edu',
         passwordHash: hashedParentPassword,
-      },
-      {
-        id: ids.users.northAdmin,
-        email: 'admin@north.edu',
-        passwordHash: hashedAdminPassword,
       },
     ])
     .onConflictDoNothing();
@@ -207,119 +184,28 @@ export async function seedDatabase() {
         userId: ids.users.centralParent,
         role: 'parent',
       },
-      {
-        id: ids.userRoles.northAdmin,
-        userId: ids.users.northAdmin,
-        role: 'director',
-      },
     ])
     .onConflictDoNothing();
 
-  // FL-R1/D7: the flag row exists so a reseed and the 0007 migration agree.
-  // The demo institutions deliberately get NO `email_notifications` override
-  // below: with the flag off, a demo database cannot send real mail.
+  // Flags are global (TEN-05): `default_value` is the value the whole school
+  // sees. `email_notifications` stays off, so a demo database cannot send real
+  // mail (FL-R1/D7).
   await db
     .insert(featureFlags)
     .values([
       { key: 'billing_module', defaultValue: false },
-      { key: 'assignments_module', defaultValue: false },
-      { key: 'calendar_module', defaultValue: false },
-      { key: 'custom_fields', defaultValue: false },
-      { key: 'messaging_module', defaultValue: false },
-      { key: 'parent_portal', defaultValue: false },
-      { key: 'reports_pdf', defaultValue: false },
+      { key: 'assignments_module', defaultValue: true },
+      { key: 'calendar_module', defaultValue: true },
+      { key: 'custom_fields', defaultValue: true },
+      { key: 'messaging_module', defaultValue: true },
+      { key: 'parent_portal', defaultValue: true },
+      { key: 'reports_pdf', defaultValue: true },
       { key: 'teacher_gradebook', defaultValue: true },
       { key: 'email_notifications', defaultValue: false },
     ])
-    .onConflictDoNothing();
-
-  await db
-    .insert(institutionFeatureFlags)
-    .values([
-      {
-        institutionId: ids.institutions.central,
-        featureKey: 'billing_module',
-        enabled: false,
-      },
-      {
-        institutionId: ids.institutions.central,
-        featureKey: 'assignments_module',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.central,
-        featureKey: 'calendar_module',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.central,
-        featureKey: 'parent_portal',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.central,
-        featureKey: 'reports_pdf',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.central,
-        featureKey: 'custom_fields',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.central,
-        featureKey: 'messaging_module',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.central,
-        featureKey: 'teacher_gradebook',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.north,
-        featureKey: 'billing_module',
-        enabled: false,
-      },
-      {
-        institutionId: ids.institutions.north,
-        featureKey: 'assignments_module',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.north,
-        featureKey: 'calendar_module',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.north,
-        featureKey: 'parent_portal',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.north,
-        featureKey: 'reports_pdf',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.north,
-        featureKey: 'custom_fields',
-        enabled: true,
-      },
-      {
-        institutionId: ids.institutions.north,
-        featureKey: 'messaging_module',
-        enabled: true,
-      },
-    ])
     .onConflictDoUpdate({
-      target: [
-        institutionFeatureFlags.institutionId,
-        institutionFeatureFlags.featureKey,
-      ],
-      set: {
-        enabled: sql`excluded.enabled`,
-      },
+      target: featureFlags.key,
+      set: { defaultValue: sql`excluded.default_value` },
     });
 
   await db
@@ -329,21 +215,6 @@ export async function seedDatabase() {
         key: 'notifications',
         name: 'Notifications',
         enabled: true,
-      },
-    ])
-    .onConflictDoNothing();
-
-  await db
-    .insert(institutionExtensions)
-    .values([
-      {
-        institutionId: ids.institutions.central,
-        extensionKey: 'notifications',
-        config: {},
-      },
-      {
-        institutionId: ids.institutions.north,
-        extensionKey: 'notifications',
         config: {},
       },
     ])
@@ -354,7 +225,6 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.academicPeriods.centralTerm1,
-        institutionId: ids.institutions.central,
         year: 2026,
         term: 1,
         startDate: new Date('2026-01-15T00:00:00.000Z'),
@@ -362,23 +232,13 @@ export async function seedDatabase() {
       },
       {
         id: ids.academicPeriods.centralTerm2,
-        institutionId: ids.institutions.central,
         year: 2026,
         term: 2,
         startDate: new Date('2026-04-01T00:00:00.000Z'),
         endDate: new Date('2026-06-30T23:59:59.000Z'),
       },
       {
-        id: ids.academicPeriods.northTerm1,
-        institutionId: ids.institutions.north,
-        year: 2026,
-        term: 1,
-        startDate: new Date('2026-01-10T00:00:00.000Z'),
-        endDate: new Date('2026-03-28T23:59:59.000Z'),
-      },
-      {
         id: ids.academicPeriods.centralTerm3,
-        institutionId: ids.institutions.central,
         year: 2026,
         term: 3,
         startDate: new Date('2026-07-01T00:00:00.000Z'),
@@ -392,21 +252,13 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.classrooms.central5A,
-        institutionId: ids.institutions.central,
         gradeLevel: 5,
         section: 'A',
       },
       {
         id: ids.classrooms.central5B,
-        institutionId: ids.institutions.central,
         gradeLevel: 5,
         section: 'B',
-      },
-      {
-        id: ids.classrooms.north6A,
-        institutionId: ids.institutions.north,
-        gradeLevel: 6,
-        section: 'A',
       },
     ])
     .onConflictDoNothing();
@@ -416,24 +268,15 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.students.johnDoe,
-        institutionId: ids.institutions.central,
         firstName: 'John',
         lastName: 'Doe',
         dateOfBirth: '2014-02-12',
       },
       {
         id: ids.students.janeSmith,
-        institutionId: ids.institutions.central,
         firstName: 'Jane',
         lastName: 'Smith',
         dateOfBirth: '2013-08-24',
-      },
-      {
-        id: ids.students.mariaLopez,
-        institutionId: ids.institutions.north,
-        firstName: 'Maria',
-        lastName: 'Lopez',
-        dateOfBirth: '2012-11-03',
       },
     ])
     .onConflictDoNothing();
@@ -443,7 +286,6 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.enrollments.johnCentralT1,
-        institutionId: ids.institutions.central,
         studentId: ids.students.johnDoe,
         academicPeriodId: ids.academicPeriods.centralTerm1,
         classroomId: ids.classrooms.central5A,
@@ -452,7 +294,6 @@ export async function seedDatabase() {
       },
       {
         id: ids.enrollments.janeCentralT1,
-        institutionId: ids.institutions.central,
         studentId: ids.students.janeSmith,
         academicPeriodId: ids.academicPeriods.centralTerm1,
         classroomId: ids.classrooms.central5B,
@@ -460,17 +301,7 @@ export async function seedDatabase() {
         promotionStatus: null,
       },
       {
-        id: ids.enrollments.mariaNorthT1,
-        institutionId: ids.institutions.north,
-        studentId: ids.students.mariaLopez,
-        academicPeriodId: ids.academicPeriods.northTerm1,
-        classroomId: ids.classrooms.north6A,
-        status: 'active',
-        promotionStatus: null,
-      },
-      {
         id: ids.enrollments.johnCentralT3,
-        institutionId: ids.institutions.central,
         studentId: ids.students.johnDoe,
         academicPeriodId: ids.academicPeriods.centralTerm3,
         classroomId: ids.classrooms.central5A,
@@ -479,7 +310,6 @@ export async function seedDatabase() {
       },
       {
         id: ids.enrollments.janeCentralT3,
-        institutionId: ids.institutions.central,
         studentId: ids.students.janeSmith,
         academicPeriodId: ids.academicPeriods.centralTerm3,
         classroomId: ids.classrooms.central5B,
@@ -504,7 +334,6 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.guardians.centralFamily,
-        institutionId: ids.institutions.central,
         name: 'Ana Doe',
         phone: '+50255551001',
         // GE-R1: demo contact address (example.com is reserved, so it can never
@@ -513,7 +342,6 @@ export async function seedDatabase() {
       },
       {
         id: ids.guardians.janeFamily,
-        institutionId: ids.institutions.central,
         name: 'Carlos Smith',
         phone: '+50255551002',
         email: 'carlos.smith@example.com',
@@ -539,12 +367,10 @@ export async function seedDatabase() {
     .insert(guardianUserLinks)
     .values([
       {
-        institutionId: ids.institutions.central,
         guardianId: ids.guardians.centralFamily,
         userId: ids.users.centralParent,
       },
       {
-        institutionId: ids.institutions.central,
         guardianId: ids.guardians.janeFamily,
         userId: ids.users.centralParent,
       },
@@ -555,7 +381,6 @@ export async function seedDatabase() {
     .insert(teacherClassroomAssignments)
     .values([
       {
-        institutionId: ids.institutions.central,
         teacherUserId: ids.users.centralTeacher,
         classroomId: ids.classrooms.central5A,
       },
@@ -600,7 +425,7 @@ export async function seedDatabase() {
         subjectId: subjectId('Reading'),
       },
       {
-        classroomId: ids.classrooms.north6A,
+        classroomId: ids.classrooms.central5B,
         subjectId: subjectId('History'),
       },
     ])
@@ -629,49 +454,36 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.grades.johnMath,
-        institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.johnCentralT1,
         subjectId: subjectId('Mathematics'),
         score: 88,
       },
       {
         id: ids.grades.janeScience,
-        institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.janeCentralT1,
         subjectId: subjectId('Science'),
         score: 93,
       },
       {
-        id: ids.grades.mariaHistory,
-        institutionId: ids.institutions.north,
-        enrollmentId: ids.enrollments.mariaNorthT1,
-        subjectId: subjectId('History'),
-        score: 81,
-      },
-      {
         id: ids.grades.johnScience,
-        institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.johnCentralT3,
         subjectId: subjectId('Science'),
         score: 91,
       },
       {
         id: ids.grades.johnReading,
-        institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.johnCentralT3,
         subjectId: subjectId('Reading'),
         score: 84,
       },
       {
         id: ids.grades.janeMath,
-        institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.janeCentralT3,
         subjectId: subjectId('Mathematics'),
         score: 78,
       },
       {
         id: ids.grades.janeReading,
-        institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.janeCentralT3,
         subjectId: subjectId('Reading'),
         score: 96,
@@ -684,42 +496,30 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.attendance.johnPresent,
-        institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.johnCentralT1,
         date: new Date('2026-01-20T08:00:00.000Z'),
         status: 'present',
       },
       {
         id: ids.attendance.janeLate,
-        institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.janeCentralT1,
         date: new Date('2026-01-20T08:00:00.000Z'),
         status: 'late',
       },
       {
-        id: ids.attendance.mariaAbsent,
-        institutionId: ids.institutions.north,
-        enrollmentId: ids.enrollments.mariaNorthT1,
-        date: new Date('2026-01-21T08:00:00.000Z'),
-        status: 'absent',
-      },
-      {
         id: ids.attendance.johnTodayPresent,
-        institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.johnCentralT3,
         date: new Date('2026-07-02T08:00:00.000Z'),
         status: 'present',
       },
       {
         id: ids.attendance.janeTodayAbsent,
-        institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.janeCentralT3,
         date: new Date('2026-07-02T08:00:00.000Z'),
         status: 'absent',
       },
       {
         id: ids.attendance.johnYesterdayLate,
-        institutionId: ids.institutions.central,
         enrollmentId: ids.enrollments.johnCentralT3,
         date: new Date('2026-07-01T08:00:00.000Z'),
         status: 'late',
@@ -732,7 +532,6 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.notifications.gradeSubmitted,
-        institutionId: ids.institutions.central,
         eventName: 'grade.submitted',
         title: 'Grades posted',
         message: 'Term 3 Mathematics and Reading scores are ready for review.',
@@ -744,7 +543,6 @@ export async function seedDatabase() {
       },
       {
         id: ids.notifications.attendanceAlert,
-        institutionId: ids.institutions.central,
         eventName: 'attendance.marked',
         title: 'Attendance needs review',
         message: 'One absence was recorded today in Grade 5 B.',
@@ -755,7 +553,6 @@ export async function seedDatabase() {
       },
       {
         id: ids.notifications.reportReady,
-        institutionId: ids.institutions.central,
         eventName: 'report.ready',
         title: 'Academic summaries available',
         message: 'Family report PDFs are available for the demo students.',
@@ -773,17 +570,15 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.auditLogs.demoSeeded,
-        institutionId: ids.institutions.central,
         userId: ids.users.centralAdmin,
         action: 'create',
         entity: 'demo',
-        entityId: ids.institutions.central,
+        entityId: ids.institution,
         before: null,
         after: { modules: 'enabled' },
       },
       {
         id: ids.auditLogs.attendanceMarked,
-        institutionId: ids.institutions.central,
         userId: ids.users.centralTeacher,
         action: 'create',
         entity: 'attendance',
@@ -793,7 +588,6 @@ export async function seedDatabase() {
       },
       {
         id: ids.auditLogs.gradeSubmitted,
-        institutionId: ids.institutions.central,
         userId: ids.users.centralTeacher,
         action: 'create',
         entity: 'grades',
@@ -809,14 +603,12 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.customFields.scholarship,
-        institutionId: ids.institutions.central,
         entity: 'students',
         name: 'Scholarship',
         type: 'boolean',
       },
       {
         id: ids.customFields.busRoute,
-        institutionId: ids.institutions.central,
         entity: 'students',
         name: 'Bus route',
         type: 'text',
@@ -845,7 +637,6 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.assignments.mathHomework,
-        institutionId: ids.institutions.central,
         classroomId: ids.classrooms.central5A,
         createdByUserId: ids.users.centralTeacher,
         title: 'Fractions practice',
@@ -855,7 +646,6 @@ export async function seedDatabase() {
       },
       {
         id: ids.assignments.scienceExam,
-        institutionId: ids.institutions.central,
         classroomId: ids.classrooms.central5A,
         createdByUserId: ids.users.centralTeacher,
         title: 'Plants and ecosystems exam',
@@ -871,7 +661,6 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.events.parentMeeting,
-        institutionId: ids.institutions.central,
         classroomId: ids.classrooms.central5A,
         createdByUserId: ids.users.centralAdmin,
         title: 'Parent check-in afternoon',
@@ -881,7 +670,6 @@ export async function seedDatabase() {
       },
       {
         id: ids.events.readingDay,
-        institutionId: ids.institutions.central,
         classroomId: null,
         createdByUserId: ids.users.centralAdmin,
         title: 'School reading day',
@@ -897,7 +685,6 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.messageThreads.attendanceFollowup,
-        institutionId: ids.institutions.central,
         subject: 'Attendance follow-up',
         createdByUserId: ids.users.centralTeacher,
       },
@@ -909,7 +696,6 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.messages.attendanceFollowup,
-        institutionId: ids.institutions.central,
         threadId: ids.messageThreads.attendanceFollowup,
         senderUserId: ids.users.centralTeacher,
         recipientUserId: ids.users.centralParent,
@@ -924,7 +710,6 @@ export async function seedDatabase() {
     .values([
       {
         id: ids.reportHistory.johnSummary,
-        institutionId: ids.institutions.central,
         studentId: ids.students.johnDoe,
         year: 2026,
         reportType: 'academic_summary',
@@ -932,7 +717,6 @@ export async function seedDatabase() {
       },
       {
         id: ids.reportHistory.janeSummary,
-        institutionId: ids.institutions.central,
         studentId: ids.students.janeSmith,
         year: 2026,
         reportType: 'academic_summary',

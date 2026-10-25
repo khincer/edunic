@@ -107,7 +107,7 @@ export function getCliErrorMessage(error: unknown): string {
     return [
       'Database schema is missing or not migrated.',
       'Run: npm run db:migrate',
-      'Then seed local institutions if needed: npm run db:seed',
+      'Then seed the local school if needed: npm run db:seed',
       `Original database error: ${postgresError.message ?? 'relation does not exist'}`,
     ].join('\n');
   }

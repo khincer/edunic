@@ -172,7 +172,8 @@ describe('seed on a freshly migrated database', () => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       seedDatabase = require('../../../../tools/seed').seedDatabase;
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      closePool = () => require('../../../../libs/db/src/index').pool.end();
+      const dbModule = require('../../../../libs/db/src/index');
+      closePool = () => dbModule.pool.end();
     });
     await seedDatabase();
     await closePool();
