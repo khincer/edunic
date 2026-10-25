@@ -72,7 +72,7 @@ describe('parent feed', () => {
 
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const adminHeaders = await createAuthHeaders({
       userId: admin.id,

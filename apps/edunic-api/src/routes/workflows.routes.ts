@@ -8,7 +8,6 @@ import {
   WorkflowsService,
   WorkflowsServiceError,
   WorkflowsRepository,
-  type WorkflowRole,
   listWorkflowQuerySchema,
   assignmentParamsSchema,
   createAssignmentBodySchema,
@@ -18,6 +17,7 @@ import {
   messageParamsSchema,
   createMessageBodySchema,
 } from '@edunic/source/domain/workflows';
+import { adminAnd, toAudienceRole } from '@edunic/source/domain/authorization';
 
 // created_at is the only filterable/sortable column shared by assignments,
 // school-events and messages (they share listWorkflowQuerySchema).
@@ -39,10 +39,10 @@ export async function workflowRoutes(app: FastifyInstance) {
     new WorkflowsRepository(app.db)
   );
   const readAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
   };
   const staffAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher'))],
   };
 
   app.get('/assignments', readAccess, async (request, reply) => {
@@ -60,7 +60,7 @@ export async function workflowRoutes(app: FastifyInstance) {
 
     return workflowsService.listAssignments({
       institutionId,
-      role: user.role as WorkflowRole,
+      role: toAudienceRole(user.role),
       userId: user.id,
       ...query,
       filters,
@@ -74,7 +74,7 @@ export async function workflowRoutes(app: FastifyInstance) {
     const user = getAuthenticatedUser(request);
     const result = await workflowsService.createAssignment({
       institutionId,
-      role: user.role as WorkflowRole,
+      role: toAudienceRole(user.role),
       userId: user.id,
       ...body,
     });
@@ -91,7 +91,7 @@ export async function workflowRoutes(app: FastifyInstance) {
     return workflowsService.updateAssignment({
       institutionId,
       assignmentId: params.assignmentId,
-      role: user.role as WorkflowRole,
+      role: toAudienceRole(user.role),
       userId: user.id,
       ...body,
     });
@@ -112,7 +112,7 @@ export async function workflowRoutes(app: FastifyInstance) {
 
     return workflowsService.listEvents({
       institutionId,
-      role: user.role as WorkflowRole,
+      role: toAudienceRole(user.role),
       userId: user.id,
       ...query,
       filters,
@@ -126,7 +126,7 @@ export async function workflowRoutes(app: FastifyInstance) {
     const user = getAuthenticatedUser(request);
     const result = await workflowsService.createEvent({
       institutionId,
-      role: user.role as WorkflowRole,
+      role: toAudienceRole(user.role),
       userId: user.id,
       ...body,
     });

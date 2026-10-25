@@ -38,7 +38,7 @@ describe('idempotency plugin', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     institutionId = institution.id;
@@ -103,7 +103,7 @@ describe('idempotency plugin', () => {
   it('executes normally when requests carry different keys or actors', async () => {
     const otherAdmin = await createUserFixture({
       institutionId,
-      role: 'admin',
+      role: 'director',
     });
     const otherHeaders = await createAuthHeaders({
       userId: otherAdmin.id,
@@ -166,7 +166,7 @@ describe('idempotency plugin with Redis unavailable', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     institutionId = institution.id;

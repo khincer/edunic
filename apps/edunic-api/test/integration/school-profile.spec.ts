@@ -27,7 +27,7 @@ describe('school profile routes', () => {
     const institution = await createInstitutionFixture('Colegio Central');
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     return {

@@ -34,7 +34,7 @@ describe('list pagination conventions', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     institutionId = institution.id;
@@ -244,7 +244,7 @@ describe('cursor pagination for the remaining list modules', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     institutionId = institution.id;

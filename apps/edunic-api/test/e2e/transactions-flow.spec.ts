@@ -39,7 +39,7 @@ describe('E2E flow: transactions', () => {
 
     const admin = await createUserFixture({
       institutionId,
-      role: 'admin',
+      role: 'director',
       email: 'e2e-admin@transactions-flow.test',
       password: 'admin1234',
     });

@@ -19,10 +19,16 @@ import {
   classroomSubjects,
   subjects,
   teacherClassroomAssignments,
-  userInstitutionRoles,
   userRoles,
   users,
 } from '@edunic/source/db/schema';
+
+export type UserRole =
+  | 'director'
+  | 'vice_director'
+  | 'subdirector'
+  | 'teacher'
+  | 'parent';
 
 let idCounter = 1;
 
@@ -85,7 +91,7 @@ export async function createGuardianFixture(input: {
 
 export async function createUserFixture(input: {
   institutionId: string;
-  role: 'admin' | 'teacher' | 'parent';
+  role: UserRole;
   email?: string;
   password?: string;
 }) {
@@ -100,16 +106,8 @@ export async function createUserFixture(input: {
 
   const user = userResult[0];
 
-  await db.insert(userInstitutionRoles).values({
-    id: nextId('16000000'),
-    userId: user.id,
-    institutionId: input.institutionId,
-    role: input.role,
-  });
-
   // The single-school model reads the role from `user_roles` (one role per
-  // user). The legacy `user_institution_roles` row stays until the contract
-  // migration, because the domain still resolves the institution from it.
+  // user).
   await db.insert(userRoles).values({
     id: nextId('17000000'),
     userId: user.id,

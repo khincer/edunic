@@ -15,6 +15,7 @@ import {
   updateCustomFieldBodySchema,
   upsertCustomFieldValuesBodySchema,
 } from '@edunic/source/domain/custom-fields';
+import { ADMIN_ROLES } from '@edunic/source/domain/authorization';
 
 const CUSTOM_FIELD_FILTER_SORT_OPTIONS = {
   filterFields: ['entity', 'name', 'type'],
@@ -26,7 +27,7 @@ export async function customFieldRoutes(app: FastifyInstance) {
     new CustomFieldsRepository(app.db)
   );
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
 
   app.get('/custom-fields', adminOnly, async (request, reply) => {

@@ -13,6 +13,7 @@ import {
   createAcademicPeriodBodySchema,
   updateAcademicPeriodBodySchema,
 } from '@edunic/source/domain/academic-periods';
+import { ADMIN_ROLES, adminAnd } from '@edunic/source/domain/authorization';
 
 const ACADEMIC_PERIOD_FILTER_SORT_OPTIONS = {
   filterFields: ['year', 'term', 'startDate', 'endDate', 'createdAt'],
@@ -24,10 +25,10 @@ export async function academicPeriodRoutes(app: FastifyInstance) {
     new AcademicPeriodsRepository(app.db)
   );
   const readAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
   };
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
 
   app.get('/', readAccess, async (request, reply) => {

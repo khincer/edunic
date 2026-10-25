@@ -88,7 +88,7 @@ describe('email deliveries admin panel', () => {
     const institution = await createInstitutionFixture();
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
@@ -168,7 +168,7 @@ describe('email deliveries admin panel', () => {
     const institution = await createInstitutionFixture();
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
@@ -219,7 +219,7 @@ describe('email deliveries admin panel', () => {
     const institution = await createInstitutionFixture();
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
@@ -289,7 +289,7 @@ describe('email deliveries admin panel', () => {
     const otherInstitution = await createInstitutionFixture('School B');
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
@@ -325,7 +325,7 @@ describe('email deliveries admin panel', () => {
     const institution = await createInstitutionFixture();
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
@@ -356,7 +356,7 @@ describe('email deliveries admin panel', () => {
     const institution = await createInstitutionFixture();
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: admin.id,

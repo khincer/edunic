@@ -10,6 +10,7 @@ import {
   getInstitutionId,
   parseFilterSort,
 } from '@edunic/source/domain/shared';
+import { ADMIN_ROLES } from '@edunic/source/domain/authorization';
 
 const AUDIT_LOG_FILTER_SORT_OPTIONS = {
   filterFields: ['entity', 'action', 'userId', 'entityId', 'createdAt'],
@@ -19,7 +20,7 @@ const AUDIT_LOG_FILTER_SORT_OPTIONS = {
 export async function auditLogRoutes(app: FastifyInstance) {
   const auditLogsService = new AuditLogsService(new AuditLogsRepository(app.db));
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
 
   app.get('/audit-logs', adminOnly, async (request, reply) => {

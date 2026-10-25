@@ -6,6 +6,7 @@ import {
 } from '@edunic/source/domain/dashboards';
 import { PaymentsRepository } from '@edunic/source/domain/payments';
 import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
+import { ADMIN_ROLES, adminAnd, toAudienceRole } from '@edunic/source/domain/authorization';
 
 function getAuthenticatedUser(request: FastifyRequest) {
   if (!request.user) {
@@ -24,7 +25,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
   app.get(
     '/admin',
     {
-      preHandler: [app.authenticate, app.authorizeRoles(['director', 'vice_director', 'subdirector'])],
+      preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
     },
     async (request) => {
       const institutionId = getInstitutionId(request);
@@ -37,7 +38,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
   app.get(
     '/teacher',
     {
-      preHandler: [app.authenticate, app.authorizeRoles(['director', 'vice_director', 'subdirector', 'teacher'])],
+      preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher'))],
     },
     async (request) => {
       const institutionId = getInstitutionId(request);
@@ -46,7 +47,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
       return dashboardsService.getTeacherDashboard({
         institutionId,
         userId: user.id,
-        role: user.role,
+        role: toAudienceRole(user.role),
       });
     }
   );

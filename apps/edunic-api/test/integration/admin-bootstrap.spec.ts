@@ -31,7 +31,7 @@ describe('admin bootstrap route', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const response = await client
       .post('/admin/bootstrap')
@@ -56,7 +56,7 @@ describe('admin bootstrap route', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const originalDatabaseUrl = process.env.DATABASE_URL;
     process.env.DATABASE_URL = 'postgres://invalid:invalid@127.0.0.1:1/invalid';

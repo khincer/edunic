@@ -14,6 +14,7 @@ import {
   listEnrollmentsQuerySchema,
   updateEnrollmentBodySchema,
 } from '@edunic/source/domain/enrollments';
+import { adminAnd } from '@edunic/source/domain/authorization';
 
 const ENROLLMENT_FILTER_SORT_OPTIONS = {
   filterFields: [
@@ -32,10 +33,10 @@ export async function enrollmentRoutes(app: FastifyInstance) {
     app.eventBus
   );
   const readAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
   };
   const academicWriteAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher'))],
   };
 
   app.get('/', readAccess, async (request, reply) => {

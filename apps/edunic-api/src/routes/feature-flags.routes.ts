@@ -8,6 +8,7 @@ import {
   updateInstitutionFeatureFlagBodySchema,
 } from '@edunic/source/domain/feature-flags';
 import { parseWithSchema } from '@edunic/source/domain/shared';
+import { ADMIN_ROLES } from '@edunic/source/domain/authorization';
 
 function assertInstitutionAccess(
   userInstitutionId: string | undefined,
@@ -34,7 +35,7 @@ export async function featureFlagRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate],
   };
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
 
   app.get('/feature-flags', authenticated, async (request) => {

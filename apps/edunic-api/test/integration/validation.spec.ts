@@ -37,7 +37,7 @@ describe('pre-service validation contract (P2-R2)', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     institutionId = institution.id;

@@ -4,7 +4,7 @@ import {
   getInstitutionId,
   parseFilterSort,
 } from '@edunic/source/domain/shared';
-import { AccessRepository, AccessService } from '@edunic/source/domain/authorization';
+import { AccessRepository, AccessService, adminAnd } from '@edunic/source/domain/authorization';
 import {
   AttendanceService,
   AttendanceServiceError,
@@ -27,10 +27,10 @@ export async function attendanceRoutes(app: FastifyInstance) {
     new AccessService(new AccessRepository(app.db))
   );
   const readAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher', 'parent'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
   };
   const academicWriteAccess = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'teacher'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher'))],
   };
 
   app.get('/', readAccess, async (request, reply) => {

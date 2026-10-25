@@ -55,7 +55,8 @@ describe('migration 0010 single school merge', () => {
     // Migrate up, then roll the merge back so the seed data below lands on
     // the pre-merge schema.
     await withScratchDatabaseUrl(runMigrations);
-    // 0012, 0011 and the merge come off in order.
+    // 0013, 0012, 0011 and the merge come off in order.
+    await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
@@ -291,12 +292,14 @@ describe('migration 0010 single school merge', () => {
     const roles = await db().query(
       'select user_id, role from user_roles order by user_id'
     );
+    // 0010 backfills 'admin'; 0013, applied after it, renames it to 'director'.
     expect(roles.rows).toEqual([
-      { user_id: 'aaaaaaa1-0000-4000-8000-000000000001', role: 'admin' },
+      { user_id: 'aaaaaaa1-0000-4000-8000-000000000001', role: 'director' },
       { user_id: 'aaaaaaa1-0000-4000-8000-000000000002', role: 'teacher' },
-      // The role row with the lowest id wins, so the shared user keeps 'admin'.
+      // The role row with the lowest id wins, so the shared user keeps the
+      // administrative role.
       { user_id: 'bbbbbbb1-0000-4000-8000-000000000001', role: 'teacher' },
-      { user_id: 'bbbbbbb1-0000-4000-8000-000000000002', role: 'admin' },
+      { user_id: 'bbbbbbb1-0000-4000-8000-000000000002', role: 'director' },
     ]);
 
     const subjects = await db().query(

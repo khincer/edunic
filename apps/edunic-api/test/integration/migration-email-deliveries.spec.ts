@@ -2,9 +2,19 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { sql } from 'drizzle-orm';
 import { db, runMigrations } from '@edunic/source/db';
-import { ensureTestDatabaseReady } from '../helpers/db.js';
+import { ensureTestDatabaseReady, resetTestDatabase } from '../helpers/db.js';
 
 const MIGRATIONS_DIR = 'libs/db/src/migrations';
+
+// The down/up test re-applies 0010, which merges every school into one and
+// repoints their rows. Suites truncate when they start, not when they end, so
+// the previous suite's school and students are still here; when this suite's
+// school wins the merge, those students move onto it and afterAll cannot
+// delete it. Start from an empty database so the merge only sees our rows.
+beforeAll(async () => {
+  await ensureTestDatabaseReady();
+  await resetTestDatabase();
+});
 
 // Rows created by this suite; deleted in afterAll so the shared test database is
 // handed back the way it was found.
@@ -209,8 +219,18 @@ describe('migration 0008 email_deliveries (D4)', () => {
   });
 
   it('down reverses 0008 then 0007 and up re-applies both cleanly', async () => {
-    // 0011 comes off first: it dropped the free-text subject that 0010's
-    // backfill reads.
+    // 0013 comes off first: it dropped user_institution_roles, which 0010
+    // reads to pick the surviving school.
+    await db.execute(
+      sql.raw(
+        readFileSync(
+          `${MIGRATIONS_DIR}/0013_roles_director_drop_user_institution_roles.down.sql`,
+          'utf8'
+        )
+      )
+    );
+
+    // Then 0011: it dropped the free-text subject that 0010's backfill reads.
     await db.execute(
       sql.raw(
         readFileSync(
@@ -269,6 +289,14 @@ describe('migration 0008 email_deliveries (D4)', () => {
       sql.raw(
         readFileSync(
           `${MIGRATIONS_DIR}/0011_single_school_subjects.sql`,
+          'utf8'
+        )
+      )
+    );
+    await db.execute(
+      sql.raw(
+        readFileSync(
+          `${MIGRATIONS_DIR}/0013_roles_director_drop_user_institution_roles.sql`,
           'utf8'
         )
       )

@@ -15,6 +15,7 @@ import {
   updateTopicBodySchema,
 } from '@edunic/source/domain/subjects';
 import { parseWithSchema } from '@edunic/source/domain/shared';
+import { ADMIN_ROLES } from '@edunic/source/domain/authorization';
 
 export async function subjectRoutes(app: FastifyInstance) {
   const subjectsService = new SubjectsService(new SubjectsRepository(app.db));
@@ -22,7 +23,7 @@ export async function subjectRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate],
   };
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
 
   // The catalog as the caller may see it: an admin sees every materia, a

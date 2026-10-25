@@ -34,7 +34,7 @@ describe('subjects routes', () => {
     const institution = await createInstitutionFixture();
     const admin = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
     const teacher = await createUserFixture({
       institutionId: institution.id,

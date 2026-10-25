@@ -25,7 +25,7 @@ describe('API error envelope contract', () => {
     const institution = await createInstitutionFixture();
     const adminUser = await createUserFixture({
       institutionId: institution.id,
-      role: 'admin',
+      role: 'director',
     });
 
     institutionId = institution.id;

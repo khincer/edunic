@@ -92,6 +92,13 @@
       "when": 1792456600000,
       "tag": "0012_payments_receipt_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792456700000,
+      "tag": "0013_roles_director_drop_user_institution_roles",
+      "breakpoints": true
     }
   ]
 }

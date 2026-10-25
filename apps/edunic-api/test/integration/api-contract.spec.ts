@@ -111,7 +111,7 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
       const institution = await createInstitutionFixture();
       const adminUser = await createUserFixture({
         institutionId: institution.id,
-        role: 'admin',
+        role: 'director',
       });
       const expired = await createAuthHeaders({
         userId: adminUser.id,
@@ -191,7 +191,7 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
     it('ignores an x-institution-id header: the school comes from the user', async () => {
       const adminUser = await createUserFixture({
         institutionId,
-        role: 'admin',
+        role: 'director',
       });
       const otherInstitution = await createInstitutionFixture('Other');
       const adminHeaders = await createAuthHeaders({
@@ -218,7 +218,7 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
       const institution = await createInstitutionFixture();
       const adminUser = await createUserFixture({
         institutionId: institution.id,
-        role: 'admin',
+        role: 'director',
       });
       headers = await createAuthHeaders({
         userId: adminUser.id,
@@ -275,7 +275,7 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
       const institution = await createInstitutionFixture();
       const adminUser = await createUserFixture({
         institutionId: institution.id,
-        role: 'admin',
+        role: 'director',
       });
       headers = await createAuthHeaders({
         userId: adminUser.id,
@@ -340,7 +340,7 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
       const institution = await createInstitutionFixture();
       const adminUser = await createUserFixture({
         institutionId: institution.id,
-        role: 'admin',
+        role: 'director',
       });
       headers = await createAuthHeaders({
         userId: adminUser.id,

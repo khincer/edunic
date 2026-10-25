@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { AccessRepository, AccessService } from '@edunic/source/domain/authorization';
+import { AccessRepository, AccessService, ADMIN_ROLES, adminAnd } from '@edunic/source/domain/authorization';
 import {
   PaymentsPdfService,
   PaymentsRepository,
@@ -18,12 +18,12 @@ export async function paymentRoutes(app: FastifyInstance) {
   );
   const paymentsPdfService = new PaymentsPdfService();
   const adminOnly = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin'])],
+    preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
   // The ledger is the school's business: an admin reads it all, a parent
   // reads the payments of their own children, a teacher reads none of it.
   const adminOrParent = {
-    preHandler: [app.authenticate, app.authorizeRoles(['admin', 'parent'])],
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('parent'))],
   };
 
   // The ledger: an admin sees every payment, a parent the ones of their own
