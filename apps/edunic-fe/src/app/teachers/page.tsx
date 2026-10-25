@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityMark, getAssignmentActivityKind } from '@/components/activity-mark';
+import { isAdminRole } from '@/lib/roles';
 import { Button } from '@/components/button';
 import { FormField, TextAreaField } from '@/components/form-field';
 import { PanelState } from '@/components/panel-state';
@@ -70,9 +71,7 @@ export default function TeachersPage() {
 
   const canUseTeacherTools =
     session?.user.role === 'teacher' ||
-    session?.user.role === 'director' ||
-    session?.user.role === 'vice_director' ||
-    session?.user.role === 'subdirector';
+    (session !== null && isAdminRole(session.user.role));
   const selectedClassroom = useMemo(
     () => classrooms.find((classroom) => classroom.id === selectedClassroomId),
     [classrooms, selectedClassroomId]
