@@ -66,6 +66,11 @@ const SWEPT: string[] = [
   // them includes institution_id. The responses stop carrying it.
   'libs/domain/src/workflows',
   'apps/edunic-api/src/routes/workflows.routes.ts',
+  // S1.4g-2: dashboards (admin, teacher, parent). The queries drop every
+  // institution predicate; the per-user conditions (teacher classroom
+  // assignments, guardian links) stay.
+  'libs/domain/src/dashboards',
+  'apps/edunic-api/src/routes/dashboards.routes.ts',
 ];
 
 // Also the per-school tables, which stay in the DB only until 0015.
