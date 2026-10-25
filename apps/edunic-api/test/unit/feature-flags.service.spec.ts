@@ -6,36 +6,40 @@ import {
 describe('FeatureFlagsService', () => {
   it('allows enabled features', async () => {
     const repository = {
-      findEffective: jest.fn().mockResolvedValue({
-        key: 'teacher_gradebook',
-        defaultValue: true,
-        institutionEnabled: null,
-        enabled: true,
-      }),
+      findByKey: jest
+        .fn()
+        .mockResolvedValue({ key: 'teacher_gradebook', enabled: true }),
     };
     const service = new FeatureFlagsService(repository as never);
 
     await expect(
-      service.requireEnabled('inst-1', 'teacher_gradebook')
+      service.requireEnabled('teacher_gradebook')
     ).resolves.toBeUndefined();
+    expect(repository.findByKey).toHaveBeenCalledWith('teacher_gradebook');
   });
 
-  it('returns 404 when a feature is disabled or missing', async () => {
+  it('returns 404 when a feature is disabled', async () => {
     const repository = {
-      findEffective: jest.fn().mockResolvedValue({
-        key: 'billing_module',
-        defaultValue: false,
-        institutionEnabled: null,
-        enabled: false,
-      }),
+      findByKey: jest
+        .fn()
+        .mockResolvedValue({ key: 'billing_module', enabled: false }),
     };
     const service = new FeatureFlagsService(repository as never);
 
-    await expect(
-      service.requireEnabled('inst-1', 'billing_module')
-    ).rejects.toEqual(
+    await expect(service.requireEnabled('billing_module')).rejects.toEqual(
       expect.objectContaining<Partial<FeatureFlagsServiceError>>({
         message: 'Feature is not available',
+        statusCode: 404,
+      })
+    );
+  });
+
+  it('returns 404 when a feature does not exist', async () => {
+    const repository = { findByKey: jest.fn().mockResolvedValue(null) };
+    const service = new FeatureFlagsService(repository as never);
+
+    await expect(service.requireEnabled('missing')).rejects.toEqual(
+      expect.objectContaining<Partial<FeatureFlagsServiceError>>({
         statusCode: 404,
       })
     );

@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import { db } from '@edunic/source/db';
 import {
   emailDeliveries,
-  institutionFeatureFlags,
+  featureFlags,
   institutions,
 } from '@edunic/source/db/schema';
 import { createTestApp, createHttpClient } from '../helpers/app.js';
@@ -34,12 +34,11 @@ async function stageDelivery(input: {
   });
 }
 
-async function enableEmailNotifications(institutionId: string) {
-  await db.insert(institutionFeatureFlags).values({
-    institutionId,
-    featureKey: 'email_notifications',
-    enabled: true,
-  });
+async function enableEmailNotifications() {
+  await db
+    .update(featureFlags)
+    .set({ defaultValue: true })
+    .where(eq(featureFlags.key, 'email_notifications'));
 }
 
 // PN-R2 route inventory: the printed route table is the structural proof that
@@ -236,7 +235,7 @@ describe('email deliveries admin panel', () => {
       senderIdentityConfigured: false,
     });
 
-    await enableEmailNotifications(institution.id);
+    await enableEmailNotifications();
     await db
       .update(institutions)
       .set({ senderName: 'Colegio Las Flores' })

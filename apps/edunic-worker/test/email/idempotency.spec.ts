@@ -169,13 +169,8 @@ describe('worker email delivery idempotency', () => {
       where id = ${institution.id}
     `);
     await db.execute(sql`
-      insert into institution_feature_flags (
-        institution_id,
-        feature_key,
-        enabled
-      )
-      values (${institution.id}, 'email_notifications', true)
-      on conflict (institution_id, feature_key) do update set enabled = true
+      update feature_flags set default_value = true
+      where key = 'email_notifications'
     `);
 
     const period = await createAcademicPeriodFixture({
