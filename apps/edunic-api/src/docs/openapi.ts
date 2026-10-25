@@ -75,11 +75,16 @@ const auditLogSchema = {
 
 const extensionSchema = {
   type: 'object',
-  required: ['key', 'name', 'enabled'],
+  required: ['key', 'name', 'enabled', 'config'],
   properties: {
     key: { type: 'string', example: 'notifications' },
     name: { type: 'string', nullable: true, example: 'Notifications' },
     enabled: { type: 'boolean', example: true },
+    config: {
+      type: 'object',
+      nullable: true,
+      additionalProperties: true,
+    },
   },
 };
 
@@ -100,17 +105,6 @@ const featureFlagSchema = {
       enum: ['default', 'institution'],
       example: 'institution',
     },
-  },
-};
-
-const institutionExtensionSchema = {
-  type: 'object',
-  required: ['institutionId', 'extensionKey', 'config', 'extension'],
-  properties: {
-    institutionId: { type: 'string', format: 'uuid' },
-    extensionKey: { type: 'string', example: 'notifications' },
-    config: { type: 'object', additionalProperties: true },
-    extension: extensionSchema,
   },
 };
 
@@ -1359,49 +1353,11 @@ export function buildOpenApiDocument() {
           },
         },
       },
-      '/institutions/{institutionId}/extensions': {
-        get: {
-          tags: ['Extensions'],
-          summary: 'List extensions enabled for an institution',
-          parameters: [
-            {
-              name: 'institutionId',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-            },
-          ],
-          responses: {
-            200: {
-              description: 'Institution extensions',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      data: {
-                        type: 'array',
-                        items: institutionExtensionSchema,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/institutions/{institutionId}/extensions/{extensionKey}': {
+      '/extensions/{extensionKey}/config': {
         put: {
           tags: ['Extensions'],
-          summary: 'Enable or configure an extension for an institution',
+          summary: 'Turn an extension on for the school or change its config',
           parameters: [
-            {
-              name: 'institutionId',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-            },
             {
               name: 'extensionKey',
               in: 'path',
@@ -1424,12 +1380,12 @@ export function buildOpenApiDocument() {
           },
           responses: {
             200: {
-              description: 'Institution extension saved',
+              description: 'Extension config saved',
               content: {
                 'application/json': {
                   schema: {
                     type: 'object',
-                    properties: { data: institutionExtensionSchema },
+                    properties: { data: extensionSchema },
                   },
                 },
               },
@@ -1439,14 +1395,8 @@ export function buildOpenApiDocument() {
         },
         delete: {
           tags: ['Extensions'],
-          summary: 'Disable an extension for an institution',
+          summary: 'Turn an extension off for the school',
           parameters: [
-            {
-              name: 'institutionId',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-            },
             {
               name: 'extensionKey',
               in: 'path',
@@ -1455,7 +1405,7 @@ export function buildOpenApiDocument() {
             },
           ],
           responses: {
-            200: { description: 'Institution extension disabled' },
+            200: { description: 'Extension config cleared' },
             404: { $ref: '#/components/responses/NotFound' },
           },
         },
