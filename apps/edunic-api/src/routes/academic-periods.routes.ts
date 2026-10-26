@@ -1,11 +1,10 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import {
   parseWithSchema,
   parseFilterSort,
 } from '@edunic/source/domain/shared';
 import {
   AcademicPeriodsService,
-  AcademicPeriodsServiceError,
   AcademicPeriodsRepository,
   academicPeriodParamsSchema,
   listAcademicPeriodsQuerySchema,

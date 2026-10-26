@@ -1,7 +1,6 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import {
   AuditLogsService,
-  AuditLogsServiceError,
   AuditLogsRepository,
   listAuditLogsQuerySchema,
 } from '@edunic/source/domain/audit-logs';

@@ -2,13 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { sql } from 'drizzle-orm';
 import { db, runMigrations, runMigrationsDown } from '@edunic/source/db';
-import { ensureTestDatabaseReady } from '../helpers/db.js';
+import { ensureTestDatabaseReady, resetTestDatabase } from '../helpers/db.js';
 
 const MIGRATIONS_DIR = 'libs/db/src/migrations';
 
 // Rows created by this suite; deleted in afterAll so the shared test database is
 // handed back the way it was found.
-const createdInstitutions: string[] = [];
 const createdUsers: string[] = [];
 const createdStudents: string[] = [];
 
@@ -29,15 +28,6 @@ async function tableName(table: string) {
   return (result.rows[0] as { name: string | null }).name;
 }
 
-async function createInstitution(name: string) {
-  const id = randomUUID();
-  createdInstitutions.push(id);
-  await db.execute(
-    sql`insert into institutions (id, name) values (${id}, ${name})`
-  );
-  return id;
-}
-
 async function createUser(email: string) {
   const id = randomUUID();
   createdUsers.push(id);
@@ -48,12 +38,12 @@ async function createUser(email: string) {
   return id;
 }
 
-async function createStudent(institutionId: string, name: string) {
+async function createStudent(name: string) {
   const id = randomUUID();
   createdStudents.push(id);
   await db.execute(
-    sql`insert into students (id, institution_id, first_name, last_name)
-        values (${id}, ${institutionId}, ${name}, ${'Student'})`
+    sql`insert into students (id, first_name, last_name)
+        values (${id}, ${name}, ${'Student'})`
   );
   return id;
 }
@@ -71,9 +61,6 @@ afterAll(async () => {
   await db.execute(sql`delete from classroom_subjects`);
   await db.execute(sql`delete from topics`);
   await db.execute(sql`delete from subjects`);
-  for (const id of createdInstitutions) {
-    await db.execute(sql`delete from institutions where id = ${id}`);
-  }
 });
 
 describe('migration 0009 single school expand', () => {
@@ -165,9 +152,8 @@ describe('migration 0009 single school expand', () => {
   });
 
   it('rejects a payment that breaks the ledger rules', async () => {
-    const institutionId = await createInstitution('Migration 0009');
     const userId = await createUser(`payments-${randomUUID()}@example.com`);
-    const studentId = await createStudent(institutionId, 'Paying');
+    const studentId = await createStudent('Paying');
 
     const insert = (values: {
       amountCents?: number;
@@ -225,8 +211,14 @@ describe('migration 0009 single school expand', () => {
   });
 
   it('down reverses 0009 and up re-applies it cleanly', async () => {
-    // 0014, 0013, 0012, 0011, 0010 and 0009 come off in order: each of them builds
-    // on what the previous one created, and the runner keeps the journal in step.
+    // 0015's down restores institution_id from the school row, so the shared
+    // database is emptied first: rows left by other suites have no school.
+    await resetTestDatabase();
+
+    // 0015, 0014, 0013, 0012, 0011, 0010 and 0009 come off in order: each of
+    // them builds on what the previous one created, and the runner keeps the
+    // journal in step.
+    await runMigrationsDown();
     await runMigrationsDown();
     await runMigrationsDown();
     await runMigrationsDown();

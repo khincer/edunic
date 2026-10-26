@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { runMigrations, runMigrationsDown } from '@edunic/source/db';
+import { runMigrationsUpTo } from '../helpers/migrations';
 
 // The institution merge is the one migration whose effect cannot be replayed
 // from a journal entry alone: it moves rows between schools. The proof is
@@ -55,7 +56,8 @@ describe('migration 0010 single school merge', () => {
     // Migrate up, then roll the merge back so the seed data below lands on
     // the pre-merge schema.
     await withScratchDatabaseUrl(runMigrations);
-    // 0014, 0013, 0012, 0011 and the merge come off in order.
+    // 0015, 0014, 0013, 0012, 0011 and the merge come off in order.
+    await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
@@ -196,7 +198,11 @@ describe('migration 0010 single school merge', () => {
 
   it('merges the schools without losing a row', async () => {
     await seedTwoSchools();
-    await withScratchDatabaseUrl(runMigrations);
+    // Up to 0014 only: the merged school columns are inspected below, and 0015
+    // (the last test) drops them.
+    await withScratchDatabaseUrl(() =>
+      runMigrationsUpTo('0014_single_school_default')
+    );
 
     // One school survives, and it keeps its sender identity.
     const institutions = await db().query(
@@ -341,4 +347,22 @@ describe('migration 0010 single school merge', () => {
       ['email_deliveries_event_id_recipient_address_unique']
     );
   });
+
+  it('then applies 0015 on the merged data: one school, no school column', async () => {
+    await withScratchDatabaseUrl(runMigrations);
+
+    const applied = await db().query(
+      'select count(*)::int as count from drizzle.__drizzle_migrations'
+    );
+    expect(applied.rows).toEqual([{ count: 16 }]);
+    const columns = await db().query(
+      `select table_name from information_schema.columns
+        where table_schema = 'public' and column_name = 'institution_id'`
+    );
+    expect(columns.rows).toEqual([]);
+    const students = await db().query('select count(*)::int as count from students');
+    expect(students.rows).toEqual([{ count: 2 }]);
+    const institutions = await db().query('select id from institutions');
+    expect(institutions.rows).toEqual([{ id: A }]);
+  }, 60_000);
 });

@@ -1,8 +1,14 @@
-import Fastify from 'fastify';
+import Fastify, { type RouteOptions } from 'fastify';
 import { registerPlugins } from './plugins/index.js';
 import { registerRoutes } from './routes/index.js';
 
-export async function buildApp() {
+export type BuildAppOptions = {
+  // Called for every route as it is registered (the OpenAPI drift test lists
+  // the routes with it).
+  onRoute?: (route: RouteOptions) => void;
+};
+
+export async function buildApp(options: BuildAppOptions = {}) {
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL || 'info',
@@ -15,6 +21,10 @@ export async function buildApp() {
           : undefined,
     },
   });
+
+  if (options.onRoute) {
+    app.addHook('onRoute', options.onRoute);
+  }
 
   await registerPlugins(app);
   await registerRoutes(app);

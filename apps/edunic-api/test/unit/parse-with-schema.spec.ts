@@ -68,7 +68,7 @@ describe('parseWithSchema', () => {
       },
     };
 
-    expect(() => parseWithSchema(throwingSchema, null)).toThrow(
+    expect(() => parseWithSchema(throwingSchema as never, null)).toThrow(
       'DB connection failed'
     );
   });

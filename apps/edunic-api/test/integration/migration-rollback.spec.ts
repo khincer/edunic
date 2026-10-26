@@ -1,7 +1,7 @@
 import pg from 'pg';
 import { runMigrations, runMigrationsDown } from '@edunic/source/db';
 
-// P4-R6 / D6: every migration (0000-0008, incl. pre-existing) ships a sibling
+// P4-R6 / D6: every migration (0000-0015, incl. pre-existing) ships a sibling
 // .down.sql and the down runner walks the chain backwards on a real Postgres.
 // The scratch database is created empty, migrated up, rolled fully down and
 // migrated up again — the up -> down -> up chain the rollback runbook relies on.
@@ -114,12 +114,12 @@ describe('migration down runner (P4-R6, D6)', () => {
     return (result.rows[0] as { count: number }).count;
   }
 
-  it('up -> down -> up restores the full schema (0014 down to 0000)', async () => {
+  it('up -> down -> up restores the full schema (0015 down to 0000)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(15);
+    expect(await appliedCount()).toBe(16);
 
-    for (let step = 0; step < 15; step += 1) {
+    for (let step = 0; step < 16; step += 1) {
       await withScratchDatabaseUrl(runMigrationsDown);
     }
     expect(await appliedCount()).toBe(0);
@@ -134,7 +134,8 @@ describe('migration down runner (P4-R6, D6)', () => {
     }
 
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(15);
+    expect(await appliedCount()).toBe(16);
+    expect(await columnExists('students', 'institution_id')).toBe(false);
     for (const table of [
       'email_deliveries',
       'outbox_events',
@@ -149,9 +150,19 @@ describe('migration down runner (P4-R6, D6)', () => {
     }
   }, 60_000);
 
-  it('rolls back exactly one migration per step (0010, 0009, 0008, 0007, 0006, 0005)', async () => {
+  it('rolls back exactly one migration per step (0015 down to 0005)', async () => {
     await recreateScratchDatabase();
     await withScratchDatabaseUrl(runMigrations);
+
+    // 0015 down: the school column, the per-school tables and the function
+    // come back.
+    expect(await columnExists('students', 'institution_id')).toBe(false);
+    await withScratchDatabaseUrl(runMigrationsDown);
+    expect(await appliedCount()).toBe(15);
+    expect(await columnExists('students', 'institution_id')).toBe(true);
+    expect(await tableExists('institution_feature_flags')).toBe(true);
+    expect(await tableExists('institution_extensions')).toBe(true);
+    expect(await functionExists('single_school_id')).toBe(true);
 
     // 0014 down: the default function and extensions.config go; data stays.
     await withScratchDatabaseUrl(runMigrationsDown);

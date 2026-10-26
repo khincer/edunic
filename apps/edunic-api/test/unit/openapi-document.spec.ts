@@ -111,11 +111,11 @@ describe('OpenAPI document (single school)', () => {
 
   it('documents the login body exactly as the route validates it', () => {
     const login = operation('/auth/login', 'post');
-    const schema = login.requestBody?.content['application/json'].schema;
+    const schema = login.requestBody?.content['application/json'].schema ?? {};
     const routeKeys = Object.keys(loginBodySchema.shape).sort();
 
-    expect(Object.keys(schema?.properties).sort()).toEqual(routeKeys);
-    expect([...schema?.required].sort()).toEqual(routeKeys);
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(routeKeys);
+    expect([...(schema.required ?? [])].sort()).toEqual(routeKeys);
     expect(JSON.stringify(login)).not.toMatch(/user_institution_roles/);
     expect(login.responses['200'].content['application/json'].schema).not
       .toHaveProperty('properties.data.properties.user.properties.institutionId');
@@ -140,5 +140,117 @@ describe('OpenAPI document (single school)', () => {
     ['/attendance/{attendanceId}', 'get'],
   ])('%s %s documents 403', (path, method) => {
     expect(operation(path, method).responses['403']).toBeDefined();
+  });
+});
+
+describe('OpenAPI document (attendance conflicts)', () => {
+  // UNIQUE (enrollment_id, date): a second mark of the same day is a 409.
+  it.each([
+    ['/attendance', 'post'],
+    ['/attendance/{attendanceId}', 'patch'],
+  ])('%s %s documents the AttendanceConflict 409', (path, method) => {
+    expect(operation(path, method).responses['409']).toEqual({
+      $ref: '#/components/responses/AttendanceConflict',
+    });
+  });
+});
+
+describe('OpenAPI document (report history)', () => {
+  it('documents GET /reports/history with its filters, page and refusals', () => {
+    const history = operation('/reports/history', 'get') as Operation & {
+      parameters: { name: string }[];
+    };
+
+    expect(history.parameters.map((p) => p.name)).toEqual(
+      expect.arrayContaining(['studentId', 'year', 'cursor', 'limit', 'offset'])
+    );
+    const item =
+      history.responses['200'].content['application/json'].schema.properties.data
+        .items;
+    expect(Object.keys(item.properties).sort()).toEqual(
+      [
+        'createdAt',
+        'createdByUserId',
+        'id',
+        'reportType',
+        'studentId',
+        'studentName',
+        'year',
+      ].sort()
+    );
+    for (const status of ['400', '401', '403']) {
+      expect(history.responses[status]).toBeDefined();
+    }
+  });
+});
+
+describe('OpenAPI document (grades CSV export)', () => {
+  it('documents GET /reports/export.csv as a text/csv download', () => {
+    const exportCsv = operation('/reports/export.csv', 'get') as Operation & {
+      parameters: { name: string; required?: boolean }[];
+    };
+
+    expect(
+      exportCsv.parameters.map((p) => [p.name, p.required ?? false])
+    ).toEqual([
+      ['year', true],
+      ['studentId', false],
+      ['classroomId', false],
+    ]);
+    expect(exportCsv.responses['200'].content).toHaveProperty('text/csv');
+    for (const status of ['400', '401', '403']) {
+      expect(exportCsv.responses[status]).toBeDefined();
+    }
+  });
+});
+
+describe('OpenAPI document (classroom activity)', () => {
+  it.each([
+    ['/classrooms/{classroomId}/activity', ['400', '401', '403', '404']],
+    ['/classrooms/activity', ['400', '401', '403']],
+  ])('documents GET %s with its refusals', (path, statuses) => {
+    const activity = operation(path, 'get') as Operation & {
+      parameters: { name: string }[];
+    };
+
+    expect(activity.parameters.map((p) => p.name)).toContain('since');
+    expect(activity.responses['200']).toBeDefined();
+    for (const status of statuses) {
+      expect(activity.responses[status]).toBeDefined();
+    }
+  });
+
+  it('describes the per-classroom totals and the recent feed', () => {
+    const schema =
+      operation('/classrooms/{classroomId}/activity', 'get').responses['200']
+        .content['application/json'].schema.properties.data;
+
+    expect(Object.keys(schema.properties).sort()).toEqual(
+      ['classroom', 'recent', 'since', 'totals'].sort()
+    );
+    expect(schema.properties.recent.items.properties.type.enum).toEqual([
+      'grade',
+      'attendance',
+      'assignment',
+      'event',
+    ]);
+  });
+});
+
+describe('OpenAPI document (extension refusals)', () => {
+  // Every extension route is administration-only and validates its input.
+  it.each([
+    ['/extensions', 'get'],
+    ['/extensions', 'post'],
+    ['/extensions/{extensionKey}', 'patch'],
+    ['/extensions/{extensionKey}/config', 'put'],
+    ['/extensions/{extensionKey}/config', 'delete'],
+  ])('%s %s documents 400 and 403', (path, method) => {
+    expect(operation(path, method).responses['400']).toEqual({
+      $ref: '#/components/responses/BadRequest',
+    });
+    expect(operation(path, method).responses['403']).toEqual({
+      $ref: '#/components/responses/Forbidden',
+    });
   });
 });

@@ -30,8 +30,9 @@ export type UserRole =
   | 'teacher'
   | 'parent';
 
-// Fixtures never write the school into a row: the single_school_id() default of
-// migration 0014 fills it in, so a school must exist (createInstitutionFixture).
+// Fixtures never write the school into a row: since migration 0015 no table
+// has a school column. createInstitutionFixture only seeds the configuration
+// row (name, sender identity, reply-to) for the specs that read it.
 let idCounter = 1;
 
 function nextId(prefix: string) {
@@ -161,7 +162,6 @@ export async function createTeacherClassroomAssignmentFixture(input: {
   const result = await db
     .insert(teacherClassroomAssignments)
     .values({
-      id: nextId('45000000'),
       teacherUserId: input.teacherUserId,
       classroomId: input.classroomId,
     })

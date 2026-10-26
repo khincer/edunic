@@ -1,8 +1,7 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { parseWithSchema, parseFilterSort } from '@edunic/source/domain/shared';
 import {
   GuardiansService,
-  GuardiansServiceError,
   GuardiansRepository,
   createGuardianBodySchema,
   guardianParamsSchema,

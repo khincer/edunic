@@ -24,7 +24,7 @@ export const institutions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     name: text('name').notNull(),
-    // Per-institution sender identity (design D4). Both nullable: the envelope
+    // The school's sender identity (design D4). Both nullable: the envelope
     // From: stays the platform-verified EMAIL_FROM_ADDRESS, so a NULL
     // sender_name means "unconfigured" and nothing is sent (SI-R1, SI-R3).
     senderName: text('sender_name'),
@@ -78,10 +78,6 @@ export const userRoles = pgTable(
 
 export const students = pgTable('students', {
   id: uuid('id').defaultRandom().primaryKey(),
-  institutionId: uuid('institution_id')
-    .notNull()
-    .default(sql`single_school_id()`)
-    .references(() => institutions.id),
 
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
@@ -98,10 +94,6 @@ export const guardians = pgTable(
   'guardians',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    institutionId: uuid('institution_id')
-      .notNull()
-      .default(sql`single_school_id()`)
-      .references(() => institutions.id),
     name: text('name').notNull(),
     phone: text('phone'),
     // Guardian contact address (GE-R1). NULL and '' both mean "no email"; the
@@ -130,15 +122,15 @@ export const studentGuardians = pgTable(
 export const guardianUserLinks = pgTable(
   'guardian_user_links',
   {
-    institutionId: uuid('institution_id')
-      .notNull()
-      .default(sql`single_school_id()`)
-      .references(() => institutions.id),
     guardianId: uuid('guardian_id').notNull().references(() => guardians.id),
     userId: uuid('user_id').notNull().references(() => users.id),
   },
   (t) => ({
-    pk: primaryKey({ columns: [t.institutionId, t.guardianId, t.userId] }),
+    pk: primaryKey({
+      name: 'guardian_user_links_pk',
+      columns: [t.guardianId, t.userId],
+    }),
+    userIdx: index('guardian_user_links_user_idx').on(t.userId),
   })
 );
 
@@ -150,10 +142,6 @@ export const academicPeriods = pgTable(
   'academic_periods',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    institutionId: uuid('institution_id')
-      .notNull()
-      .default(sql`single_school_id()`)
-      .references(() => institutions.id),
     year: integer('year').notNull(),
     term: integer('term').notNull(), // 1–4
     startDate: timestamp('start_date'),
@@ -161,11 +149,7 @@ export const academicPeriods = pgTable(
     createdAt: timestamp('created_at').defaultNow(),
   },
   (t) => ({
-    uniqueInstitutionYearTerm: unique().on(
-      t.institutionId,
-      t.year,
-      t.term
-    ),
+    uniqueYearTerm: unique().on(t.year, t.term),
     validTerm: check('academic_periods_term_check', sql`${t.term} between 1 and 4`),
     validDateRange: check(
       'academic_periods_date_range_check',
@@ -178,19 +162,11 @@ export const classrooms = pgTable(
   'classrooms',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    institutionId: uuid('institution_id')
-      .notNull()
-      .default(sql`single_school_id()`)
-      .references(() => institutions.id),
     gradeLevel: integer('grade_level').notNull(),
     section: text('section'),
   },
   (t) => ({
-    uniqueInstitutionGradeSection: unique().on(
-      t.institutionId,
-      t.gradeLevel,
-      t.section
-    ),
+    uniqueGradeSection: unique().on(t.gradeLevel, t.section),
     validGradeLevel: check(
       'classrooms_grade_level_check',
       sql`${t.gradeLevel} > 0`
@@ -201,17 +177,17 @@ export const classrooms = pgTable(
 export const teacherClassroomAssignments = pgTable(
   'teacher_classroom_assignments',
   {
-    institutionId: uuid('institution_id')
-      .notNull()
-      .default(sql`single_school_id()`)
-      .references(() => institutions.id),
     teacherUserId: uuid('teacher_user_id').notNull().references(() => users.id),
     classroomId: uuid('classroom_id').notNull().references(() => classrooms.id),
   },
   (t) => ({
     pk: primaryKey({
-      columns: [t.institutionId, t.teacherUserId, t.classroomId],
+      name: 'teacher_classroom_assignments_pk',
+      columns: [t.teacherUserId, t.classroomId],
     }),
+    teacherIdx: index('teacher_classroom_assignments_teacher_idx').on(
+      t.teacherUserId
+    ),
   })
 );
 
@@ -296,11 +272,6 @@ export const enrollments = pgTable(
   'enrollments',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-
-    institutionId: uuid('institution_id')
-      .notNull()
-      .default(sql`single_school_id()`)
-      .references(() => institutions.id),
     studentId: uuid('student_id').notNull().references(() => students.id),
     academicPeriodId: uuid('academic_period_id')
       .notNull()
@@ -332,11 +303,6 @@ export const grades = pgTable(
   'grades',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-
-    institutionId: uuid('institution_id')
-      .notNull()
-      .default(sql`single_school_id()`)
-      .references(() => institutions.id),
     enrollmentId: uuid('enrollment_id')
       .notNull()
       .references(() => enrollments.id),
@@ -363,11 +329,6 @@ export const attendance = pgTable(
   'attendance',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-
-    institutionId: uuid('institution_id')
-      .notNull()
-      .default(sql`single_school_id()`)
-      .references(() => institutions.id),
     enrollmentId: uuid('enrollment_id')
       .notNull()
       .references(() => enrollments.id),
@@ -392,11 +353,6 @@ export const attendance = pgTable(
 
 export const auditLogs = pgTable('audit_logs', {
   id: uuid('id').defaultRandom().primaryKey(),
-
-  institutionId: uuid('institution_id')
-    .notNull()
-    .default(sql`single_school_id()`)
-    .references(() => institutions.id),
   userId: uuid('user_id').references(() => users.id),
 
   action: text('action').notNull(),
@@ -412,11 +368,6 @@ export const auditLogs = pgTable('audit_logs', {
 export const notifications = pgTable('notifications', {
   id: uuid('id').defaultRandom().primaryKey(),
 
-  institutionId: uuid('institution_id')
-    .notNull()
-    .default(sql`single_school_id()`)
-    .references(() => institutions.id),
-
   eventName: text('event_name').notNull(),
   title: text('title').notNull(),
   message: text('message').notNull(),
@@ -428,10 +379,6 @@ export const notifications = pgTable('notifications', {
 
 export const assignments = pgTable('assignments', {
   id: uuid('id').defaultRandom().primaryKey(),
-  institutionId: uuid('institution_id')
-    .notNull()
-    .default(sql`single_school_id()`)
-    .references(() => institutions.id),
   classroomId: uuid('classroom_id').references(() => classrooms.id),
   // An assignment targets a materia and optionally one of its temas.
   subjectId: uuid('subject_id').references(() => subjects.id),
@@ -446,10 +393,6 @@ export const assignments = pgTable('assignments', {
 
 export const schoolEvents = pgTable('school_events', {
   id: uuid('id').defaultRandom().primaryKey(),
-  institutionId: uuid('institution_id')
-    .notNull()
-    .default(sql`single_school_id()`)
-    .references(() => institutions.id),
   classroomId: uuid('classroom_id').references(() => classrooms.id),
   createdByUserId: uuid('created_by_user_id').references(() => users.id),
   title: text('title').notNull(),
@@ -461,10 +404,6 @@ export const schoolEvents = pgTable('school_events', {
 
 export const messageThreads = pgTable('message_threads', {
   id: uuid('id').defaultRandom().primaryKey(),
-  institutionId: uuid('institution_id')
-    .notNull()
-    .default(sql`single_school_id()`)
-    .references(() => institutions.id),
   subject: text('subject').notNull(),
   createdByUserId: uuid('created_by_user_id').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
@@ -472,10 +411,6 @@ export const messageThreads = pgTable('message_threads', {
 
 export const messages = pgTable('messages', {
   id: uuid('id').defaultRandom().primaryKey(),
-  institutionId: uuid('institution_id')
-    .notNull()
-    .default(sql`single_school_id()`)
-    .references(() => institutions.id),
   threadId: uuid('thread_id').notNull().references(() => messageThreads.id),
   senderUserId: uuid('sender_user_id').references(() => users.id),
   recipientUserId: uuid('recipient_user_id').references(() => users.id),
@@ -486,10 +421,6 @@ export const messages = pgTable('messages', {
 
 export const reportHistory = pgTable('report_history', {
   id: uuid('id').defaultRandom().primaryKey(),
-  institutionId: uuid('institution_id')
-    .notNull()
-    .default(sql`single_school_id()`)
-    .references(() => institutions.id),
   studentId: uuid('student_id').notNull().references(() => students.id),
   year: integer('year').notNull(),
   reportType: text('report_type').notNull().default('academic_summary'),
@@ -547,19 +478,6 @@ export const featureFlags = pgTable('feature_flags', {
   defaultValue: boolean('default_value').notNull(),
 });
 
-export const institutionFeatureFlags = pgTable(
-  'institution_feature_flags',
-  {
-    institutionId: uuid('institution_id')
-      .notNull()
-      .references(() => institutions.id),
-    featureKey: text('feature_key').notNull().references(() => featureFlags.key),
-    enabled: boolean('enabled').notNull(),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.institutionId, t.featureKey] }),
-  })
-);
 
 /* =========================================================
    🧩 EXTENSIONS SYSTEM
@@ -572,19 +490,6 @@ export const extensions = pgTable('extensions', {
   config: jsonb('config'),
 });
 
-export const institutionExtensions = pgTable(
-  'institution_extensions',
-  {
-    institutionId: uuid('institution_id')
-      .notNull()
-      .references(() => institutions.id),
-    extensionKey: text('extension_key').notNull().references(() => extensions.key),
-    config: jsonb('config'),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.institutionId, t.extensionKey] }),
-  })
-);
 
 /* =========================================================
    🧱 CUSTOM FIELDS (FLEXIBILITY)
@@ -592,10 +497,6 @@ export const institutionExtensions = pgTable(
 
 export const customFields = pgTable('custom_fields', {
   id: uuid('id').defaultRandom().primaryKey(),
-  institutionId: uuid('institution_id')
-    .notNull()
-    .default(sql`single_school_id()`)
-    .references(() => institutions.id),
   entity: text('entity').notNull(),
   name: text('name').notNull(),
   type: text('type').notNull(),
@@ -633,7 +534,7 @@ export const outboxEvents = pgTable('outbox_events', {
    ✉️ EMAIL DELIVERY LEDGER (design D4)
    ========================================================= */
 
-// One row per (institution, event, recipient address) delivery attempt. The
+// One row per (event, recipient address) delivery attempt. The
 // unique key is the database half of the once-only guarantee: the enqueue
 // inserts `on conflict do nothing`, so a redelivered event cannot add a second
 // record for the same address. `event_id` is the envelope id and has no FK to
@@ -642,10 +543,6 @@ export const emailDeliveries = pgTable(
   'email_deliveries',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    institutionId: uuid('institution_id')
-      .notNull()
-      .default(sql`single_school_id()`)
-      .references(() => institutions.id),
     eventId: uuid('event_id').notNull(),
     eventName: text('event_name').notNull(),
     // Trimmed and lowercased on write; the same normalization the queue's
@@ -674,11 +571,12 @@ export const emailDeliveries = pgTable(
       'email_deliveries_status_check',
       sql`${t.status} in ('queued', 'sending', 'sent', 'failed', 'retried')`
     ),
-    institutionCreatedIdx: index(
-      'email_deliveries_institution_created_idx'
-    ).on(t.institutionId, t.createdAt.desc(), t.id.desc()),
+    createdIdx: index('email_deliveries_created_idx').on(
+      t.createdAt.desc(),
+      t.id.desc()
+    ),
     inflightIdx: index('email_deliveries_inflight_idx')
-      .on(t.institutionId)
+      .on(t.updatedAt)
       .where(sql`${t.status} in ('queued', 'sending', 'retried')`),
   })
 );

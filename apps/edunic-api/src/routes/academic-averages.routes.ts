@@ -1,8 +1,7 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { parseWithSchema } from '@edunic/source/domain/shared';
 import {
   AcademicAveragesService,
-  AcademicAveragesServiceError,
   AcademicAveragesRepository,
   studentAverageParamsSchema,
   studentAverageQuerySchema,

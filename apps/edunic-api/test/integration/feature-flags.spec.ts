@@ -7,6 +7,7 @@ import { resetTestDatabase } from '../helpers/db.js';
 import {
   createInstitutionFixture,
   createUserFixture,
+  type UserRole,
 } from '../helpers/fixtures.js';
 
 describe('feature flag routes (global, single school)', () => {
@@ -30,7 +31,7 @@ describe('feature flag routes (global, single school)', () => {
     await app.close();
   });
 
-  async function headersFor(role: string) {
+  async function headersFor(role: UserRole) {
     const institution = await createInstitutionFixture();
     const user = await createUserFixture({
       role,
@@ -93,7 +94,7 @@ describe('feature flag routes (global, single school)', () => {
   });
 
   it('lets every admin role patch a flag', async () => {
-    for (const role of ['director', 'vice_director', 'subdirector']) {
+    for (const role of ['director', 'vice_director', 'subdirector'] as const) {
       const { headers } = await headersFor(role);
       const response = await client
         .patch('/feature-flags/parent_portal')
@@ -105,7 +106,7 @@ describe('feature flag routes (global, single school)', () => {
   });
 
   it('prevents teachers and parents from patching flags', async () => {
-    for (const role of ['teacher', 'parent']) {
+    for (const role of ['teacher', 'parent'] as const) {
       const { headers } = await headersFor(role);
       const response = await client
         .patch('/feature-flags/parent_portal')

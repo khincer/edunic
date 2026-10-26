@@ -5,10 +5,10 @@ import { createAuthHeaders } from '../helpers/auth.js';
 import { resetTestDatabase } from '../helpers/db.js';
 import { createUserFixture } from '../helpers/fixtures.js';
 
-// The admin dashboard names the school. While a second `institutions` row can
-// still exist (the seed creates two until the contract migration), it must name
-// the same school as the rest of the system: the oldest row, ties by lowest id
-// (single_school_id(), AuthRepository.findAuthContext).
+// The admin dashboard names the school. Migration 0015 refuses to run with more
+// than one `institutions` row, but nothing stops a second one being inserted
+// later, so the dashboard must name the same school as the rest of the system:
+// the oldest row, ties by lowest id (AuthRepository.findAuthContext).
 describe('admin dashboard school context', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let client: ReturnType<typeof createHttpClient>;

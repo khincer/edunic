@@ -1,3 +1,9 @@
+import {
+  administrationPaths,
+  administrationTags,
+  operationsPaths,
+} from './openapi-administration.js';
+
 const studentSchema = {
   type: 'object',
   required: ['id', 'firstName', 'lastName', 'fullName'],
@@ -395,6 +401,109 @@ const studentAcademicSummarySchema = {
   },
 };
 
+const reportHistoryEntrySchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    studentId: { type: 'string', format: 'uuid' },
+    studentName: { type: 'string', example: 'Jane Doe' },
+    year: { type: 'integer', example: 2026 },
+    reportType: { type: 'string', example: 'academic_summary_pdf' },
+    createdByUserId: { type: 'string', format: 'uuid', nullable: true },
+    createdAt: {
+      type: 'string',
+      description: 'Database timestamp text (YYYY-MM-DD HH:MM:SS, UTC).',
+      example: '2026-02-03 10:00:00',
+    },
+  },
+};
+
+const timestampText = {
+  type: 'string',
+  description: 'Database timestamp text (YYYY-MM-DD HH:MM:SS, UTC).',
+  example: '2026-02-03 10:00:00',
+};
+
+const activitySinceParameter = {
+  name: 'since',
+  in: 'query',
+  required: false,
+  description:
+    'Start of the window (YYYY-MM-DD or ISO datetime). Defaults to 30 days ago.',
+  schema: { type: 'string', example: '2026-01-10' },
+};
+
+const classroomActivitySchema = {
+  type: 'object',
+  properties: {
+    classroom: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        gradeLevel: { type: 'integer' },
+        section: { type: 'string', nullable: true },
+      },
+    },
+    since: { type: 'string', format: 'date-time' },
+    totals: {
+      type: 'object',
+      properties: {
+        activeStudents: { type: 'integer' },
+        gradesRecorded: { type: 'integer' },
+        gradeAverage: { type: 'integer', nullable: true },
+        attendanceMarked: { type: 'integer' },
+        absences: { type: 'integer' },
+        lates: { type: 'integer' },
+        assignmentsCreated: { type: 'integer' },
+        eventsScheduled: { type: 'integer' },
+      },
+    },
+    recent: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          type: {
+            type: 'string',
+            enum: ['grade', 'attendance', 'assignment', 'event'],
+          },
+          id: { type: 'string', format: 'uuid' },
+          occurredAt: timestampText,
+          studentId: { type: 'string', format: 'uuid', nullable: true },
+          studentName: { type: 'string', nullable: true },
+          summary: { type: 'string', example: 'Mathematics: 90' },
+        },
+      },
+    },
+  },
+};
+
+const classroomActivitySummarySchema = {
+  type: 'object',
+  properties: {
+    since: { type: 'string', format: 'date-time' },
+    classrooms: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          classroomId: { type: 'string', format: 'uuid' },
+          gradeLevel: { type: 'integer' },
+          section: { type: 'string', nullable: true },
+          teacherCount: { type: 'integer' },
+          activeStudents: { type: 'integer' },
+          gradesRecorded: { type: 'integer' },
+          attendanceMarked: { type: 'integer' },
+          absences: { type: 'integer' },
+          assignmentsCreated: { type: 'integer' },
+          eventsScheduled: { type: 'integer' },
+          lastActivityAt: { ...timestampText, nullable: true },
+        },
+      },
+    },
+  },
+};
+
 const dashboardInstitutionSchema = {
   type: 'object',
   required: ['id', 'name'],
@@ -742,6 +851,7 @@ export function buildOpenApiDocument() {
       { name: 'Health', description: 'Service health endpoints' },
       { name: 'School', description: 'The school profile' },
       { name: 'Students', description: 'Student CRUD endpoints' },
+      ...administrationTags,
     ],
     paths: {
       '/dashboard/admin': {
@@ -1159,6 +1269,7 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            400: { $ref: '#/components/responses/BadRequest' },
             401: { $ref: '#/components/responses/Unauthorized' },
             403: { $ref: '#/components/responses/Forbidden' },
           },
@@ -1195,6 +1306,8 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
             409: { $ref: '#/components/responses/Conflict' },
           },
         },
@@ -1237,6 +1350,9 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/NotFound' },
           },
         },
@@ -1278,6 +1394,9 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/NotFound' },
           },
         },
@@ -1304,6 +1423,9 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/NotFound' },
           },
         },
@@ -1677,7 +1799,7 @@ export function buildOpenApiDocument() {
           tags: ['Reports'],
           summary: 'Download a student academic summary PDF',
           description:
-            'Generates a PDF export for the student academic summary report for the selected year.',
+            'Generates a PDF export for the student academic summary report for the selected year. Each successful export is recorded in the report history.',
           parameters: [
             {
               name: 'studentId',
@@ -1707,6 +1829,121 @@ export function buildOpenApiDocument() {
             400: { $ref: '#/components/responses/BadRequest' },
             403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/StudentReportNotFound' },
+          },
+        },
+      },
+      '/reports/export.csv': {
+        get: {
+          tags: ['Reports'],
+          summary: 'Export the grades of a year as CSV',
+          description:
+            'One row per grade (student_id, student_name, grade_level, section, year, term, subject, score), RFC 4180 escaped. A text cell starting with =, +, -, @, tab or carriage return is prefixed with a single quote so spreadsheets never run it as a formula. The administration exports any student, a teacher the students of their classrooms, a parent their own children. Each exported student is recorded in the report history.',
+          parameters: [
+            {
+              name: 'year',
+              in: 'query',
+              required: true,
+              schema: { type: 'integer', minimum: 2000, maximum: 2100 },
+            },
+            {
+              name: 'studentId',
+              in: 'query',
+              required: false,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'classroomId',
+              in: 'query',
+              required: false,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'CSV file',
+              content: {
+                'text/csv': {
+                  schema: {
+                    type: 'string',
+                    example:
+                      'student_id,student_name,grade_level,section,year,term,subject,score',
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/reports/history': {
+        get: {
+          tags: ['Reports'],
+          summary: 'List report exports',
+          description:
+            'Every report export, newest first. The administration sees all of them, a teacher the exports of the students in their classrooms. Parents are refused.',
+          parameters: [
+            {
+              name: 'studentId',
+              in: 'query',
+              required: false,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'year',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer', minimum: 2000, maximum: 2100 },
+            },
+            {
+              name: 'cursor',
+              in: 'query',
+              required: false,
+              description: 'Keyset cursor; `start` opens the first page.',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer', minimum: 1, maximum: 100, default: 25 },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              required: false,
+              description: 'Legacy offset pagination, used when no cursor is sent.',
+              schema: { type: 'integer', minimum: 0, default: 0 },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Report export history page',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: { type: 'array', items: reportHistoryEntrySchema },
+                      hasMore: { type: 'boolean' },
+                      nextCursor: { type: 'string' },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          total: { type: 'integer' },
+                          limit: { type: 'integer' },
+                          offset: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
           },
         },
       },
@@ -2163,6 +2400,72 @@ export function buildOpenApiDocument() {
           },
         },
       },
+      '/classrooms/activity': {
+        get: {
+          tags: ['Classrooms'],
+          summary: 'Activity summary of every classroom',
+          description:
+            'One row per classroom: what was recorded since the date (grades, attendance marks, assignments, classroom events) and the time of its latest activity. Administration only.',
+          parameters: [activitySinceParameter],
+          responses: {
+            200: {
+              description: 'Classroom activity summary',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: classroomActivitySummarySchema },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/classrooms/{classroomId}/activity': {
+        get: {
+          tags: ['Classrooms'],
+          summary: 'Activity of one classroom',
+          description:
+            'Totals since the date and the latest grades, attendance marks, assignments and events, newest first. The administration reads any classroom, a teacher only their own (another classroom, existing or not, is a 403).',
+          parameters: [
+            {
+              name: 'classroomId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            activitySinceParameter,
+            {
+              name: 'limit',
+              in: 'query',
+              required: false,
+              description: 'Maximum entries in `recent`.',
+              schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Classroom activity',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: classroomActivitySchema },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/ClassroomNotFound' },
+          },
+        },
+      },
       '/classrooms/{classroomId}': {
         get: {
           tags: ['Classrooms'],
@@ -2403,6 +2706,7 @@ export function buildOpenApiDocument() {
             },
             400: { $ref: '#/components/responses/BadRequest' },
             404: { $ref: '#/components/responses/AttendanceRelatedNotFound' },
+            409: { $ref: '#/components/responses/AttendanceConflict' },
           },
         },
       },
@@ -2483,6 +2787,7 @@ export function buildOpenApiDocument() {
             },
             400: { $ref: '#/components/responses/BadRequest' },
             404: { $ref: '#/components/responses/AttendanceNotFound' },
+            409: { $ref: '#/components/responses/AttendanceConflict' },
           },
         },
         delete: {
@@ -3700,6 +4005,8 @@ export function buildOpenApiDocument() {
           },
         },
       },
+      ...administrationPaths,
+      ...operationsPaths,
     },
     components: {
       securitySchemes: {
@@ -3859,6 +4166,23 @@ export function buildOpenApiDocument() {
                   message: {
                     type: 'string',
                     example: 'Academic period not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        AttendanceConflict: {
+          description: 'Attendance is already recorded for the enrollment and date',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example:
+                      'Attendance is already recorded for this enrollment and date',
                   },
                 },
               },

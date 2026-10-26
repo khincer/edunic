@@ -14,19 +14,24 @@ const SWEPT: string[] = [
   'apps/edunic-worker/src',
   'apps/edunic-fe/src',
   'tools',
+  // S1.8b: migration 0015 dropped the columns, so the Drizzle schema and the
+  // db helpers carry no tenant identifier either.
+  'libs/db/src/schema',
+  'libs/db/src/index.ts',
+  'libs/db/src/create-db.ts',
 ];
 
 // Deliberately NOT scanned:
-//  - libs/db (Drizzle schema + migrations keep the columns until 0015, S1.8b)
-//    and every test directory (fixtures, S1.8a) are outside the roots above.
+//  - libs/db/src/migrations: the SQL history names the column it drops.
+//  - the test directories, guarded by the second describe block below.
 //    Nothing inside the roots is excluded. tools/ (seed, create-user,
 //    reset-db) is scanned since S1.7.
 
 // The pattern targets the tenant identifier, never the `institutions` table:
 // the school profile and the single-school context lookups legitimately read
 // `from institutions` (the one configuration row), and none of these tokens
-// appear in them. Also the per-school tables, which stay in the DB only until
-// 0015, the removed request header, and the removed per-user tenant tables.
+// appear in them. Also the per-school tables dropped by 0015, the removed
+// request header, and the removed per-user tenant tables.
 const FORBIDDEN =
   /institutionId|institution_id|getInstitutionId|InstitutionNotResolvedError|x-institution-id|user_institution_roles|institution_feature_flags|institutionFeatureFlags|institution_extensions|institutionExtensions/;
 
@@ -51,7 +56,9 @@ describe('single-school sweep guard', () => {
     expect(files.length).toBeGreaterThanOrEqual(150);
     for (const root of SWEPT) {
       expect(
-        relativeFiles.filter((file) => file.startsWith(`${root}/`)).length
+        relativeFiles.filter(
+          (file) => file === root || file.startsWith(`${root}/`)
+        ).length
       ).toBeGreaterThan(0);
     }
   });
@@ -90,13 +97,14 @@ describe('single-school sweep guard', () => {
 });
 
 // S1.8a: the API test tree stops passing, inserting or asserting the tenant
-// identifier, so migration 0015 (S1.8b) can drop the columns without touching
-// the suite. Fixtures rely on the `single_school_id()` default of 0014.
+// identifier, so migration 0015 (S1.8b) could drop the columns without touching
+// the suite.
 const TEST_ROOT = 'apps/edunic-api/test';
 
 // Specs whose subject IS the database itself: the institution_id columns, the
-// 0014 default, the institutions table or the seed. S1.8b adapts them together
-// with the migration, so they are excluded on purpose (not temporarily).
+// 0014 default, the 0015 contract, the institutions table or the seed. They
+// name the dropped column on purpose (to prove it is gone, or to replay the
+// migrations that still had it), so they are excluded permanently.
 const TEST_EXCLUDED: RegExp[] = [
   /^integration\/migration-[^/]+\.spec\.ts$/,
   /^integration\/db-constraints\.spec\.ts$/,
@@ -108,8 +116,6 @@ const TEST_EXCLUDED: RegExp[] = [
   // instance that still sends the school must keep being accepted (rolling
   // deploy), so these specs name the field on purpose.
   /^unit\/(event-bus|email-delivery\.service|notifications\.service|idempotency)\.spec\.ts$/,
-  // TRUNCATE names the two per-school tables that migration 0015 drops.
-  /^helpers\/db\.ts$/,
 ];
 
 // An assertion that a value does NOT carry the field proves the contract is

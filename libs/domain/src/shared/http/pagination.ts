@@ -195,6 +195,13 @@ function stableOrderBy(order: CursorOrderSpec): SQL {
   );
 }
 
+// Array.isArray does not narrow a readonly array out of a union.
+function isSortKeyList(
+  sortKey: string | number | Date | readonly string[]
+): sortKey is readonly string[] {
+  return Array.isArray(sortKey);
+}
+
 function nextCursorFor<T>(
   data: T[],
   hasMore: boolean,
@@ -213,7 +220,7 @@ function nextCursorFor<T>(
 
   return {
     nextCursor: encodeCursor(
-      Array.isArray(sortKey) ? sortKey : toCursorSortKey(sortKey),
+      isSortKeyList(sortKey) ? sortKey : toCursorSortKey(sortKey),
       accessors.id(last)
     ),
   };

@@ -164,9 +164,6 @@ describe('EmailDeliveriesRepository', () => {
   });
 
   it('lists a newest-first page with status and event filters', async () => {
-    // The 0014 default fills the school, so a bare insert needs one to exist.
-    await createInstitutionFixture();
-
     await stageDelivery({
       address: 'oldest@example.com',
       createdAt: new Date('2026-02-01T00:00:00.000Z'),
