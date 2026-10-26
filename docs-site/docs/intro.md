@@ -22,8 +22,8 @@ task in the web app or through the HTTP API.
 | `teacher` | Classroom staff. Marks attendance, submits grades and publishes work for the classrooms assigned to them. | `/teachers/login` |
 | `parent` | Guardian account. Reads the progress and payments of the students linked to that guardian. | `/parents/login` |
 
-A user holds exactly one role. The three administration roles share the same permissions
-today. **Students do not have a login and there is no `student` role.** The `/students`
+A user holds exactly one role. The three administration roles have the same permissions;
+the difference between them is only hierarchical. **Students do not have a login and there is no `student` role.** The `/students`
 page in the web app is a static placeholder with no authentication and no data. See
 [Roles and permissions](./getting-started/roles-and-permissions.md) for the full matrix.
 

@@ -15,8 +15,8 @@ Things to know before reading it:
 - There are five roles: `director`, `vice_director`, `subdirector`, `teacher` and
   `parent`. A user holds exactly one role (`user_roles`).
 - The director, the vice director and the subdirector form the **administration**
-  ("Admin" below). They share the same permissions today; any difference between them is
-  a product decision that has not been made yet.
+  ("Admin" below). They have the same permissions: the difference between them is only
+  hierarchical, not a permission boundary.
 - There is no student account. A student is a record, not a login.
 
 ## Matrix
@@ -110,8 +110,8 @@ school-wide items.
 
 - Enrollment writes are role-gated, not roster-gated: a teacher token can create or edit an
   enrollment for any student. The web app only offers the teacher's own rosters.
-- A teacher's `PATCH /assignments/:id` without a `classroomId` is treated as school-wide
-  and refused (403).
+- By design, a teacher's `PATCH /assignments/:id` must name one of their classrooms
+  (`classroomId`); without it the update is treated as school-wide and refused (403).
 
 ## What is not available yet
 

@@ -68,9 +68,10 @@ Five roles. A user holds exactly one role (`user_roles.uniqueUserRole`).
 
 ### Vice-Director / Subdirector
 
-Same operational surface as the director unless a spec says otherwise. The
-director/vice split is **not yet defined in code**; treat any permission
-difference as a product decision, not an assumption.
+Same role and permissions as the director. The difference between director,
+vice director and subdirector is only hierarchical (who reports to whom); it
+is not a permission boundary, so code must treat the three as one group
+(`ADMIN_ROLES`).
 
 ### Teacher
 

@@ -33,7 +33,7 @@ On the tip (`docs/single-school-sweep`): `nx test api` (fresh scratch database a
 
 ## Still open
 
-- **Product decisions:** the director / vice-director split (all three administration roles share the same permissions), and whether a teacher's `PATCH /assignments/:id` without `classroomId` should stay a 403 (pinned by a test and documented).
+- **Product decisions (settled 2026-10-26):** director, vice director and subdirector are the same role with the same permissions; the difference is only hierarchical. A teacher's `PATCH /assignments/:id` without `classroomId` stays a 403 by design. Both are documented and match the code; carry them into the Engram spec delta below.
 - **Spec delta for the role model.** The Engram spec (ROLE-02, AUTH-03) still says `admin | teacher | parent`; the code and the docs site describe director / vice_director / subdirector / teacher / parent. Update the spec before `sdd-verify`.
 - **Engram bookkeeping:** fold the per-slice evidence observations (#1194–#1213 and this chain) into the tasks (#995) and apply-progress (#996) artifacts.
 - **Close the change:** `sdd-verify` on `main` once the chain is merged (the earlier verify, #1187, failed on S1.4, S1.8 and S9), then `sdd-archive`.

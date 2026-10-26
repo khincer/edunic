@@ -196,8 +196,8 @@ describe('workflows scoping', () => {
         .patch(`/assignments/${own.id}`)
         .set(school.teacherHeaders)
         .send({ classroomId: school.other.id });
-      // Current behavior, kept as is: a teacher update must name the
-      // classroom, otherwise it is refused as school-wide.
+      // Product rule: a teacher update must name one of their classrooms,
+      // otherwise it is refused as school-wide (403).
       const schoolWide = await client
         .patch(`/assignments/${own.id}`)
         .set(school.teacherHeaders)
