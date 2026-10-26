@@ -101,8 +101,11 @@ describe('seed on a freshly migrated database', () => {
         row.role,
       ])
     );
+    // Every role of the model has a demo account (ROLE-02).
     expect(byEmail).toEqual({
       'admin@central.edu': 'director',
+      'vicedirector@central.edu': 'vice_director',
+      'subdirector@central.edu': 'subdirector',
       'teacher@central.edu': 'teacher',
       'parent@central.edu': 'parent',
     });
