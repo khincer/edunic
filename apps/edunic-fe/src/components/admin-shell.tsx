@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   FileText,
+  GraduationCap,
   LayoutDashboard,
   UsersRound,
   Workflow,
@@ -22,7 +23,8 @@ import {
   getSession,
   onSessionChange,
 } from '@/lib/auth';
-import { Button } from './button';
+import { isAdminRole } from '@/lib/roles';
+import { Button, ButtonLink } from './button';
 
 type AdminShellProps = {
   children: ReactNode;
@@ -36,6 +38,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/admin/dashboard', group: 'Workspace', icon: LayoutDashboard },
   { label: 'School', href: '/admin/settings', group: 'Workspace', icon: Building2 },
+  { label: 'Teachers', href: '/admin/teachers', group: 'Workspace', icon: GraduationCap },
   { label: 'Notifications', href: '/admin/notifications', group: 'Workspace', icon: Bell },
   { label: 'Students', href: '/admin/students', group: 'Roadmap', icon: UsersRound },
   { label: 'Enrollments', href: '/admin/enrollments', group: 'Roadmap', icon: ClipboardList },
@@ -68,6 +71,35 @@ export function AdminShell({ children }: AdminShellProps) {
       <main className="admin-app">
         <div className="admin-content">
           <section className="empty-state body-copy">Checking admin session...</section>
+        </div>
+      </main>
+    );
+  }
+
+  // ROLE-01: the console belongs to the school administration. A signed-in
+  // teacher or parent is pointed at their own portal instead (the API refuses
+  // them the console data anyway).
+  if (!isAdminRole(session.user.role)) {
+    const portal = getPortalFor(session.user.role);
+
+    return (
+      <main className="admin-app">
+        <div className="admin-content">
+          <section className="card section-stack" role="alert">
+            <p className="eyebrow">Admin console</p>
+            <h1 className="page-title">This console is for the school administration</h1>
+            <p className="body-copy">
+              You are signed in as {session.user.email} ({session.user.role}).
+            </p>
+            <div className="button-row">
+              {portal ? (
+                <ButtonLink href={portal.href}>{portal.label}</ButtonLink>
+              ) : null}
+              <Button onClick={handleLogout} variant="secondary">
+                Sign out
+              </Button>
+            </div>
+          </section>
         </div>
       </main>
     );
@@ -141,6 +173,18 @@ export function AdminShell({ children }: AdminShellProps) {
   );
 }
 
+function getPortalFor(role: string) {
+  if (role === 'teacher') {
+    return { href: '/teachers', label: 'Go to the teacher portal' };
+  }
+
+  if (role === 'parent') {
+    return { href: '/parents', label: 'Go to the parent portal' };
+  }
+
+  return null;
+}
+
 function subscribeToHydration() {
   return () => undefined;
 }
@@ -156,6 +200,10 @@ function getServerHydrated() {
 function getPageLabel(pathname: string) {
   if (pathname.startsWith('/admin/settings')) {
     return 'School';
+  }
+
+  if (pathname.startsWith('/admin/teachers')) {
+    return 'Teachers';
   }
 
   if (pathname.startsWith('/admin/notifications')) {

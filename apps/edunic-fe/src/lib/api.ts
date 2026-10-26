@@ -479,3 +479,29 @@ function redirectToLogin() {
     window.location.replace(`${loginPath}?reason=session-expired`);
   }
 }
+
+export type StaffRole =
+  | 'director'
+  | 'vice_director'
+  | 'subdirector'
+  | 'teacher'
+  | 'parent';
+
+export type Teacher = {
+  id: string;
+  email: string;
+  role: StaffRole;
+  createdAt: string | null;
+};
+
+export type TeacherClassroom = {
+  id: string;
+  gradeLevel: number;
+  section: string | null;
+};
+
+export function formatClassroom(classroom: { gradeLevel: number; section: string | null }) {
+  return classroom.section
+    ? `Grade ${classroom.gradeLevel} ${classroom.section}`
+    : `Grade ${classroom.gradeLevel}`;
+}
