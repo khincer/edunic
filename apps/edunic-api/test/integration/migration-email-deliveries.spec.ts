@@ -16,9 +16,6 @@ beforeAll(async () => {
   await resetTestDatabase();
 });
 
-// Rows created by this suite; deleted in afterAll so the shared test database is
-// handed back the way it was found.
-const createdInstitutions: string[] = [];
 
 async function columnExists(table: string, column: string) {
   const result = await db.execute(sql`
@@ -55,21 +52,15 @@ async function emailFlagDefault() {
 
 async function createInstitution(name: string) {
   const id = randomUUID();
-  createdInstitutions.push(id);
   await db.execute(
     sql`insert into institutions (id, name) values (${id}, ${name})`
   );
   return id;
 }
 
+// Hand the shared test database back empty, the way it was found.
 afterAll(async () => {
-  for (const id of createdInstitutions) {
-    await db.execute(
-      sql`delete from email_deliveries where institution_id = ${id}`
-    );
-    await db.execute(sql`delete from guardians where institution_id = ${id}`);
-    await db.execute(sql`delete from institutions where id = ${id}`);
-  }
+  await resetTestDatabase();
 });
 
 describe('migration 0007 email notifications (D4, D7)', () => {
@@ -88,8 +79,8 @@ describe('migration 0007 email notifications (D4, D7)', () => {
     // NULL and '' both mean "no email"; a blank string must not be storable.
     const guardianId = randomUUID();
     await db.execute(
-      sql`insert into guardians (id, institution_id, name)
-          values (${guardianId}, ${institutionId}, 'Guardian')`
+      sql`insert into guardians (id, name)
+          values (${guardianId}, 'Guardian')`
     );
     await db.execute(
       sql`update guardians set email = ${'family@example.com'}
@@ -146,27 +137,27 @@ describe('migration 0008 email_deliveries (D4)', () => {
     expect((await indexNames('email_deliveries')).sort()).toEqual(
       [
         'email_deliveries_pkey',
+        // Rebuilt without the school by migration 0015.
         'email_deliveries_inflight_idx',
-        'email_deliveries_institution_created_idx',
+        'email_deliveries_created_idx',
         // The institution-free idempotency key, installed by migration 0010.
         'email_deliveries_event_id_recipient_address_unique',
       ].sort()
     );
 
-    const institutionId = await createInstitution('Migration 0008');
     const eventId = randomUUID();
 
     await db.execute(
       sql`insert into email_deliveries
-            (institution_id, event_id, event_name, recipient_address, recipient_source)
-          values (${institutionId}, ${eventId}, ${'enrollment.welcomed'},
+            (event_id, event_name, recipient_address, recipient_source)
+          values (${eventId}, ${'enrollment.welcomed'},
                   ${'family@example.com'}, ${'guardian'})`
     );
 
     const stored = await db.execute(
       sql`select status, attempt_count, provider_message_id, provider_error, sent_at, student_id
           from email_deliveries
-          where institution_id = ${institutionId} and event_id = ${eventId}`
+          where event_id = ${eventId}`
     );
     expect(stored.rows[0]).toMatchObject({
       status: 'queued',
@@ -181,8 +172,8 @@ describe('migration 0008 email_deliveries (D4)', () => {
     await expect(
       db.execute(
         sql`insert into email_deliveries
-              (institution_id, event_id, event_name, recipient_address, recipient_source, status)
-            values (${institutionId}, ${randomUUID()}, ${'grade.submitted'},
+              (event_id, event_name, recipient_address, recipient_source, status)
+            values (${randomUUID()}, ${'grade.submitted'},
                     ${'other@example.com'}, ${'guardian'}, ${'bogus'})`
       )
     ).rejects.toMatchObject({ cause: { code: '23514' } });
@@ -191,36 +182,39 @@ describe('migration 0008 email_deliveries (D4)', () => {
     await expect(
       db.execute(
         sql`insert into email_deliveries
-              (institution_id, event_id, event_name, recipient_address, recipient_source)
-            values (${institutionId}, ${randomUUID()}, ${'grade.submitted'},
+              (event_id, event_name, recipient_address, recipient_source)
+            values (${randomUUID()}, ${'grade.submitted'},
                     ${'other@example.com'}, ${'other'})`
       )
     ).rejects.toMatchObject({ cause: { code: '23514' } });
 
-    // Duplicate (institution, event, address): the idempotency key.
+    // Duplicate (event, address): the idempotency key.
     await expect(
       db.execute(
         sql`insert into email_deliveries
-              (institution_id, event_id, event_name, recipient_address, recipient_source)
-            values (${institutionId}, ${eventId}, ${'enrollment.welcomed'},
+              (event_id, event_name, recipient_address, recipient_source)
+            values (${eventId}, ${'enrollment.welcomed'},
                     ${'family@example.com'}, ${'guardian'})`
       )
     ).rejects.toMatchObject({ cause: { code: '23505' } });
-
-    // Tenant FK.
-    await expect(
-      db.execute(
-        sql`insert into email_deliveries
-              (institution_id, event_id, event_name, recipient_address, recipient_source)
-            values (${randomUUID()}, ${randomUUID()}, ${'grade.submitted'},
-                    ${'nowhere@example.com'}, ${'user'})`
-      )
-    ).rejects.toMatchObject({ cause: { code: '23503' } });
   });
 
   it('down reverses 0008 then 0007 and up re-applies both cleanly', async () => {
-    // 0014 comes off first: the ledger is recreated by 0008's up without the
-    // single_school_id() default, so 0014 is re-applied last.
+    // 0015 comes off first and goes back last: 0008's up recreates the ledger
+    // with institution_id, which 0015 then drops again. Its down backfills the
+    // column from the school, so one must exist.
+    await createInstitution('Migration 0008');
+    await db.execute(
+      sql.raw(
+        readFileSync(
+          `${MIGRATIONS_DIR}/0015_single_school_contract.down.sql`,
+          'utf8'
+        )
+      )
+    );
+
+    // 0014 next: the ledger is recreated by 0008's up without the
+    // single_school_id() default, so 0014 is re-applied after it.
     await db.execute(
       sql.raw(
         readFileSync(
@@ -317,6 +311,12 @@ describe('migration 0008 email_deliveries (D4)', () => {
         readFileSync(`${MIGRATIONS_DIR}/0014_single_school_default.sql`, 'utf8')
       )
     );
+    await db.execute(
+      sql.raw(
+        readFileSync(`${MIGRATIONS_DIR}/0015_single_school_contract.sql`, 'utf8')
+      )
+    );
+    expect(await columnExists('email_deliveries', 'institution_id')).toBe(false);
 
     expect(await tableName('email_deliveries')).toBe('email_deliveries');
     expect(await columnExists('guardians', 'email')).toBe(true);

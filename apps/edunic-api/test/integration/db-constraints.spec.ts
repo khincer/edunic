@@ -8,7 +8,6 @@ import { runMigrations } from '@edunic/source/db';
 const SCRATCH_DB = 'edu_s3a_constraints';
 
 const IDS = {
-  institution: '11111111-0000-4000-8000-000000000001',
   student: '22222222-0000-4000-8000-000000000002',
   period: '33333333-0000-4000-8000-000000000003',
   enrollment: '44444444-0000-4000-8000-000000000004',
@@ -59,25 +58,22 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
     await migrateScratchDatabase();
     await scratch.connect();
 
-    // Parent rows every probe builds on.
+    // Parent rows every probe builds on. Since 0015 no row names a school, so
+    // none is needed.
     await scratch.query(
-      `INSERT INTO institutions (id, name) VALUES ($1, 'Fresh DB Institution')`,
-      [IDS.institution]
+      `INSERT INTO students (id, first_name, last_name)
+       VALUES ($1, 'Jane', 'Doe')`,
+      [IDS.student]
     );
     await scratch.query(
-      `INSERT INTO students (id, institution_id, first_name, last_name)
-       VALUES ($1, $2, 'Jane', 'Doe')`,
-      [IDS.student, IDS.institution]
+      `INSERT INTO academic_periods (id, year, term, start_date, end_date)
+       VALUES ($1, 2026, 1, '2026-01-15', '2026-03-31')`,
+      [IDS.period]
     );
     await scratch.query(
-      `INSERT INTO academic_periods (id, institution_id, year, term, start_date, end_date)
-       VALUES ($1, $2, 2026, 1, '2026-01-15', '2026-03-31')`,
-      [IDS.period, IDS.institution]
-    );
-    await scratch.query(
-      `INSERT INTO enrollments (id, institution_id, student_id, academic_period_id, status)
-       VALUES ($1, $2, $3, $4, 'active')`,
-      [IDS.enrollment, IDS.institution, IDS.student, IDS.period]
+      `INSERT INTO enrollments (id, student_id, academic_period_id, status)
+       VALUES ($1, $2, $3, 'active')`,
+      [IDS.enrollment, IDS.student, IDS.period]
     );
   }, 60_000);
 
@@ -91,7 +87,7 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
     const migrations = await scratch.query(
       'SELECT COUNT(*)::int AS count FROM drizzle.__drizzle_migrations'
     );
-    expect(migrations.rows[0]).toEqual({ count: 15 });
+    expect(migrations.rows[0]).toEqual({ count: 16 });
 
     const tables = [
       'users',
@@ -119,9 +115,9 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
   it('rejects foreign-key violations directly', async () => {
     await expect(
       scratch.query(
-        `INSERT INTO enrollments (institution_id, student_id, academic_period_id, status)
-         VALUES ($1, $2, $3, 'active')`,
-        [IDS.institution, IDS.unknownId, IDS.period]
+        `INSERT INTO enrollments (student_id, academic_period_id, status)
+         VALUES ($1, $2, 'active')`,
+        [IDS.unknownId, IDS.period]
       )
     ).rejects.toMatchObject({
       code: '23503',
@@ -135,9 +131,9 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
 
     await expect(
       scratch.query(
-        `INSERT INTO grades (institution_id, enrollment_id, subject_id, score)
-         VALUES ($1, $2, $3, 90)`,
-        [IDS.institution, IDS.unknownId, IDS.subject]
+        `INSERT INTO grades (enrollment_id, subject_id, score)
+         VALUES ($1, $2, 90)`,
+        [IDS.unknownId, IDS.subject]
       )
     ).rejects.toMatchObject({
       code: '23503',
@@ -150,9 +146,9 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
     // and leave `constraint` unset (only named constraints set it).
     await expect(
       scratch.query(
-        `INSERT INTO students (id, institution_id, first_name, last_name)
-         VALUES ($1, $2, NULL, 'NoFirst')`,
-        [IDS.unknownId, IDS.institution]
+        `INSERT INTO students (id, first_name, last_name)
+         VALUES ($1, NULL, 'NoFirst')`,
+        [IDS.unknownId]
       )
     ).rejects.toMatchObject({
       code: '23502',
@@ -162,9 +158,9 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
 
     await expect(
       scratch.query(
-        `INSERT INTO grades (institution_id, enrollment_id, subject_id, score)
-         VALUES ($1, $2, NULL, 90)`,
-        [IDS.institution, IDS.enrollment]
+        `INSERT INTO grades (enrollment_id, subject_id, score)
+         VALUES ($1, NULL, 90)`,
+        [IDS.enrollment]
       )
     ).rejects.toMatchObject({
       code: '23502',
@@ -175,9 +171,9 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
   it('rejects CHECK violations directly', async () => {
     await expect(
       scratch.query(
-        `INSERT INTO enrollments (institution_id, student_id, academic_period_id, status)
-         VALUES ($1, $2, $3, 'bogus')`,
-        [IDS.institution, IDS.student, IDS.period]
+        `INSERT INTO enrollments (student_id, academic_period_id, status)
+         VALUES ($1, $2, 'bogus')`,
+        [IDS.student, IDS.period]
       )
     ).rejects.toMatchObject({
       code: '23514',
@@ -186,9 +182,9 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
 
     await expect(
       scratch.query(
-        `INSERT INTO grades (institution_id, enrollment_id, subject_id, score)
-         VALUES ($1, $2, $3, 150)`,
-        [IDS.institution, IDS.enrollment, IDS.subject]
+        `INSERT INTO grades (enrollment_id, subject_id, score)
+         VALUES ($1, $2, 150)`,
+        [IDS.enrollment, IDS.subject]
       )
     ).rejects.toMatchObject({
       code: '23514',
@@ -197,9 +193,9 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
 
     await expect(
       scratch.query(
-        `INSERT INTO attendance (institution_id, enrollment_id, date, status)
-         VALUES ($1, $2, '2026-02-01', 'sick')`,
-        [IDS.institution, IDS.enrollment]
+        `INSERT INTO attendance (enrollment_id, date, status)
+         VALUES ($1, '2026-02-01', 'sick')`,
+        [IDS.enrollment]
       )
     ).rejects.toMatchObject({
       code: '23514',
@@ -210,9 +206,9 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
   it('rejects duplicate enrollments for the same student and period', async () => {
     await expect(
       scratch.query(
-        `INSERT INTO enrollments (id, institution_id, student_id, academic_period_id, status)
-         VALUES ($1, $2, $3, $4, 'active')`,
-        [IDS.otherEnrollment, IDS.institution, IDS.student, IDS.period]
+        `INSERT INTO enrollments (id, student_id, academic_period_id, status)
+         VALUES ($1, $2, $3, 'active')`,
+        [IDS.otherEnrollment, IDS.student, IDS.period]
       )
     ).rejects.toMatchObject({
       code: '23505',

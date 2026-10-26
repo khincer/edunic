@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
-import { runMigrations, runMigrationsDown } from '@edunic/source/db';
+import { runMigrationsDown } from '@edunic/source/db';
 import { classrooms, students } from '@edunic/source/db/schema';
+import { runMigrationsUpTo } from '../helpers/migrations';
 
 // Migration 0014 is the expand step of the single-school contract: it adds
 // `single_school_id()` and makes it the DEFAULT of every `institution_id`
@@ -18,9 +19,13 @@ import { classrooms, students } from '@edunic/source/db/schema';
 //     config is still NULL, so a global value is never clobbered;
 //   - the migration can be replayed (idempotent) and its down removes the
 //     defaults, the function and the column but leaves every row intact.
+// The chain is replayed up to 0014 only: 0015 drops the columns proved here.
 const SCRATCH_DB = 'edu_single_school_default';
 const MIGRATIONS_DIR = 'libs/db/src/migrations';
-const MIGRATION_FILE = `${MIGRATIONS_DIR}/0014_single_school_default.sql`;
+const MIGRATION_TAG = '0014_single_school_default';
+const MIGRATION_FILE = `${MIGRATIONS_DIR}/${MIGRATION_TAG}.sql`;
+
+const migrateTo0014 = () => runMigrationsUpTo(MIGRATION_TAG);
 
 const OLD_SCHOOL = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 const NEW_SCHOOL = '11111111-1111-4111-8111-111111111111';
@@ -169,7 +174,7 @@ describe('migration 0014 single school default', () => {
   }
 
   it('is applied by the migrator and installs single_school_id()', async () => {
-    await withScratchDatabaseUrl(runMigrations);
+    await withScratchDatabaseUrl(migrateTo0014);
 
     expect(await appliedCount()).toBe(15);
     expect(await functionExists()).toBe(true);
@@ -334,7 +339,7 @@ describe('migration 0014 single school default', () => {
       [OLD_SCHOOL, NEW_SCHOOL]
     );
 
-    await withScratchDatabaseUrl(runMigrations);
+    await withScratchDatabaseUrl(migrateTo0014);
 
     expect(await appliedCount()).toBe(15);
     const flags = await db().query(
@@ -398,7 +403,7 @@ describe('migration 0014 single school default', () => {
       `UPDATE feature_flags SET default_value = false WHERE key = 'email_notifications'`
     );
 
-    await withScratchDatabaseUrl(runMigrations);
+    await withScratchDatabaseUrl(migrateTo0014);
 
     expect(await appliedCount()).toBe(15);
     expect(await singleSchoolId()).toBeNull();
@@ -408,32 +413,30 @@ describe('migration 0014 single school default', () => {
     expect(flag.rows).toEqual([{ default_value: false }]);
   }, 60_000);
 
-  it('the Drizzle schema lets code omit institutionId and the database fills it in', async () => {
+  // Rolling deploy: code built on the 0015 schema (no school column) may run
+  // before 0015 is applied. Its inserts omit the column and get the default.
+  it('inserts from the column-free Drizzle schema get the default on the 0014 schema', async () => {
     await insertSchool(OLD_SCHOOL, '2020-01-01T00:00:00Z');
     const orm = drizzle(db());
 
     const [student] = await orm
       .insert(students)
       .values({ firstName: 'Typed', lastName: 'Insert' })
-      .returning();
+      .returning({ id: students.id });
     const [classroom] = await orm
       .insert(classrooms)
       .values({ gradeLevel: 9, section: 'Z' })
-      .returning();
+      .returning({ id: classrooms.id });
 
-    expect(student.institutionId).toBe(OLD_SCHOOL);
-    expect(classroom.institutionId).toBe(OLD_SCHOOL);
-
-    // Existing code passes the column explicitly and keeps working.
-    await insertSchool(NEW_SCHOOL, '2025-01-01T00:00:00Z');
-    const [explicit] = await orm
-      .insert(students)
-      .values({
-        firstName: 'Explicit',
-        lastName: 'Insert',
-        institutionId: NEW_SCHOOL,
-      })
-      .returning();
-    expect(explicit.institutionId).toBe(NEW_SCHOOL);
+    const rows = await db().query(
+      `SELECT institution_id FROM students WHERE id = $1
+       UNION ALL
+       SELECT institution_id FROM classrooms WHERE id = $2`,
+      [student.id, classroom.id]
+    );
+    expect(rows.rows).toEqual([
+      { institution_id: OLD_SCHOOL },
+      { institution_id: OLD_SCHOOL },
+    ]);
   });
 });

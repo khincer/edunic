@@ -118,26 +118,23 @@ describe('seed on a freshly migrated database', () => {
     ).toBe(0);
   });
 
-  it('holds every seeded row under the single school', async () => {
-    const result = await scratch.query(
-      `SELECT COUNT(DISTINCT institution_id)::int AS count FROM classrooms`
-    );
-    expect((result.rows[0] as { count: number }).count).toBe(1);
+  it('seeds no school column anywhere (0015)', async () => {
     expect(
       await count(
-        `SELECT COUNT(*)::int AS count FROM students s
-          WHERE s.institution_id <> (SELECT id FROM institutions)`
+        `SELECT COUNT(*)::int AS count FROM information_schema.columns
+          WHERE table_schema = 'public' AND column_name = 'institution_id'`
       )
     ).toBe(0);
+    expect(await count('SELECT COUNT(*)::int AS count FROM classrooms')).toBeGreaterThan(0);
+    expect(await count('SELECT COUNT(*)::int AS count FROM students')).toBeGreaterThan(0);
   });
 
   it('keeps feature flags and extensions global', async () => {
-    expect(
-      await count('SELECT COUNT(*)::int AS count FROM institution_feature_flags')
-    ).toBe(0);
-    expect(
-      await count('SELECT COUNT(*)::int AS count FROM institution_extensions')
-    ).toBe(0);
+    const perSchool = await scratch.query(
+      `SELECT to_regclass('public.institution_feature_flags') AS flags,
+              to_regclass('public.institution_extensions') AS extensions`
+    );
+    expect(perSchool.rows).toEqual([{ flags: null, extensions: null }]);
 
     const flags = await scratch.query('SELECT key, default_value FROM feature_flags');
     const byKey = Object.fromEntries(
