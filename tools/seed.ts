@@ -39,11 +39,15 @@ const ids = {
     centralAdmin: '70000000-0000-0000-0000-000000000001',
     centralTeacher: '70000000-0000-0000-0000-000000000002',
     centralParent: '70000000-0000-0000-0000-000000000003',
+    centralViceDirector: '70000000-0000-0000-0000-000000000004',
+    centralSubdirector: '70000000-0000-0000-0000-000000000005',
   },
   userRoles: {
     centralAdmin: '72000000-0000-0000-0000-000000000001',
     centralTeacher: '72000000-0000-0000-0000-000000000002',
     centralParent: '72000000-0000-0000-0000-000000000003',
+    centralViceDirector: '72000000-0000-0000-0000-000000000004',
+    centralSubdirector: '72000000-0000-0000-0000-000000000005',
   },
   academicPeriods: {
     centralTerm1: '10000000-0000-0000-0000-000000000001',
@@ -128,6 +132,8 @@ export async function seedDatabase() {
   const hashedAdminPassword = hashPassword('ULJaEJT9j8y8DeAQ');
   const hashedTeacherPassword = hashPassword('37WTW9BZm2gnQkYn');
   const hashedParentPassword = hashPassword('NP7rLvCv7HjUTM5a');
+  const hashedViceDirectorPassword = hashPassword('Vd8qKm2PxT5wRz4N');
+  const hashedSubdirectorPassword = hashPassword('Sd3nHf7LcQ9yBv6J');
 
   // The single configuration row (name and sender identity). No other row
   // names the school: since migration 0015 there is no school column.
@@ -160,11 +166,22 @@ export async function seedDatabase() {
         email: 'parent@central.edu',
         passwordHash: hashedParentPassword,
       },
+      {
+        id: ids.users.centralViceDirector,
+        email: 'vicedirector@central.edu',
+        passwordHash: hashedViceDirectorPassword,
+      },
+      {
+        id: ids.users.centralSubdirector,
+        email: 'subdirector@central.edu',
+        passwordHash: hashedSubdirectorPassword,
+      },
     ])
     .onConflictDoNothing();
 
   // The single-school model reads the role from `user_roles` (one role per
-  // user).
+  // user). Every role has a demo account; the vice director and the
+  // subdirector share the director's administrative surface.
   await db
     .insert(userRoles)
     .values([
@@ -182,6 +199,16 @@ export async function seedDatabase() {
         id: ids.userRoles.centralParent,
         userId: ids.users.centralParent,
         role: 'parent',
+      },
+      {
+        id: ids.userRoles.centralViceDirector,
+        userId: ids.users.centralViceDirector,
+        role: 'vice_director',
+      },
+      {
+        id: ids.userRoles.centralSubdirector,
+        userId: ids.users.centralSubdirector,
+        role: 'subdirector',
       },
     ])
     .onConflictDoNothing();
