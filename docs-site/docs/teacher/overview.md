@@ -12,8 +12,8 @@ assigned classrooms.
 
 ## Prerequisites
 
-- A `teacher` account, or an `admin` account using the teacher workspace.
-- Sign in at `/teachers/login`. The login page accepts `teacher` and `admin`; a `parent`
+- A `teacher` account, or an administration account using the teacher workspace.
+- Sign in at `/teachers/login`. The login page accepts `teacher` and the administration roles; a `parent`
   account is rejected there.
 
 ## The workspace
@@ -47,14 +47,17 @@ The top bar shows the current section, your email and role, and **Sign out**.
 
 - `GET /dashboard/teacher` is filtered through `teacher_classroom_assignments`: only
   classrooms assigned to the signed-in teacher are counted.
-- `GET /enrollments` is filtered the same way for a teacher token.
+- `GET /students`, `GET /enrollments`, `GET /attendance`, `GET /grades`, the averages
+  and the reports return only the students of your classrooms; another student is a 403.
+- `GET /classrooms/:id/activity` shows the activity of one of your classrooms.
 - Assignment and event lists show items for your assigned classrooms plus school-wide
   items.
 - Messages show only threads where you are the sender or recipient.
 
-Teacher **writes** are role-gated, not roster-gated. The API accepts an attendance mark or
-grade for any enrollment id in the institution. The app only offers your roster, but do not
-treat a teacher token as row-level security.
+Attendance and grade **writes** are limited to the enrollments of your classrooms, and a
+grade must be for a materia assigned to you; anything else is refused with 403.
+Enrollment writes are role-gated only: the app offers your roster, but the API accepts any
+enrollment.
 
 ## In the app
 
@@ -67,8 +70,7 @@ treat a teacher token as row-level security.
 
 ```bash
 curl "http://localhost:3000/dashboard/teacher" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ## Expected result
@@ -100,7 +102,7 @@ curl "http://localhost:3000/dashboard/teacher" \
 }
 ```
 
-An `admin` token can call this endpoint too; in that case the data is not filtered to a
+An administration token can call this endpoint too; in that case the data is not filtered to a
 teacher's assignments.
 
 ## If it fails
@@ -109,7 +111,7 @@ teacher's assignments.
 |--------|------|---------|-------|
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | A parent token called the teacher dashboard |
-| 404 | `NOT_FOUND` | `Institution not found` | The token's institution no longer exists |
+| 404 | `NOT_FOUND` | `Institution not found` | The school profile row is missing (the database was never seeded) |
 
 ## What is not available yet
 

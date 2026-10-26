@@ -43,7 +43,7 @@ This project is a **single-school academic management platform**. One deployment
 - One deployment serves exactly one school. There is no tenant dimension.
 - New tables and queries MUST NOT add or require `institution_id`.
 - The `institutions` table survives only as the single configuration row (school name, sender identity, reply-to). It is not a tenant selector.
-- Migration status: the data merge landed in migrations `0009`–`0011`, and `user_roles` already holds one role per user. The code sweep that removes the remaining `institution_id` filters is still in progress. While it runs, do not add new tenant scoping, and remove it in any module you touch.
+- Migration status: the data merge landed in migrations `0009`–`0011`, `user_roles` holds one role per user, the code sweep is done, and migration `0015` dropped the `institution_id` columns and the per-school tables. `single-school-sweep.spec.ts` guards runtime code, the schema, the tests and the docs against reintroducing them.
 
 ### 5. Feature Flags
 
@@ -241,7 +241,7 @@ Commercial-ready platform
 ## 🧩 Feature Flags Strategy
 
 - All new features must be behind flags
-- Flags are global. The per-institution dimension is being removed.
+- Flags are global. The per-institution dimension was removed (migration 0015).
 
 Example:
 

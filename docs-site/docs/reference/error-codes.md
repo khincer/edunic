@@ -37,8 +37,8 @@ Errors are returned with their HTTP status and are **not** wrapped in the succes
 |--------|------|------|
 | 400 | `VALIDATION_ERROR` | Schema or query validation failure; also the fallback code for any unmapped 4xx |
 | 401 | `UNAUTHORIZED` | Missing, malformed, or expired token; bad login credentials |
-| 403 | `FORBIDDEN` | Authenticated but the role, the institution, or the classroom is not allowed |
-| 404 | `NOT_FOUND` | Resource does not exist in this institution |
+| 403 | `FORBIDDEN` | Authenticated but the role, the student, or the classroom is not allowed |
+| 404 | `NOT_FOUND` | Resource does not exist |
 | 409 | `CONFLICT` | Duplicate, still-referenced record, or an idempotency key in flight |
 | 500 | `INTERNAL_ERROR` | Unexpected fault; the message is masked to `Internal Server Error` |
 | 503 | `SERVICE_UNAVAILABLE` | Dependency unavailable, for example the database probe |
@@ -60,7 +60,7 @@ HTTP status but reports the generic 4xx code, because 429 is not part of the sta
 | `Unsupported filter operator: <op>` | Use one of `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `in` |
 | `Invalid sort: <value>` | Use `sort=field:asc` or `sort=field:desc` with a whitelisted field |
 | `Too many login attempts. Try again later.` | Login throttling, sent with status 429 |
-| `Invalid credentials` (401) | Wrong password, unknown email, or no role in the institution |
+| `Invalid credentials` (401) | Wrong password, unknown email, or no role |
 
 ### `UNAUTHORIZED` (401)
 
@@ -77,9 +77,9 @@ In the web app, any 401 clears the stored session and redirects to your role's l
 | Message | Cause | Action |
 |---------|-------|--------|
 | `You do not have permission to perform this action` | Your role is not in the route's allowed list | Use an account with the right role |
-| `User role for this institution was not found` | The account has no role row for the institution in the token | Use the correct institution id at login |
-| `Authenticated institution does not match x-institution-id` | The header disagrees with the token | Drop the header or set it to the token's institution |
-| `Institution access denied` | Feature-flag path institution differs from the token | Only manage your own institution's flags |
+| `User role was not found` | The token's user no longer has a role | Ask the administration to restore the account |
+| `The student is not in a classroom of this teacher` | A teacher read another teacher's student | Read only your own students |
+| `This student is not linked to your account` | A parent read another family's child | Read only your own children |
 | `Classroom is required for teachers` | A teacher tried a school-wide assignment or event | Select one of your classrooms |
 | `Teacher is not assigned to this classroom` | Publishing for a classroom not on your assignments | Ask an admin to assign you |
 | `Parents cannot create assignments` / `cannot create events` / `cannot update assignments` | Parent token on a staff write | Use a staff account |
@@ -88,13 +88,15 @@ In the web app, any 401 clears the stored session and redirects to your role's l
 
 Messages are resource-specific: `Student not found`, `Guardian not found`,
 `Enrollment not found`, `Academic period not found`, `Classroom not found`,
-`Grade not found`, `Attendance record not found`, `Institution not found`,
+`Grade not found`, `Attendance record not found`, `School profile not found`,
 `Assignment not found`, `Event not found`, `Message not found`,
-`Notification not found`, `Extension not found`, `Institution extension not found`,
+`Notification not found`, `Extension not found`, `Teacher not found`, `Subject not found`,
+`Payment not found`,
 `Feature flag not found`, `Feature is not available`, `Custom field not found`,
 `Message recipient not found`, `Guardian link for this student was not found`.
 
-A 404 usually means the id exists but belongs to another institution, or it was deleted.
+A 404 usually means the id is wrong or the record was deleted. A teacher or parent asking
+for a record outside their scope gets a 403 instead, whether or not it exists.
 
 ### `CONFLICT` (409)
 
@@ -109,7 +111,8 @@ A 404 usually means the id exists but belongs to another institution, or it was 
 | `Classroom cannot be deleted while enrollments exist` | Dependent records | Move the enrollments first |
 | `Guardian is already linked to this student` | The link exists | Nothing to do |
 | `Guardian cannot be deleted while linked to students` | Dependent links | Unlink first |
-| `Institution cannot be deleted while dependent academic records exist` | Students, classrooms, or enrollments remain | Clean up first |
+| `Attendance is already recorded for this enrollment and date` | One mark per enrollment and day | Edit the existing mark |
+| `An account with this email already exists` | Duplicate account email | Use the existing account |
 | `Extension already exists` | Duplicate extension key | Update the existing extension |
 
 ### `IDEMPOTENCY_CONFLICT` (409)

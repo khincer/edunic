@@ -15,7 +15,10 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: [
         'admin/overview',
-        'admin/institutions',
+        'admin/school-profile',
+        'admin/teachers-and-subjects',
+        'admin/payments',
+        'admin/classroom-activity',
         'admin/academic-periods',
         'admin/students-and-guardians',
         'admin/enrollments',

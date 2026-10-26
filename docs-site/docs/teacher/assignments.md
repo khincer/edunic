@@ -49,7 +49,6 @@ appear on the **Overview** section under **Upcoming work**.
 ```bash
 curl -X POST "http://localhost:3000/assignments" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "classroomId": "<classroom uuid>",
@@ -63,7 +62,6 @@ curl -X POST "http://localhost:3000/assignments" \
 ```bash
 curl -X POST "http://localhost:3000/school-events" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "classroomId": "<classroom uuid>",
@@ -78,7 +76,6 @@ Update an assignment's status:
 ```bash
 curl -X PATCH "http://localhost:3000/assignments/$ASSIGNMENT_ID" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{ "status": "reviewed" }'
 ```
@@ -97,7 +94,6 @@ Required body fields:
 {
   "data": {
     "id": "<uuid>",
-    "institutionId": "<uuid>",
     "classroomId": "<uuid>",
     "title": "Classroom practice set",
     "type": "homework",

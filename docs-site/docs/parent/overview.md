@@ -14,12 +14,11 @@ Understand what the parent portal shows and which children appear in it.
 - A `parent` account. The portal at `/parents/login` accepts only the `parent` role.
 - A guardian record linked to your user account. The portal reads `guardian_user_links`
   joined to `student_guardians`; only students connected this way appear.
-- The institution host, because the login is tenant-specific.
 
 ## The portal
 
 `/parents` is a single page. The top navigation has **Edunic**, links to **Admin** and
-**Teachers**, and **Sign out**. The hero shows the signed-in email and institution id.
+**Teachers**, and **Sign out**. The hero shows the signed-in email.
 
 | Block | Contents |
 |-------|----------|
@@ -39,14 +38,14 @@ Understand what the parent portal shows and which children appear in it.
 each child's average, attendance summary, recent grades, and a ready-to-use
 `reportUrl` for the PDF.
 
-This scoping is a feature of that one endpoint. The route guards also admit `parent` on the
-plain collection endpoints such as `GET /students`, `GET /grades`, and `GET /attendance`,
-where the data is institution-wide rather than limited to your children. The portal itself
-never calls those collections.
+The same rule holds on every endpoint a parent can call: `GET /students`, `GET /grades`,
+`GET /attendance`, the reports, `GET /payments` and the payment receipts return only your
+own children's records, and another child is refused with 403. The dashboard also lists
+your children's payments and balances.
 
 ## In the app
 
-1. Open `http://central.localtest.me:3001/parents/login` (or your institution's host).
+1. Open `http://localhost:3001/parents/login`.
 2. Enter your email and password and select **Sign in**.
 3. You land on `/parents`.
 4. Use **Report PDF** on a child's card to download their academic summary.
@@ -56,8 +55,7 @@ never calls those collections.
 
 ```bash
 curl "http://localhost:3000/dashboard/parent" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ## Expected result
@@ -108,7 +106,7 @@ curl "http://localhost:3000/dashboard/parent" \
 |--------|------|---------|-------|
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | The account is not a parent |
-| 404 | `NOT_FOUND` | `Institution not found` | The token's institution no longer exists |
+| 404 | `NOT_FOUND` | `Institution not found` | The school profile row is missing (the database was never seeded) |
 
 ## What is not available yet
 

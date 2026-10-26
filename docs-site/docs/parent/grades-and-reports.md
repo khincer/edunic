@@ -41,16 +41,14 @@ The dashboard supplies all grade data:
 
 ```bash
 curl "http://localhost:3000/dashboard/parent" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Read the full summary for one child:
 
 ```bash
 curl "http://localhost:3000/reports/students/$STUDENT_ID/academic-summary?year=2026" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Download the PDF using the `reportUrl` from the dashboard:
@@ -58,7 +56,6 @@ Download the PDF using the `reportUrl` from the dashboard:
 ```bash
 curl "http://localhost:3000$REPORT_URL" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   --output student-report.pdf
 ```
 
@@ -100,12 +97,10 @@ The full field reference is in [Admin reports](../admin/reports.md). The PDF end
 | 400 | `VALIDATION_ERROR` | Zod message for `year` | Missing or out-of-range year |
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again; the portal redirects to the login page |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | Role mismatch |
-| 404 | `NOT_FOUND` | `Student not found` | Wrong student UUID or another institution |
+| 404 | `NOT_FOUND` | `Student not found` | Wrong student UUID |
+| 403 | `FORBIDDEN` | `This student is not linked to your account` | The student is not your child |
 
 ## What is not available yet
 
 - No per-subject history view, no progress chart, and no term selector in the portal.
-- The parent portal does not filter the reports endpoint to your own children; the API
-  admits a parent token for any student in the institution. Use the `reportUrl` the
-  dashboard gives you.
 - No signed or downloadable archive of past reports. PDFs are generated on demand.

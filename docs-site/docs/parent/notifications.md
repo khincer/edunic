@@ -33,24 +33,21 @@ List your notifications:
 
 ```bash
 curl "http://localhost:3000/notifications?limit=25" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 List only unread ones:
 
 ```bash
 curl "http://localhost:3000/notifications?unreadOnly=true&limit=25" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Mark one read:
 
 ```bash
 curl -X PATCH "http://localhost:3000/notifications/$NOTIFICATION_ID/read" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Query parameters: `unreadOnly` (boolean, default false), `eventName` (max 100), `cursor`,
@@ -63,7 +60,6 @@ Query parameters: `unreadOnly` (boolean, default false), `eventName` (max 100), 
   "data": [
     {
       "id": "<uuid>",
-      "institutionId": "<uuid>",
       "eventName": "grade.submitted",
       "title": "Grade submitted",
       "message": "Mathematics 90",

@@ -19,8 +19,8 @@ Mark every student in a classroom for one date and correct a mark later the same
 ## In the app
 
 1. Open `/teachers` and select **Roster** in the sidebar.
-2. In **Classroom**, choose the classroom. The selector lists institution classrooms; a
-   classroom you are not assigned to returns an empty roster.
+2. In **Classroom**, choose the classroom. The selector lists the classrooms assigned to
+   you.
 3. Set **Attendance date**. It defaults to today.
 4. For each student, choose `present`, `late`, or `absent` in the attendance toggle. The
    default is `present`.
@@ -37,8 +37,7 @@ Read today's mark for one enrollment:
 
 ```bash
 curl "http://localhost:3000/attendance?enrollmentId=$ENROLLMENT_ID&date=2026-10-18&limit=1" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Create a mark when none exists:
@@ -46,7 +45,6 @@ Create a mark when none exists:
 ```bash
 curl -X POST "http://localhost:3000/attendance" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "enrollmentId": "<enrollment uuid>",
@@ -60,7 +58,6 @@ Correct an existing mark:
 ```bash
 curl -X PATCH "http://localhost:3000/attendance/$ATTENDANCE_ID" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{ "status": "present" }'
 ```
@@ -74,7 +71,6 @@ Required body fields: `enrollmentId`, `date`, `status` on create; at least one o
 {
   "data": {
     "id": "<attendance uuid>",
-    "institutionId": "<uuid>",
     "enrollmentId": "<uuid>",
     "date": "2026-10-18T00:00:00.000Z",
     "status": "late",
@@ -90,7 +86,8 @@ Required body fields: `enrollmentId`, `date`, `status` on create; at least one o
 | 400 | `VALIDATION_ERROR` | `Expected format YYYY-MM-DD or ISO datetime` | Bad date |
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | Parent token |
-| 404 | `NOT_FOUND` | `Enrollment not found` | The enrollment is from another institution or was deleted |
+| 404 | `NOT_FOUND` | `Enrollment not found` | The enrollment does not exist or was deleted |
+| 403 | `FORBIDDEN` | `Teacher is not assigned to this classroom` | The enrollment is in a classroom you do not teach |
 | 404 | `NOT_FOUND` | `Attendance record not found` | The mark you tried to patch was deleted |
 | 500 | `INTERNAL_ERROR` | `Internal Server Error` | Creating a second mark for the same enrollment and date hits the unique constraint; patch the existing mark |
 

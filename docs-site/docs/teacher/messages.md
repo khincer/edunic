@@ -12,8 +12,8 @@ Read and send messages, and clear notifications from your inbox.
 ## Prerequisites
 
 - Signed in at `/teachers/login`.
-- To send: the recipient's **user UUID**, not their email. The recipient must hold a role in
-  the same institution.
+- To send: the recipient's **user UUID**, not their email. The recipient must hold a role at
+  the school.
 
 ## In the app
 
@@ -41,8 +41,7 @@ List messages:
 
 ```bash
 curl "http://localhost:3000/messages?limit=25" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Send a message:
@@ -50,7 +49,6 @@ Send a message:
 ```bash
 curl -X POST "http://localhost:3000/messages" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "recipientUserId": "70000000-0000-0000-0000-000000000003",
@@ -63,24 +61,21 @@ Mark a message read:
 
 ```bash
 curl -X PATCH "http://localhost:3000/messages/$MESSAGE_ID/read" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 List notifications, optionally unread only:
 
 ```bash
 curl "http://localhost:3000/notifications?unreadOnly=true&limit=25" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Mark a notification read:
 
 ```bash
 curl -X PATCH "http://localhost:3000/notifications/$NOTIFICATION_ID/read" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Required body fields:
@@ -100,7 +95,6 @@ sender or recipient, notifications addressed to your role, classroom, or user.
 {
   "data": {
     "id": "<message uuid>",
-    "institutionId": "<uuid>",
     "threadId": "<thread uuid>",
     "senderUserId": "<your uuid>",
     "recipientUserId": "<recipient uuid>",
@@ -121,7 +115,7 @@ Marking read returns the updated record with `readAt` set.
 | 400 | `VALIDATION_ERROR` | Zod message for `body` or `subject` | Empty or too long |
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | Role cannot access the route |
-| 404 | `NOT_FOUND` | `Message recipient not found` | The user has no role in this institution |
+| 404 | `NOT_FOUND` | `Message recipient not found` | The user has no role |
 | 404 | `NOT_FOUND` | `Message not found` / `Notification not found` | Wrong UUID, or it belongs to another user |
 
 ## What is not available yet

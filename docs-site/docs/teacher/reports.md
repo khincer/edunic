@@ -25,8 +25,7 @@ JSON summary:
 
 ```bash
 curl "http://localhost:3000/reports/students/$STUDENT_ID/academic-summary?year=2026" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 PDF:
@@ -34,7 +33,6 @@ PDF:
 ```bash
 curl "http://localhost:3000/reports/students/$STUDENT_ID/academic-summary/pdf?year=2026" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   --output student-report.pdf
 ```
 
@@ -45,7 +43,6 @@ curl "http://localhost:3000/reports/students/$STUDENT_ID/academic-summary/pdf?ye
 ```json
 {
   "data": {
-    "institutionId": "<uuid>",
     "year": 2026,
     "student": {
       "id": "<uuid>",
@@ -87,11 +84,13 @@ The full field reference is in [Admin reports](../admin/reports.md).
 | 400 | `VALIDATION_ERROR` | Zod message for `year` | Missing or out-of-range year |
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | Role not admitted on the route |
-| 404 | `NOT_FOUND` | `Student not found` | Wrong student UUID or another institution |
+| 404 | `NOT_FOUND` | `Student not found` | Wrong student UUID |
+| 403 | `FORBIDDEN` | `The student is not in a classroom of this teacher` | The student is not in one of your classrooms |
 
 ## What is not available yet
 
 - No reports page in the teacher workspace.
 - No batch report for a whole classroom.
-- A teacher token is not limited to assigned classrooms on this endpoint; any student in the
-  institution can be requested.
+- The CSV export (`GET /reports/export.csv?year=`) and the export history
+  (`GET /reports/history`) work for your own students through the API; the teacher
+  workspace has no page for them yet.

@@ -37,8 +37,7 @@ The dashboard is the canonical source and returns the per-student summary:
 
 ```bash
 curl "http://localhost:3000/dashboard/parent" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 If you know the enrollment id (the dashboard returns it as `enrollmentId`), you can read
@@ -46,8 +45,7 @@ that enrollment's marks directly:
 
 ```bash
 curl "http://localhost:3000/attendance?enrollmentId=$ENROLLMENT_ID&sortBy=date&sortOrder=desc&limit=25" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ## Expected result
@@ -72,7 +70,6 @@ From `GET /attendance`:
   "data": [
     {
       "id": "<uuid>",
-      "institutionId": "<uuid>",
       "enrollmentId": "<uuid>",
       "date": "2026-10-18T00:00:00.000Z",
       "status": "present",
@@ -91,12 +88,11 @@ From `GET /attendance`:
 | 400 | `VALIDATION_ERROR` | Zod message for `enrollmentId` or `limit` | Malformed query |
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | Role mismatch |
-| 404 | `NOT_FOUND` | `Institution not found` | The token's institution no longer exists |
+| 403 | `FORBIDDEN` | `This student is not linked to your account` | The record belongs to another family's child |
 
-:::warning
-`GET /attendance` is not scoped to your children when called with a parent token; it
-returns institution-wide records. The card counts in the portal come from the scoped
-`/dashboard/parent` call.
+:::note
+`GET /attendance` with a parent token returns only the attendance of your own children.
+The card counts in the portal come from `/dashboard/parent`.
 :::
 
 ## What is not available yet

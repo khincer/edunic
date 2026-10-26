@@ -7,25 +7,23 @@ sidebar_label: Overview
 
 ## Goal
 
-Understand what the admin workspace shows, where each page lives, and what is scoped to
-the signed-in institution.
+Understand what the admin console shows and where each page lives.
 
 ## Prerequisites
 
-- You are signed in at `/admin/login` with an `admin` role. If you are not, the shell
-  redirects to `/admin/login`.
-- You know which school you are operating on. The dashboard title is the institution name
-  from your token.
+- You are signed in at `/admin/login` with an administration role (`director`,
+  `vice_director` or `subdirector`). Without a session the console redirects to
+  `/admin/login`; a teacher or parent session gets a page that points to their own portal.
 
 ## The shell
 
 Every admin page uses the same shell:
 
-- **Sidebar — Workspace**: Dashboard, Institutions.
+- **Sidebar — Workspace**: Dashboard, School, Teachers, Subjects, Payments, Classroom
+  activity, Notifications.
 - **Sidebar — Roadmap**: Students, Enrollments, Academic periods, Grades, Attendance,
   Workflows, Reports.
-- **Top bar**: a search box that jumps to `/admin/institutions?search=...`, the signed-in
-  email with the role, and **Sign out**.
+- **Top bar**: the current section, the signed-in email with the role, and **Sign out**.
 
 The URL `/admin/academic-records` also exists and is reachable by typing it, but it is not
 linked from the sidebar. It shows three counts (periods, grades, attendance) and the
@@ -43,20 +41,14 @@ At `/admin/dashboard`:
 | Assignments / Events / Messages | Upcoming assignment count, upcoming event count, unread message count |
 | Upcoming work | Assignments and exams with classroom and due date |
 | Calendar | Upcoming school events |
-| Modules | Effective feature flags and extensions with Active/Off state |
+| Modules | Feature flags and extensions with Active/Off state |
 | Academic period | Active period label and dates, guardian, parent, and teacher counts |
 | Notifications | Recent notifications with a **Mark read** button |
 | Audit trail | Recent create/update/delete entries |
 | Messages | Recent inbox items |
-| Reports | Recent report history, with **Open reports** |
+| Reports | Recent report exports, with **Open reports** |
 
-Header buttons **Institutions** and **New school** go to the institutions pages.
-
-## Institution context
-
-The API derives the institution from your token, not from the page. The web app also sends
-`X-Institution-Id` on most calls; if that header disagrees with the token, the API returns
-403 `Authenticated institution does not match x-institution-id`. Keep both values equal.
+The header button **School** opens the [school profile](./school-profile.md).
 
 ## In the app
 
@@ -69,8 +61,7 @@ The API derives the institution from your token, not from the page. The web app 
 
 ```bash
 curl "http://localhost:3000/dashboard/admin" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ## Expected result
@@ -78,13 +69,13 @@ curl "http://localhost:3000/dashboard/admin" \
 ```json
 {
   "data": {
-    "institution": { "id": "<uuid>", "name": "Central School" },
+    "institution": { "id": "<uuid>", "name": "Colegio Central" },
     "activePeriod": {
       "id": "<uuid>",
       "year": 2026,
       "term": 1,
-      "startDate": "2026-02-01T00:00:00.000Z",
-      "endDate": "2026-05-31T00:00:00.000Z",
+      "startDate": "2026-02-01 00:00:00",
+      "endDate": "2026-05-31 00:00:00",
       "label": "2026 Term 1"
     },
     "counts": {
@@ -109,18 +100,19 @@ curl "http://localhost:3000/dashboard/admin" \
 }
 ```
 
-Counts and dates vary with your data.
+`institution` names the school (its configuration row). Counts and dates vary with your
+data.
 
 ## If it fails
 
 | Status | Code | Cause |
 |--------|------|-------|
 | 401 | `UNAUTHORIZED` | Missing, invalid, or expired token; sign in again |
-| 403 | `FORBIDDEN` | The account role is not `admin` |
-| 404 | `NOT_FOUND` | `Institution not found` — the token's institution no longer exists |
+| 403 | `FORBIDDEN` | The account is not an administration role |
+| 404 | `NOT_FOUND` | `Institution not found` — the school profile row is missing (the database was never seeded) |
 
 ## What is not available yet
 
-There is no admin settings page, no user or role management page, no classrooms page, and
-no guardians page. Classrooms and guardians are API-only. Custom fields and the academic
-averages endpoint are also API-only.
+There is no user or role management page beyond the teacher roster, no classrooms page
+and no guardians page. Classrooms and guardians are API-only. Custom fields and the
+academic averages endpoint are also API-only.

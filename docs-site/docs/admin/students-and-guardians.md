@@ -11,8 +11,8 @@ Create a student record and connect it to one or more guardians.
 
 ## Prerequisites
 
-- `admin` role. Teachers and parents can read students and guardians, but cannot create or
-  change them.
+- An administration role. Teachers and parents can read their own students and
+  guardians, but cannot create or change them.
 - The student's first and last name. Date of birth is optional.
 
 ## In the app
@@ -44,7 +44,6 @@ Create a student:
 ```bash
 curl -X POST "http://localhost:3000/students" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "firstName": "John",
@@ -58,7 +57,6 @@ Update a student (at least one field):
 ```bash
 curl -X PATCH "http://localhost:3000/students/$STUDENT_ID" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{ "lastName": "Doe-Smith" }'
 ```
@@ -68,7 +66,6 @@ Create a guardian:
 ```bash
 curl -X POST "http://localhost:3000/guardians" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{ "name": "Maria Doe", "phone": "+505 8888 0000" }'
 ```
@@ -77,24 +74,21 @@ Link the guardian to the student:
 
 ```bash
 curl -X POST "http://localhost:3000/students/$STUDENT_ID/guardians/$GUARDIAN_ID" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 List a student's guardians:
 
 ```bash
 curl "http://localhost:3000/students/$STUDENT_ID/guardians" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Delete a student:
 
 ```bash
 curl -X DELETE "http://localhost:3000/students/$STUDENT_ID" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Required body fields:
@@ -113,7 +107,6 @@ Required body fields:
 {
   "data": {
     "id": "<student uuid>",
-    "institutionId": "<uuid>",
     "firstName": "John",
     "lastName": "Doe",
     "fullName": "John Doe",
@@ -135,7 +128,7 @@ The link call returns the linked guardian. Lists return `data` plus `hasMore`,
 | 400 | `VALIDATION_ERROR` | `At least one field must be provided` | Empty PATCH |
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | Teacher or parent tried to write |
-| 404 | `NOT_FOUND` | `Student not found` / `Guardian not found` | Wrong UUID, or wrong institution |
+| 404 | `NOT_FOUND` | `Student not found` / `Guardian not found` | Wrong UUID |
 | 409 | `CONFLICT` | `Student cannot be deleted while enrollments exist` | Remove the enrollments first |
 | 409 | `CONFLICT` | `Guardian is already linked to this student` | The link already exists |
 | 409 | `CONFLICT` | `Guardian cannot be deleted while linked to students` | Unlink the guardian first |
