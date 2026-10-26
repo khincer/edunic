@@ -16,7 +16,7 @@ type CountRow = {
 
 // Stable keyset order for the admin panel (D6): newest first, with the uuid
 // `id` closing the order because rows can share a created_at. Matches
-// `email_deliveries_institution_created_idx`.
+// `email_deliveries_created_idx`.
 export const EMAIL_DELIVERY_CURSOR_ORDER: CursorOrderSpec = {
   columns: ['created_at', 'id'],
   direction: 'desc',
@@ -172,7 +172,8 @@ export class EmailDeliveriesRepository {
   }
 
   // SI-R1/SI-R3: the school's sender identity: the single institutions row, the
-  // oldest by the same rule as single_school_id(). NULL means unconfigured.
+  // oldest by the same rule as AuthRepository.findAuthContext. NULL means
+  // unconfigured.
   async findSenderIdentity(): Promise<EmailSenderIdentity | null> {
     const result = await this.db.execute<EmailSenderIdentity>(sql`
       select

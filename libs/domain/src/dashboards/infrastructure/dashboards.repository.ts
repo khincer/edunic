@@ -141,7 +141,7 @@ export class DashboardsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
   // The single configuration row of the school: the oldest row, ties by lowest
-  // id, the same rule as single_school_id() and AuthRepository.findAuthContext.
+  // id, the same rule as AuthRepository.findAuthContext.
   async getInstitutionContext() {
     const result = await this.db.execute<InstitutionContextRow>(sql`
       select id, name

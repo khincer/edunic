@@ -129,9 +129,8 @@ export async function seedDatabase() {
   const hashedTeacherPassword = hashPassword('37WTW9BZm2gnQkYn');
   const hashedParentPassword = hashPassword('NP7rLvCv7HjUTM5a');
 
-  // The single configuration row (name and sender identity). It goes first:
-  // every other insert omits the school column and relies on its column
-  // default (migration 0014), which resolves to this row.
+  // The single configuration row (name and sender identity). No other row
+  // names the school: since migration 0015 there is no school column.
   await db
     .insert(institutions)
     .values({
