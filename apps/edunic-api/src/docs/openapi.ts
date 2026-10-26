@@ -395,6 +395,19 @@ const studentAcademicSummarySchema = {
   },
 };
 
+const reportHistoryEntrySchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    studentId: { type: 'string', format: 'uuid' },
+    studentName: { type: 'string', example: 'Jane Doe' },
+    year: { type: 'integer', example: 2026 },
+    reportType: { type: 'string', example: 'academic_summary_pdf' },
+    createdByUserId: { type: 'string', format: 'uuid', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+};
+
 const dashboardInstitutionSchema = {
   type: 'object',
   required: ['id', 'name'],
@@ -1677,7 +1690,7 @@ export function buildOpenApiDocument() {
           tags: ['Reports'],
           summary: 'Download a student academic summary PDF',
           description:
-            'Generates a PDF export for the student academic summary report for the selected year.',
+            'Generates a PDF export for the student academic summary report for the selected year. Each successful export is recorded in the report history.',
           parameters: [
             {
               name: 'studentId',
@@ -1707,6 +1720,76 @@ export function buildOpenApiDocument() {
             400: { $ref: '#/components/responses/BadRequest' },
             403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/StudentReportNotFound' },
+          },
+        },
+      },
+      '/reports/history': {
+        get: {
+          tags: ['Reports'],
+          summary: 'List report exports',
+          description:
+            'Every report export, newest first. The administration sees all of them, a teacher the exports of the students in their classrooms. Parents are refused.',
+          parameters: [
+            {
+              name: 'studentId',
+              in: 'query',
+              required: false,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'year',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer', minimum: 2000, maximum: 2100 },
+            },
+            {
+              name: 'cursor',
+              in: 'query',
+              required: false,
+              description: 'Keyset cursor; `start` opens the first page.',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer', minimum: 1, maximum: 100, default: 25 },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              required: false,
+              description: 'Legacy offset pagination, used when no cursor is sent.',
+              schema: { type: 'integer', minimum: 0, default: 0 },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Report export history page',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: { type: 'array', items: reportHistoryEntrySchema },
+                      hasMore: { type: 'boolean' },
+                      nextCursor: { type: 'string' },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          total: { type: 'integer' },
+                          limit: { type: 'integer' },
+                          offset: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
           },
         },
       },

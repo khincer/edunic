@@ -1,5 +1,19 @@
-import { sql } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import {
+  applyCursorPagination,
+  buildStudentIdCondition,
+  type CursorOrderSpec,
+} from '@edunic/source/domain/shared';
+import type { ListReportHistoryQuery } from '../schemas/reports.schemas.js';
+
+// Stable keyset order for the history list: newest first, the uuid closing the
+// order because two exports can share a created_at. Qualified: the list joins
+// students, which has both columns too.
+export const REPORT_HISTORY_CURSOR_ORDER: CursorOrderSpec = {
+  columns: ['report_history.created_at', 'report_history.id'],
+  direction: 'desc',
+};
 
 export type StudentReportStudentRow = {
   id: string;
@@ -22,6 +36,33 @@ export type StudentReportEnrollmentRow = {
   term: number;
   enrollmentStatus: string | null;
   promotionStatus: string | null;
+};
+
+export type ReportHistoryRecord = {
+  id: string;
+  studentId: string;
+  studentFirstName: string;
+  studentLastName: string;
+  year: number;
+  reportType: string;
+  createdByUserId: string | null;
+  createdAt: Date | null;
+};
+
+export type RecordReportExportInput = {
+  studentId: string;
+  year: number;
+  reportType: string;
+  createdByUserId: string;
+};
+
+export type ListReportHistoryInput = ListReportHistoryQuery & {
+  // Restricts the list to these students; undefined means unscoped.
+  studentIds?: string[];
+};
+
+type CountRow = {
+  count: string | number;
 };
 
 export class ReportsRepository {
@@ -82,5 +123,88 @@ export class ReportsRepository {
     `);
 
     return result.rows;
+  }
+
+  async recordExport(input: RecordReportExportInput) {
+    await this.db.execute(sql`
+      insert into report_history (student_id, year, report_type, created_by_user_id)
+      values (
+        ${input.studentId},
+        ${input.year},
+        ${input.reportType},
+        ${input.createdByUserId}
+      )
+    `);
+  }
+
+  async listHistory(input: ListReportHistoryInput) {
+    const filters: SQL[] = [];
+    const scope = buildStudentIdCondition(
+      'report_history.student_id',
+      input.studentIds
+    );
+
+    if (scope) {
+      filters.push(scope);
+    }
+
+    if (input.studentId) {
+      filters.push(sql`report_history.student_id = ${input.studentId}`);
+    }
+
+    if (input.year !== undefined) {
+      filters.push(sql`report_history.year = ${input.year}`);
+    }
+
+    const plan = applyCursorPagination(input, REPORT_HISTORY_CURSOR_ORDER);
+
+    if (plan.keyset) {
+      filters.push(plan.keyset);
+    }
+
+    const whereClause =
+      filters.length > 0
+        ? sql`where ${sql.join(filters, sql` and `)}`
+        : sql``;
+    const offsetClause =
+      plan.offset === null ? sql`` : sql`offset ${plan.offset}`;
+
+    const itemsQuery = sql`
+      select
+        report_history.id,
+        report_history.student_id as "studentId",
+        students.first_name as "studentFirstName",
+        students.last_name as "studentLastName",
+        report_history.year,
+        report_history.report_type as "reportType",
+        report_history.created_by_user_id as "createdByUserId",
+        report_history.created_at as "createdAt"
+      from report_history
+      inner join students
+        on students.id = report_history.student_id
+      ${whereClause}
+      order by report_history.created_at desc, report_history.id desc
+      limit ${plan.fetchLimit}
+      ${offsetClause}
+    `;
+
+    if (plan.offset === null) {
+      const items = await this.db.execute<ReportHistoryRecord>(itemsQuery);
+      return { items: items.rows };
+    }
+
+    const [items, totalRows] = await Promise.all([
+      this.db.execute<ReportHistoryRecord>(itemsQuery),
+      this.db.execute<CountRow>(sql`
+        select count(*)::int as count
+        from report_history
+        ${whereClause}
+      `),
+    ]);
+
+    return {
+      items: items.rows,
+      total: Number(totalRows.rows[0]?.count ?? 0),
+    };
   }
 }
