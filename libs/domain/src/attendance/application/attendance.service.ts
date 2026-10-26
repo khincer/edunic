@@ -21,6 +21,13 @@ import {
   type AttendanceRecord,
 } from '../infrastructure/attendance.repository.js';
 
+type DatabaseError = Error & {
+  code?: string;
+  cause?: {
+    code?: string;
+  };
+};
+
 export class AttendanceServiceError extends Error {
   constructor(
     message: string,
@@ -110,14 +117,16 @@ export class AttendanceService {
     // outcome commit together — a failed publish rolls the rows back.
     const attendance = await this.attendanceRepository.transaction(
       async (tx) => {
-        const createdAttendance = await this.attendanceRepository.create(
-          {
-            enrollmentId: input.enrollmentId,
-            date: input.date.trim(),
-            status: input.status,
-          },
-          tx
-        );
+        const createdAttendance = await this.attendanceRepository
+          .create(
+            {
+              enrollmentId: input.enrollmentId,
+              date: input.date.trim(),
+              status: input.status,
+            },
+            tx
+          )
+          .catch((error: unknown) => this.handlePersistenceError(error));
 
         const record = await this.attendanceRepository.findById(
           createdAttendance.id,
@@ -173,11 +182,13 @@ export class AttendanceService {
       existingAttendance.enrollmentId
     );
 
-    const updatedAttendance = await this.attendanceRepository.update({
-      attendanceId: input.attendanceId,
-      date: input.date?.trim(),
-      status: input.status,
-    });
+    const updatedAttendance = await this.attendanceRepository
+      .update({
+        attendanceId: input.attendanceId,
+        date: input.date?.trim(),
+        status: input.status,
+      })
+      .catch((error: unknown) => this.handlePersistenceError(error));
 
     if (!updatedAttendance) {
       throw new AttendanceServiceError('Attendance record not found', 404);
@@ -229,6 +240,20 @@ export class AttendanceService {
     }
 
     await this.access.assertTeacherOwnsEnrollment(actor.userId, enrollmentId);
+  }
+
+  // UNIQUE (enrollment_id, date): one mark per enrollment and day.
+  private handlePersistenceError(error: unknown): never {
+    const databaseError = error as DatabaseError;
+
+    if (databaseError?.code === '23505' || databaseError?.cause?.code === '23505') {
+      throw new AttendanceServiceError(
+        'Attendance is already recorded for this enrollment and date',
+        409
+      );
+    }
+
+    throw error;
   }
 
   private toAttendanceResponse(attendance: AttendanceRecord) {

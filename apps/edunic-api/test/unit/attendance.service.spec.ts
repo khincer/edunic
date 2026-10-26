@@ -141,4 +141,83 @@ describe('AttendanceService', () => {
     expect(result.data.id).toBe('attendance-1');
     expect(tx.execute).toHaveBeenCalledTimes(1);
   });
+
+  // pg raises 23505 directly; drizzle wraps it and keeps it on `cause`.
+  it.each([
+    ['raised by pg', Object.assign(new Error('duplicate key'), { code: '23505' })],
+    [
+      'wrapped by drizzle',
+      Object.assign(new Error('Failed query'), { cause: { code: '23505' } }),
+    ],
+  ])(
+    'maps a duplicate (enrollment, date) %s on create to 409',
+    async (_label, uniqueViolation) => {
+      const tx = { execute: jest.fn() };
+      const repository = createRepositoryMock(tx);
+      repository.create.mockRejectedValue(uniqueViolation);
+      const service = new AttendanceService(
+        repository as never,
+        undefined,
+        access
+      );
+
+      await expect(
+        service.createAttendance({
+          role: 'director',
+          userId: 'user-1',
+          enrollmentId: 'enrollment-1',
+          date: '2026-02-01T08:00:00.000Z',
+          status: 'present',
+        })
+      ).rejects.toEqual(
+        expect.objectContaining<Partial<AttendanceServiceError>>({
+          message: 'Attendance is already recorded for this enrollment and date',
+          statusCode: 409,
+        })
+      );
+    }
+  );
+
+  it('maps a duplicate (enrollment, date) on update to 409', async () => {
+    const repository = {
+      findById: jest.fn().mockResolvedValue(attendanceRecord),
+      update: jest
+        .fn()
+        .mockRejectedValue(
+          Object.assign(new Error('Failed query'), { cause: { code: '23505' } })
+        ),
+    };
+    const service = new AttendanceService(repository as never, undefined, access);
+
+    await expect(
+      service.updateAttendance({
+        attendanceId: 'attendance-1',
+        role: 'director',
+        userId: 'user-1',
+        date: '2026-02-02T08:00:00.000Z',
+      })
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<AttendanceServiceError>>({
+        statusCode: 409,
+      })
+    );
+  });
+
+  it('rethrows any other database error unchanged', async () => {
+    const tx = { execute: jest.fn() };
+    const repository = createRepositoryMock(tx);
+    const other = Object.assign(new Error('fk'), { code: '23503' });
+    repository.create.mockRejectedValue(other);
+    const service = new AttendanceService(repository as never, undefined, access);
+
+    await expect(
+      service.createAttendance({
+        role: 'director',
+        userId: 'user-1',
+        enrollmentId: 'enrollment-1',
+        date: '2026-02-01T08:00:00.000Z',
+        status: 'present',
+      })
+    ).rejects.toBe(other);
+  });
 });

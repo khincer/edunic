@@ -142,3 +142,15 @@ describe('OpenAPI document (single school)', () => {
     expect(operation(path, method).responses['403']).toBeDefined();
   });
 });
+
+describe('OpenAPI document (attendance conflicts)', () => {
+  // UNIQUE (enrollment_id, date): a second mark of the same day is a 409.
+  it.each([
+    ['/attendance', 'post'],
+    ['/attendance/{attendanceId}', 'patch'],
+  ])('%s %s documents the AttendanceConflict 409', (path, method) => {
+    expect(operation(path, method).responses['409']).toEqual({
+      $ref: '#/components/responses/AttendanceConflict',
+    });
+  });
+});

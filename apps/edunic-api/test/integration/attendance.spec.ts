@@ -129,11 +129,28 @@ describe('attendance routes', () => {
     expect(listed.body.data[0]).not.toHaveProperty('institutionId');
 
     // UNIQUE (enrollment_id, date) has no school column: a second mark of
-    // the same day is still refused and leaves a single row.
+    // the same day is refused with a 409 CONFLICT and leaves a single row.
     const duplicate = await client.post('/attendance').set(headers).send(body);
-    expect(duplicate.status).toBeGreaterThanOrEqual(400);
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.body).toMatchObject({
+      code: 'CONFLICT',
+      message: 'Attendance is already recorded for this enrollment and date',
+    });
     const after = await client.get('/attendance').set(headers);
     expect(after.body.data).toHaveLength(1);
+
+    // Moving another mark onto the taken day is the same conflict.
+    const otherDay = await client
+      .post('/attendance')
+      .set(headers)
+      .send({ ...body, date: '2026-02-06T08:00:00.000Z' });
+    expect(otherDay.status).toBe(201);
+    const moved = await client
+      .patch(`/attendance/${otherDay.body.data.id}`)
+      .set(headers)
+      .send({ date: body.date });
+    expect(moved.status).toBe(409);
+    expect(moved.body).toMatchObject({ code: 'CONFLICT' });
 
     const missing = await client
       .get('/attendance/99999999-9999-4999-8999-999999999999')

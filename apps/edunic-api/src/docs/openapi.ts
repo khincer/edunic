@@ -2403,6 +2403,7 @@ export function buildOpenApiDocument() {
             },
             400: { $ref: '#/components/responses/BadRequest' },
             404: { $ref: '#/components/responses/AttendanceRelatedNotFound' },
+            409: { $ref: '#/components/responses/AttendanceConflict' },
           },
         },
       },
@@ -2483,6 +2484,7 @@ export function buildOpenApiDocument() {
             },
             400: { $ref: '#/components/responses/BadRequest' },
             404: { $ref: '#/components/responses/AttendanceNotFound' },
+            409: { $ref: '#/components/responses/AttendanceConflict' },
           },
         },
         delete: {
@@ -3859,6 +3861,23 @@ export function buildOpenApiDocument() {
                   message: {
                     type: 'string',
                     example: 'Academic period not found',
+                  },
+                },
+              },
+            },
+          },
+        },
+        AttendanceConflict: {
+          description: 'Attendance is already recorded for the enrollment and date',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: {
+                    type: 'string',
+                    example:
+                      'Attendance is already recorded for this enrollment and date',
                   },
                 },
               },
