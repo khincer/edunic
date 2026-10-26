@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import {
   parseWithSchema,
-  getInstitutionId,
   parseFilterSort,
 } from '@edunic/source/domain/shared';
 import {
@@ -46,7 +45,6 @@ export async function workflowRoutes(app: FastifyInstance) {
   };
 
   app.get('/assignments', readAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listWorkflowQuerySchema, request.query);
     const user = getAuthenticatedUser(request);
     const { filters, sort } = parseFilterSort(
@@ -59,7 +57,6 @@ export async function workflowRoutes(app: FastifyInstance) {
     }
 
     return workflowsService.listAssignments({
-      institutionId,
       role: toAudienceRole(user.role),
       userId: user.id,
       ...query,
@@ -69,11 +66,9 @@ export async function workflowRoutes(app: FastifyInstance) {
   });
 
   app.post('/assignments', staffAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createAssignmentBodySchema, request.body);
     const user = getAuthenticatedUser(request);
     const result = await workflowsService.createAssignment({
-      institutionId,
       role: toAudienceRole(user.role),
       userId: user.id,
       ...body,
@@ -83,13 +78,11 @@ export async function workflowRoutes(app: FastifyInstance) {
   });
 
   app.patch('/assignments/:assignmentId', staffAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(assignmentParamsSchema, request.params);
     const body = parseWithSchema(updateAssignmentBodySchema, request.body);
     const user = getAuthenticatedUser(request);
 
     return workflowsService.updateAssignment({
-      institutionId,
       assignmentId: params.assignmentId,
       role: toAudienceRole(user.role),
       userId: user.id,
@@ -98,7 +91,6 @@ export async function workflowRoutes(app: FastifyInstance) {
   });
 
   app.get('/school-events', readAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listWorkflowQuerySchema, request.query);
     const user = getAuthenticatedUser(request);
     const { filters, sort } = parseFilterSort(
@@ -111,7 +103,6 @@ export async function workflowRoutes(app: FastifyInstance) {
     }
 
     return workflowsService.listEvents({
-      institutionId,
       role: toAudienceRole(user.role),
       userId: user.id,
       ...query,
@@ -121,11 +112,9 @@ export async function workflowRoutes(app: FastifyInstance) {
   });
 
   app.post('/school-events', staffAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createEventBodySchema, request.body);
     const user = getAuthenticatedUser(request);
     const result = await workflowsService.createEvent({
-      institutionId,
       role: toAudienceRole(user.role),
       userId: user.id,
       ...body,
@@ -135,7 +124,6 @@ export async function workflowRoutes(app: FastifyInstance) {
   });
 
   app.get('/messages', readAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const query = parseWithSchema(listWorkflowQuerySchema, request.query);
     const user = getAuthenticatedUser(request);
     const { filters, sort } = parseFilterSort(
@@ -148,7 +136,6 @@ export async function workflowRoutes(app: FastifyInstance) {
     }
 
     return workflowsService.listMessages({
-      institutionId,
       userId: user.id,
       ...query,
       filters,
@@ -157,11 +144,9 @@ export async function workflowRoutes(app: FastifyInstance) {
   });
 
   app.post('/messages', readAccess, async (request, reply) => {
-    const institutionId = getInstitutionId(request);
     const body = parseWithSchema(createMessageBodySchema, request.body);
     const user = getAuthenticatedUser(request);
     const result = await workflowsService.createMessage({
-      institutionId,
       userId: user.id,
       ...body,
     });
@@ -170,12 +155,10 @@ export async function workflowRoutes(app: FastifyInstance) {
   });
 
   app.patch('/messages/:messageId/read', readAccess, async (request) => {
-    const institutionId = getInstitutionId(request);
     const params = parseWithSchema(messageParamsSchema, request.params);
     const user = getAuthenticatedUser(request);
 
     return workflowsService.markMessageRead({
-      institutionId,
       messageId: params.messageId,
       userId: user.id,
     });

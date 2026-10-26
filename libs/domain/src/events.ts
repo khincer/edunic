@@ -45,34 +45,28 @@ export type AcademicDomainEvent =
   | AttendanceMarkedEvent;
 
 export function createEnrollmentCreatedEvent(input: {
-  institutionId?: string;
   payload: EnrollmentCreatedPayload;
 }) {
   return createEventEnvelope({
     name: 'enrollment.created',
-    institutionId: input.institutionId,
     payload: input.payload,
   });
 }
 
 export function createGradeSubmittedEvent(input: {
-  institutionId?: string;
   payload: GradeSubmittedPayload;
 }) {
   return createEventEnvelope({
     name: 'grade.submitted',
-    institutionId: input.institutionId,
     payload: input.payload,
   });
 }
 
 export function createAttendanceMarkedEvent(input: {
-  institutionId?: string;
   payload: AttendanceMarkedPayload;
 }) {
   return createEventEnvelope({
     name: 'attendance.marked',
-    institutionId: input.institutionId,
     payload: input.payload,
   });
 }
@@ -91,12 +85,10 @@ export type EnrollmentWelcomedEvent = EventEnvelope<
 >;
 
 export function createEnrollmentWelcomedEvent(input: {
-  institutionId?: string;
   payload: EnrollmentWelcomedPayload;
 }) {
   return createEventEnvelope({
     name: 'enrollment.welcomed',
-    institutionId: input.institutionId,
     payload: input.payload,
   });
 }

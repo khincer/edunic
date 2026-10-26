@@ -10,7 +10,6 @@ const MIGRATIONS_DIR = 'libs/db/src/migrations';
 function buildEvent() {
   return createEventEnvelope({
     name: 'enrollment.created',
-    institutionId: randomUUID(),
     payload: { enrollmentId: randomUUID() },
   });
 }

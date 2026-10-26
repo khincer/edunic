@@ -52,7 +52,6 @@ describe('CustomFieldsService', () => {
     const service = new CustomFieldsService(repository as never);
 
     await service.upsertCustomFieldValues({
-      institutionId: '00000000-0000-0000-0000-000000000010',
       entity: 'students',
       entityId: '00000000-0000-0000-0000-000000000020',
       values: [
@@ -77,7 +76,7 @@ describe('CustomFieldsService', () => {
     });
   });
 
-  it('looks fields up by id only and returns no institutionId', async () => {
+  it('looks fields up by id only and returns no school field', async () => {
     const field = {
       id: '00000000-0000-0000-0000-000000000001',
       entity: 'students',

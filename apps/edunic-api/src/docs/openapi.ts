@@ -1,9 +1,8 @@
 const studentSchema = {
   type: 'object',
-  required: ['id', 'institutionId', 'firstName', 'lastName', 'fullName'],
+  required: ['id', 'firstName', 'lastName', 'fullName'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    institutionId: { type: 'string', format: 'uuid' },
     firstName: { type: 'string', example: 'Jane' },
     lastName: { type: 'string', example: 'Doe' },
     fullName: { type: 'string', example: 'Jane Doe' },
@@ -20,26 +19,11 @@ const studentSchema = {
   },
 };
 
-const institutionSchema = {
+const guardianSchema = {
   type: 'object',
   required: ['id', 'name'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    name: { type: 'string', example: 'Colegio Central' },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      nullable: true,
-    },
-  },
-};
-
-const guardianSchema = {
-  type: 'object',
-  required: ['id', 'institutionId', 'name'],
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    institutionId: { type: 'string', format: 'uuid' },
     name: { type: 'string', example: 'Maria Lopez' },
     phone: {
       type: 'string',
@@ -51,10 +35,9 @@ const guardianSchema = {
 
 const auditLogSchema = {
   type: 'object',
-  required: ['id', 'institutionId', 'action', 'entity'],
+  required: ['id', 'action', 'entity'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    institutionId: { type: 'string', format: 'uuid' },
     userId: { type: 'string', format: 'uuid', nullable: true },
     action: {
       type: 'string',
@@ -90,30 +73,18 @@ const extensionSchema = {
 
 const featureFlagSchema = {
   type: 'object',
-  required: ['key', 'defaultValue', 'enabled', 'source'],
+  required: ['key', 'enabled'],
   properties: {
     key: { type: 'string', example: 'parent_portal' },
-    defaultValue: { type: 'boolean', example: false },
-    institutionEnabled: {
-      type: 'boolean',
-      nullable: true,
-      example: true,
-    },
     enabled: { type: 'boolean', example: true },
-    source: {
-      type: 'string',
-      enum: ['default', 'institution'],
-      example: 'institution',
-    },
   },
 };
 
 const customFieldSchema = {
   type: 'object',
-  required: ['id', 'institutionId', 'entity', 'name', 'type'],
+  required: ['id', 'entity', 'name', 'type'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    institutionId: { type: 'string', format: 'uuid' },
     entity: { type: 'string', example: 'students' },
     name: { type: 'string', example: 'Scholarship' },
     type: {
@@ -148,10 +119,9 @@ const customFieldValueSchema = {
 
 const notificationSchema = {
   type: 'object',
-  required: ['id', 'institutionId', 'eventName', 'title', 'message'],
+  required: ['id', 'eventName', 'title', 'message'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    institutionId: { type: 'string', format: 'uuid' },
     eventName: { type: 'string', example: 'grade.submitted' },
     title: { type: 'string', example: 'Grade submitted' },
     message: { type: 'string', example: 'Mathematics grade was submitted' },
@@ -165,7 +135,6 @@ const enrollmentSchema = {
   type: 'object',
   required: [
     'id',
-    'institutionId',
     'studentId',
     'academicPeriodId',
     'status',
@@ -173,7 +142,6 @@ const enrollmentSchema = {
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    institutionId: { type: 'string', format: 'uuid' },
     studentId: { type: 'string', format: 'uuid' },
     academicPeriodId: { type: 'string', format: 'uuid' },
     classroomId: { type: 'string', format: 'uuid', nullable: true },
@@ -207,10 +175,9 @@ const enrollmentSchema = {
 
 const gradeSchema = {
   type: 'object',
-  required: ['id', 'institutionId', 'enrollmentId', 'subject', 'score'],
+  required: ['id', 'enrollmentId', 'subject', 'score'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    institutionId: { type: 'string', format: 'uuid' },
     enrollmentId: { type: 'string', format: 'uuid' },
     subject: { type: 'string', example: 'Mathematics' },
     score: { type: 'integer', minimum: 0, maximum: 100, example: 87 },
@@ -224,10 +191,9 @@ const gradeSchema = {
 
 const attendanceSchema = {
   type: 'object',
-  required: ['id', 'institutionId', 'enrollmentId', 'date', 'status'],
+  required: ['id', 'enrollmentId', 'date', 'status'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    institutionId: { type: 'string', format: 'uuid' },
     enrollmentId: { type: 'string', format: 'uuid' },
     date: { type: 'string', format: 'date-time' },
     status: {
@@ -245,10 +211,9 @@ const attendanceSchema = {
 
 const academicPeriodSchema = {
   type: 'object',
-  required: ['id', 'institutionId', 'year', 'term'],
+  required: ['id', 'year', 'term'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    institutionId: { type: 'string', format: 'uuid' },
     year: { type: 'integer', example: 2026 },
     term: { type: 'integer', minimum: 1, maximum: 4, example: 1 },
     startDate: {
@@ -271,10 +236,9 @@ const academicPeriodSchema = {
 
 const classroomSchema = {
   type: 'object',
-  required: ['id', 'institutionId', 'gradeLevel', 'name'],
+  required: ['id', 'gradeLevel', 'name'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    institutionId: { type: 'string', format: 'uuid' },
     gradeLevel: { type: 'integer', minimum: 1, maximum: 20, example: 5 },
     section: { type: 'string', nullable: true, example: 'A' },
     name: { type: 'string', example: 'Grade 5 A' },
@@ -283,9 +247,8 @@ const classroomSchema = {
 
 const academicAverageSchema = {
   type: 'object',
-  required: ['institutionId', 'studentId', 'year', 'annualSubjects', 'termAverages'],
+  required: ['studentId', 'year', 'annualSubjects', 'termAverages'],
   properties: {
-    institutionId: { type: 'string', format: 'uuid' },
     studentId: { type: 'string', format: 'uuid' },
     year: { type: 'integer', example: 2026 },
     annualAverage: {
@@ -357,9 +320,8 @@ const promotionEvaluationSchema = {
 
 const studentAcademicSummarySchema = {
   type: 'object',
-  required: ['institutionId', 'year', 'student', 'annualSubjects', 'termAverages', 'enrollments'],
+  required: ['year', 'student', 'annualSubjects', 'termAverages', 'enrollments'],
   properties: {
-    institutionId: { type: 'string', format: 'uuid' },
     year: { type: 'integer', example: 2026 },
     student: {
       type: 'object',
@@ -664,10 +626,9 @@ const parentDashboardResponseSchema = {
 
 const workflowAssignmentSchema = {
   type: 'object',
-  required: ['id', 'institutionId', 'title', 'type', 'status'],
+  required: ['id', 'title', 'type', 'status'],
   properties: {
     ...dashboardAssignmentSchema.properties,
-    institutionId: { type: 'string', format: 'uuid' },
     classroomId: { type: 'string', format: 'uuid', nullable: true },
     createdByUserId: { type: 'string', format: 'uuid', nullable: true },
     createdAt: { type: 'string', format: 'date-time', nullable: true },
@@ -676,10 +637,9 @@ const workflowAssignmentSchema = {
 
 const workflowEventSchema = {
   type: 'object',
-  required: ['id', 'institutionId', 'title', 'eventType', 'startsAt'],
+  required: ['id', 'title', 'eventType', 'startsAt'],
   properties: {
     ...dashboardEventSchema.properties,
-    institutionId: { type: 'string', format: 'uuid' },
     classroomId: { type: 'string', format: 'uuid', nullable: true },
     createdByUserId: { type: 'string', format: 'uuid', nullable: true },
     createdAt: { type: 'string', format: 'date-time', nullable: true },
@@ -688,10 +648,9 @@ const workflowEventSchema = {
 
 const workflowMessageSchema = {
   type: 'object',
-  required: ['id', 'institutionId', 'threadId', 'subject', 'body'],
+  required: ['id', 'threadId', 'subject', 'body'],
   properties: {
     ...dashboardMessageSchema.properties,
-    institutionId: { type: 'string', format: 'uuid' },
     threadId: { type: 'string', format: 'uuid' },
     senderUserId: { type: 'string', format: 'uuid', nullable: true },
     recipientUserId: { type: 'string', format: 'uuid', nullable: true },
@@ -743,15 +702,15 @@ export function buildOpenApiDocument() {
       },
       {
         name: 'Extensions',
-        description: 'Extension registry and per-institution enablement',
+        description: 'Extension registry and school-wide enablement',
       },
       {
         name: 'Feature Flags',
-        description: 'Global feature catalog and per-institution overrides',
+        description: 'Global feature flags the school administrators switch on or off',
       },
       {
         name: 'Custom Fields',
-        description: 'Tenant-scoped custom field definitions and values',
+        description: 'Custom field definitions and values',
       },
       {
         name: 'Notifications',
@@ -781,7 +740,6 @@ export function buildOpenApiDocument() {
       { name: 'Grades', description: 'Grade CRUD endpoints' },
       { name: 'Guardians', description: 'Guardian CRUD and student-link endpoints' },
       { name: 'Health', description: 'Service health endpoints' },
-      { name: 'Institutions', description: 'Institution CRUD endpoints' },
       { name: 'School', description: 'The school profile' },
       { name: 'Students', description: 'Student CRUD endpoints' },
     ],
@@ -1042,7 +1000,7 @@ export function buildOpenApiDocument() {
         },
         post: {
           tags: ['Workflows'],
-          summary: 'Send a message to another user in the institution',
+          summary: 'Send a message to another user',
           description:
             'Creates a simple message thread and emits a recipient-scoped notification.',
           requestBody: {
@@ -1113,10 +1071,10 @@ export function buildOpenApiDocument() {
       '/feature-flags': {
         get: {
           tags: ['Feature Flags'],
-          summary: 'List effective feature flags for the authenticated institution',
+          summary: 'List the feature flags',
           responses: {
             200: {
-              description: 'Effective feature flags',
+              description: 'Feature flags',
               content: {
                 'application/json': {
                   schema: {
@@ -1135,56 +1093,18 @@ export function buildOpenApiDocument() {
           },
         },
       },
-      '/institutions/{institutionId}/feature-flags': {
-        get: {
+      '/feature-flags/{featureKey}': {
+        patch: {
           tags: ['Feature Flags'],
-          summary: 'List effective feature flags for an institution',
+          summary: 'Switch a feature flag on or off',
+          description:
+            'Sets the school-wide value of a feature flag. Directors, vice directors and subdirectors only.',
           parameters: [
-            {
-              name: 'institutionId',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-            },
-          ],
-          responses: {
-            200: {
-              description: 'Effective feature flags',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      data: {
-                        type: 'array',
-                        items: featureFlagSchema,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            401: { $ref: '#/components/responses/Unauthorized' },
-            403: { $ref: '#/components/responses/Forbidden' },
-          },
-        },
-      },
-      '/institutions/{institutionId}/feature-flags/{featureKey}': {
-        put: {
-          tags: ['Feature Flags'],
-          summary: 'Set a feature flag override for an institution',
-          parameters: [
-            {
-              name: 'institutionId',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-            },
             {
               name: 'featureKey',
               in: 'path',
               required: true,
-              schema: { type: 'string' },
+              schema: { type: 'string', example: 'parent_portal' },
             },
           ],
           requestBody: {
@@ -1203,7 +1123,7 @@ export function buildOpenApiDocument() {
           },
           responses: {
             200: {
-              description: 'Feature flag override saved',
+              description: 'Feature flag saved',
               content: {
                 'application/json': {
                   schema: {
@@ -1214,39 +1134,7 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
-            403: { $ref: '#/components/responses/Forbidden' },
-            404: { $ref: '#/components/responses/NotFound' },
-          },
-        },
-        delete: {
-          tags: ['Feature Flags'],
-          summary: 'Remove an institution feature flag override',
-          parameters: [
-            {
-              name: 'institutionId',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-            },
-            {
-              name: 'featureKey',
-              in: 'path',
-              required: true,
-              schema: { type: 'string' },
-            },
-          ],
-          responses: {
-            200: {
-              description: 'Feature flag reset to global default',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: { data: featureFlagSchema },
-                  },
-                },
-              },
-            },
+            401: { $ref: '#/components/responses/Unauthorized' },
             403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/NotFound' },
           },
@@ -1405,7 +1293,17 @@ export function buildOpenApiDocument() {
             },
           ],
           responses: {
-            200: { description: 'Extension config cleared' },
+            200: {
+              description: 'Extension config cleared',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: extensionSchema },
+                  },
+                },
+              },
+            },
             404: { $ref: '#/components/responses/NotFound' },
           },
         },
@@ -1606,7 +1504,7 @@ export function buildOpenApiDocument() {
           tags: ['Audit Logs'],
           summary: 'List audit logs',
           description:
-            'Returns audit trail records for successful mutating requests within the authenticated institution. Admin role required.',
+            'Returns audit trail records for successful mutating requests Admin role required.',
           parameters: [
             {
               name: 'entity',
@@ -1682,22 +1580,17 @@ export function buildOpenApiDocument() {
           tags: ['Auth'],
           summary: 'Log in and obtain a bearer token',
           description:
-            'Authenticates a user for a specific institution and returns a JWT bearer token that resolves role-based permissions from user_institution_roles.',
+            'Authenticates a user by email and password and returns a JWT bearer token. The role of the user (user_roles) decides what the token can do.',
           requestBody: {
             required: true,
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['email', 'password', 'institutionId'],
+                  required: ['email', 'password'],
                   properties: {
                     email: { type: 'string', format: 'email', example: 'admin@central.edu' },
                     password: { type: 'string', example: 'admin1234' },
-                    institutionId: {
-                      type: 'string',
-                      format: 'uuid',
-                      example: '00000000-0000-0000-0000-000000000001',
-                    },
                   },
                 },
               },
@@ -1720,7 +1613,6 @@ export function buildOpenApiDocument() {
                             properties: {
                               id: { type: 'string', format: 'uuid' },
                               email: { type: 'string', format: 'email' },
-                              institutionId: { type: 'string', format: 'uuid' },
                               role: {
                                 type: 'string',
                                 enum: ['director', 'vice_director', 'subdirector', 'teacher', 'parent'],
@@ -1775,6 +1667,7 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/StudentReportNotFound' },
           },
         },
@@ -1812,6 +1705,7 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/StudentReportNotFound' },
           },
         },
@@ -1851,6 +1745,7 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/StudentAverageNotFound' },
           },
         },
@@ -2464,6 +2359,7 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
           },
         },
         post: {
@@ -2536,6 +2432,7 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/AttendanceNotFound' },
           },
         },
@@ -2703,6 +2600,7 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
           },
         },
         post: {
@@ -2774,6 +2672,7 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/GradeNotFound' },
           },
         },
@@ -2952,6 +2851,7 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
           },
         },
         post: {
@@ -3032,6 +2932,7 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/EnrollmentNotFound' },
           },
         },
@@ -3247,113 +3148,6 @@ export function buildOpenApiDocument() {
           },
         },
       },
-      '/institutions/{institutionId}': {
-        get: {
-          tags: ['Institutions'],
-          summary: 'Get an institution by id',
-          parameters: [
-            {
-              name: 'institutionId',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-            },
-          ],
-          responses: {
-            200: {
-              description: 'Institution details',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      data: institutionSchema,
-                    },
-                  },
-                },
-              },
-            },
-            404: { $ref: '#/components/responses/InstitutionNotFound' },
-          },
-        },
-        patch: {
-          tags: ['Institutions'],
-          summary: 'Update an institution',
-          parameters: [
-            {
-              name: 'institutionId',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-            },
-          ],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    name: { type: 'string' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Institution updated',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      data: institutionSchema,
-                    },
-                  },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            404: { $ref: '#/components/responses/InstitutionNotFound' },
-          },
-        },
-        delete: {
-          tags: ['Institutions'],
-          summary: 'Delete an institution',
-          parameters: [
-            {
-              name: 'institutionId',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-            },
-          ],
-          responses: {
-            200: {
-              description: 'Institution deleted',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      data: {
-                        type: 'object',
-                        properties: {
-                          id: { type: 'string', format: 'uuid' },
-                          deleted: { type: 'boolean', example: true },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            404: { $ref: '#/components/responses/InstitutionNotFound' },
-            409: { $ref: '#/components/responses/InstitutionConflict' },
-          },
-        },
-      },
       '/guardians': {
         get: {
           tags: ['Guardians'],
@@ -3419,6 +3213,7 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
           },
         },
         post: {
@@ -3483,6 +3278,7 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/GuardianNotFound' },
           },
         },
@@ -3595,6 +3391,7 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/NotFound' },
           },
         },
@@ -3750,6 +3547,7 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            403: { $ref: '#/components/responses/Forbidden' },
           },
         },
         post: {
@@ -3818,6 +3616,7 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/NotFound' },
           },
         },
@@ -4028,39 +3827,6 @@ export function buildOpenApiDocument() {
                   message: {
                     type: 'string',
                     example: 'Student cannot be deleted while enrollments exist',
-                  },
-                },
-              },
-            },
-          },
-        },
-        InstitutionNotFound: {
-          description: 'Institution not found',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  message: {
-                    type: 'string',
-                    example: 'Institution not found',
-                  },
-                },
-              },
-            },
-          },
-        },
-        InstitutionConflict: {
-          description: 'Institution cannot be deleted because related data exists',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  message: {
-                    type: 'string',
-                    example:
-                      'Institution cannot be deleted while dependent academic records exist',
                   },
                 },
               },

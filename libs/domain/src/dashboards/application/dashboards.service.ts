@@ -24,10 +24,9 @@ export class DashboardsService {
     private readonly paymentsRepository: PaymentsRepository
   ) {}
 
-  async getAdminDashboard(institutionId: string, userId: string) {
-    const context = await this.getInstitutionContext(institutionId);
-    const activePeriod =
-      await this.dashboardsRepository.getActiveAcademicPeriod(institutionId);
+  async getAdminDashboard(userId: string) {
+    const context = await this.getInstitutionContext();
+    const activePeriod = await this.dashboardsRepository.getActiveAcademicPeriod();
 
     const [
       studentCount,
@@ -48,36 +47,30 @@ export class DashboardsService {
       recentMessages,
       reportHistory,
     ] = await Promise.all([
-      this.dashboardsRepository.countStudents(institutionId),
-      this.dashboardsRepository.countUsersByRole(institutionId, 'teacher'),
-      this.dashboardsRepository.countUsersByRole(institutionId, 'parent'),
-      this.dashboardsRepository.countGuardians(institutionId),
-      this.dashboardsRepository.countActiveEnrollments(institutionId),
-      this.dashboardsRepository.countClassrooms(institutionId),
-      this.dashboardsRepository.getTodayAttendanceSummary(institutionId),
-      this.dashboardsRepository.getGradeSubmissionSummary(
-        institutionId,
-        activePeriod?.id ?? null
-      ),
+      this.dashboardsRepository.countStudents(),
+      this.dashboardsRepository.countUsersByRole('teacher'),
+      this.dashboardsRepository.countUsersByRole('parent'),
+      this.dashboardsRepository.countGuardians(),
+      this.dashboardsRepository.countActiveEnrollments(),
+      this.dashboardsRepository.countClassrooms(),
+      this.dashboardsRepository.getTodayAttendanceSummary(),
+      this.dashboardsRepository.getGradeSubmissionSummary(activePeriod?.id ?? null),
       this.dashboardsRepository.listFeatureStatuses(),
       this.dashboardsRepository.listExtensionStatuses(),
       this.dashboardsRepository.listRecentNotifications({
-        institutionId,
         role: 'admin',
         userId,
       }),
-      this.dashboardsRepository.listRecentAuditActivity(institutionId),
+      this.dashboardsRepository.listRecentAuditActivity(),
       this.dashboardsRepository.listUpcomingAssignments({
-        institutionId,
         role: 'admin',
       }),
       this.dashboardsRepository.listUpcomingEvents({
-        institutionId,
         role: 'admin',
       }),
-      this.dashboardsRepository.countUnreadMessages(institutionId, userId),
-      this.dashboardsRepository.listRecentMessages(institutionId, userId),
-      this.dashboardsRepository.listReportHistory(institutionId),
+      this.dashboardsRepository.countUnreadMessages(userId),
+      this.dashboardsRepository.listRecentMessages(userId),
+      this.dashboardsRepository.listReportHistory(),
     ]);
 
     return {
@@ -106,13 +99,9 @@ export class DashboardsService {
     };
   }
 
-  async getTeacherDashboard(input: {
-    institutionId: string;
-    userId: string;
-    role: string;
-  }) {
-    const { institutionId, userId, role } = input;
-    await this.getInstitutionContext(institutionId);
+  async getTeacherDashboard(input: { userId: string; role: string }) {
+    const { userId, role } = input;
+    await this.getInstitutionContext();
     const teacherUserId = role === 'teacher' ? userId : undefined;
 
     const [
@@ -127,28 +116,25 @@ export class DashboardsService {
       unreadMessages,
       recentMessages,
     ] = await Promise.all([
-      this.dashboardsRepository.listClassroomSnapshots(institutionId, teacherUserId),
-      this.dashboardsRepository.getTodayAttendanceSummary(institutionId, teacherUserId),
-      this.dashboardsRepository.countActiveEnrollments(institutionId, teacherUserId),
-      this.dashboardsRepository.listRecentGrades(institutionId, 5, teacherUserId),
-      this.dashboardsRepository.listStudentsAtRisk(institutionId, 5, teacherUserId),
+      this.dashboardsRepository.listClassroomSnapshots(teacherUserId),
+      this.dashboardsRepository.getTodayAttendanceSummary(teacherUserId),
+      this.dashboardsRepository.countActiveEnrollments(teacherUserId),
+      this.dashboardsRepository.listRecentGrades(5, teacherUserId),
+      this.dashboardsRepository.listStudentsAtRisk(5, teacherUserId),
       this.dashboardsRepository.listRecentNotifications({
-        institutionId,
         role,
         userId,
       }),
       this.dashboardsRepository.listUpcomingAssignments({
-        institutionId,
         role,
         userId,
       }),
       this.dashboardsRepository.listUpcomingEvents({
-        institutionId,
         role,
         userId,
       }),
-      this.dashboardsRepository.countUnreadMessages(institutionId, userId),
-      this.dashboardsRepository.listRecentMessages(institutionId, userId),
+      this.dashboardsRepository.countUnreadMessages(userId),
+      this.dashboardsRepository.listRecentMessages(userId),
     ]);
 
     return {
@@ -177,8 +163,8 @@ export class DashboardsService {
     };
   }
 
-  async getParentDashboard(institutionId: string, userId: string) {
-    await this.getInstitutionContext(institutionId);
+  async getParentDashboard(userId: string) {
+    await this.getInstitutionContext();
 
     const currentYear = new Date().getFullYear();
     const [
@@ -189,42 +175,32 @@ export class DashboardsService {
       unreadMessages,
       recentMessages,
     ] = await Promise.all([
-      this.dashboardsRepository.listParentStudents(institutionId, userId),
+      this.dashboardsRepository.listParentStudents(userId),
       this.dashboardsRepository.listRecentNotifications({
-        institutionId,
         role: 'parent',
         userId,
       }),
       this.dashboardsRepository.listUpcomingAssignments({
-        institutionId,
         role: 'parent',
         userId,
       }),
       this.dashboardsRepository.listUpcomingEvents({
-        institutionId,
         role: 'parent',
         userId,
       }),
-      this.dashboardsRepository.countUnreadMessages(institutionId, userId),
-      this.dashboardsRepository.listRecentMessages(institutionId, userId),
+      this.dashboardsRepository.countUnreadMessages(userId),
+      this.dashboardsRepository.listRecentMessages(userId),
     ]);
 
     const studentSummaries = await Promise.all(
       students.map(async (student) => {
         const [average, attendance, recentGrades] = await Promise.all([
           this.dashboardsRepository.getStudentAverage(
-            institutionId,
             student.studentId,
             student.academicYear ?? currentYear
           ),
-          this.dashboardsRepository.getStudentAttendanceSummary(
-            institutionId,
-            student.studentId
-          ),
-          this.dashboardsRepository.listStudentRecentGrades(
-            institutionId,
-            student.studentId
-          ),
+          this.dashboardsRepository.getStudentAttendanceSummary(student.studentId),
+          this.dashboardsRepository.listStudentRecentGrades(student.studentId),
         ]);
 
         return {
@@ -283,9 +259,8 @@ export class DashboardsService {
     };
   }
 
-  private async getInstitutionContext(institutionId: string) {
-    const context =
-      await this.dashboardsRepository.getInstitutionContext(institutionId);
+  private async getInstitutionContext() {
+    const context = await this.dashboardsRepository.getInstitutionContext();
 
     if (!context) {
       throw new DashboardsServiceError('Institution not found', 404);

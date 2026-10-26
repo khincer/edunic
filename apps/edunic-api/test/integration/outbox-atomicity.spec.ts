@@ -21,7 +21,6 @@ async function countEnrollments() {
 describe('outbox atomicity (P2-R6)', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let client: ReturnType<typeof createHttpClient>;
-  let institutionId: string;
   let headers: Record<string, string>;
 
   beforeAll(async () => {
@@ -32,16 +31,13 @@ describe('outbox atomicity (P2-R6)', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const teacherUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
 
-    institutionId = institution.id;
     headers = await createAuthHeaders({
       userId: teacherUser.id,
-      institutionId: institution.id,
     });
   });
 
@@ -52,9 +48,9 @@ describe('outbox atomicity (P2-R6)', () => {
   // Un-skipped in slice S2 (task 2.5): the db.transaction() + outbox wrapping
   // for the enrollments service landed, so P2-R6 is asserted for real.
   it('rolls back the enrollment row when event publish fails', async () => {
-    const student = await createStudentFixture({ institutionId });
-    const period = await createAcademicPeriodFixture({ institutionId });
-    const classroom = await createClassroomFixture({ institutionId });
+    const student = await createStudentFixture({});
+    const period = await createAcademicPeriodFixture({});
+    const classroom = await createClassroomFixture({});
 
     const originalPublish = app.eventBus.publish.bind(app.eventBus);
     app.eventBus.publish = () =>

@@ -94,9 +94,7 @@ describe('worker email delivery idempotency', () => {
     EMAIL_SEND_TIMEOUT_MS: String(SEND_TIMEOUT_MS),
   });
 
-  const readDeliveries = async (
-    institutionId: string
-  ): Promise<DeliveryRow[]> => {
+  const readDeliveries = async (): Promise<DeliveryRow[]> => {
     const result = await db.execute<DeliveryRow>(sql`
       select
         id,
@@ -106,7 +104,6 @@ describe('worker email delivery idempotency', () => {
         provider_message_id as "providerMessageId",
         provider_error as "providerError"
       from email_deliveries
-      where institution_id = ${institutionId}
       order by recipient_address asc
     `);
 
@@ -114,7 +111,6 @@ describe('worker email delivery idempotency', () => {
   };
 
   const waitForDeliveries = async (
-    institutionId: string,
     expected: { status: string; count: number },
     timeoutMs = 10000
   ): Promise<DeliveryRow[]> => {
@@ -122,7 +118,7 @@ describe('worker email delivery idempotency', () => {
     let rows: DeliveryRow[] = [];
 
     while (Date.now() < deadline) {
-      rows = await readDeliveries(institutionId);
+      rows = await readDeliveries();
       if (
         rows.length === expected.count &&
         rows.every((row) => row.status === expected.status)
@@ -174,20 +170,16 @@ describe('worker email delivery idempotency', () => {
     `);
 
     const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
     });
     const student = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'Wren',
       lastName: 'Vasquez',
     });
     const enrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
     });
     const guardian = await createGuardianFixture({
-      institutionId: institution.id,
       email: 'maria@example.com',
     });
     await db
@@ -195,7 +187,6 @@ describe('worker email delivery idempotency', () => {
       .values({ studentId: student.id, guardianId: guardian.id });
 
     return {
-      institutionId: institution.id,
       studentId: student.id,
       enrollmentId: enrollment.id,
     };
@@ -204,22 +195,20 @@ describe('worker email delivery idempotency', () => {
   // A second address for the same student, resolved exactly as production
   // resolves the first one (RC-R1).
   const addGuardian = async (
-    institutionId: string,
     studentId: string,
     email: string
   ): Promise<void> => {
-    const guardian = await createGuardianFixture({ institutionId, email });
+    const guardian = await createGuardianFixture({ email });
     await db
       .insert(studentGuardians)
       .values({ studentId, guardianId: guardian.id });
   };
 
   const deliveryJob = (
-    scenario: { institutionId: string; enrollmentId: string },
+    scenario: { enrollmentId: string },
     eventId: string,
     recipientAddress = RECIPIENT
   ): EmailDeliveryJob => ({
-    institutionId: scenario.institutionId,
     eventId,
     recipientAddress,
     from: FROM_ADDRESS,
@@ -232,14 +221,12 @@ describe('worker email delivery idempotency', () => {
   // The end state a worker that died between the claim and the completion write
   // leaves behind: the row is stuck in 'sending' and its claim is `ageMs` old.
   const stageStrandedRow = async (input: {
-    institutionId: string;
     eventId: string;
     studentId: string;
     ageMs: number;
   }): Promise<void> => {
     await db.execute(sql`
       insert into email_deliveries (
-        institution_id,
         event_id,
         event_name,
         recipient_address,
@@ -250,7 +237,6 @@ describe('worker email delivery idempotency', () => {
         updated_at
       )
       values (
-        ${input.institutionId},
         ${input.eventId},
         'enrollment.welcomed',
         ${RECIPIENT},
@@ -349,7 +335,6 @@ describe('worker email delivery idempotency', () => {
   it('OC-R1: a ledger row that is already sent is never sent again', async () => {
     const scenario = await createScenario();
     const event = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
@@ -359,7 +344,7 @@ describe('worker email delivery idempotency', () => {
     await redis.xadd('edunic:domain-events', '*', 'event', JSON.stringify(event));
     expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
 
-    const delivered = await waitForDeliveries(scenario.institutionId, {
+    const delivered = await waitForDeliveries({
       status: 'sent',
       count: 1,
     });
@@ -374,7 +359,7 @@ describe('worker email delivery idempotency', () => {
 
     // No transport call at all: the claim affects no row, so nothing is sent.
     expect(fake.calls).toBe(0);
-    const rows = await readDeliveries(scenario.institutionId);
+    const rows = await readDeliveries();
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('sent');
     expect(rows[0].providerMessageId).toBe(delivered[0].providerMessageId);
@@ -384,7 +369,6 @@ describe('worker email delivery idempotency', () => {
   it('OC-R1: replaying an evicted job sends the awaiting row exactly once', async () => {
     const scenario = await createScenario();
     const event = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
@@ -398,7 +382,7 @@ describe('worker email delivery idempotency', () => {
     await runtime.emailWorker.pause();
     await runtime.emailDelivery.enqueueForEvent(event);
 
-    const staged = await waitForDeliveries(scenario.institutionId, {
+    const staged = await waitForDeliveries({
       status: 'queued',
       count: 1,
     });
@@ -414,7 +398,7 @@ describe('worker email delivery idempotency', () => {
     await runtime.emailWorker.resume();
     expect(await waitForJobEnd(jobId)).toBe('completed');
 
-    const rows = await waitForDeliveries(scenario.institutionId, {
+    const rows = await waitForDeliveries({
       status: 'sent',
       count: 1,
     });
@@ -427,7 +411,6 @@ describe('worker email delivery idempotency', () => {
   it('OC-R1: two jobs for one ledger row produce a single send', async () => {
     const scenario = await createScenario();
     const event = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
@@ -438,7 +421,7 @@ describe('worker email delivery idempotency', () => {
     // `queued` is the non-final state both jobs race for.
     await runtime.emailWorker.pause();
     await runtime.emailDelivery.enqueueForEvent(event);
-    const [queued] = await waitForDeliveries(scenario.institutionId, {
+    const [queued] = await waitForDeliveries({
       status: 'queued',
       count: 1,
     });
@@ -450,7 +433,7 @@ describe('worker email delivery idempotency', () => {
 
     expect(await waitForJobEnd(duplicateId)).toBe('completed');
 
-    const rows = await waitForDeliveries(scenario.institutionId, {
+    const rows = await waitForDeliveries({
       status: 'sent',
       count: 1,
     });
@@ -463,7 +446,6 @@ describe('worker email delivery idempotency', () => {
     async () => {
       const scenario = await createScenario();
       const event = createEnrollmentWelcomedEvent({
-        institutionId: scenario.institutionId,
         payload: {
           enrollmentId: scenario.enrollmentId,
           studentId: scenario.studentId,
@@ -477,7 +459,6 @@ describe('worker email delivery idempotency', () => {
       // the claim guard refused it, and the job finished having sent nothing.
       // Its record survives under the deterministic id (7-day retention).
       await stageStrandedRow({
-        institutionId: scenario.institutionId,
         eventId: event.id,
         studentId: scenario.studentId,
         ageMs: HOUR_MS,
@@ -496,9 +477,7 @@ describe('worker email delivery idempotency', () => {
       // One sweep pass: an hour-old claim is reclaimed and requeued.
       expect(await runtime.claimSweeper.sweepOnce()).toBe(1);
 
-      const rows = await waitForDeliveries(
-        scenario.institutionId,
-        {
+      const rows = await waitForDeliveries({
           status: 'sent',
           count: 1,
         },
@@ -525,7 +504,6 @@ describe('worker email delivery idempotency', () => {
     async () => {
       const scenario = await createScenario();
       const event = createEnrollmentWelcomedEvent({
-        institutionId: scenario.institutionId,
         payload: {
           enrollmentId: scenario.enrollmentId,
           studentId: scenario.studentId,
@@ -536,13 +514,13 @@ describe('worker email delivery idempotency', () => {
       // the exact key the service derives for this row and accepts the message.
       await runtime.emailWorker.pause();
       await runtime.emailDelivery.enqueueForEvent(event);
-      await waitForDeliveries(scenario.institutionId, {
+      await waitForDeliveries({
         status: 'queued',
         count: 1,
       });
       await runtime.emailWorker.resume();
 
-      const [delivered] = await waitForDeliveries(scenario.institutionId, {
+      const [delivered] = await waitForDeliveries({
         status: 'sent',
         count: 1,
       });
@@ -566,9 +544,7 @@ describe('worker email delivery idempotency', () => {
 
       expect(await runtime.claimSweeper.sweepOnce()).toBe(1);
 
-      const rows = await waitForDeliveries(
-        scenario.institutionId,
-        { status: 'sent', count: 1 },
+      const rows = await waitForDeliveries({ status: 'sent', count: 1 },
         10000
       );
 
@@ -590,19 +566,17 @@ describe('worker email delivery idempotency', () => {
 
   it('P10: the provider key is the row identity, so no two rows can share one', async () => {
     const scenario = await createScenario();
-    await addGuardian(scenario.institutionId, scenario.studentId, 'dad@example.com');
+    await addGuardian(scenario.studentId, 'dad@example.com');
 
     // Two events for one address and one event for a second address: the keys
     // have to separate the events and the addresses alike.
     const first = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
       },
     });
     const second = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
@@ -612,9 +586,7 @@ describe('worker email delivery idempotency', () => {
     await runtime.emailDelivery.enqueueForEvent(first);
     await runtime.emailDelivery.enqueueForEvent(second);
 
-    const rows = await waitForDeliveries(
-      scenario.institutionId,
-      { status: 'sent', count: 4 },
+    const rows = await waitForDeliveries({ status: 'sent', count: 4 },
       15000
     );
 
@@ -623,14 +595,13 @@ describe('worker email delivery idempotency', () => {
     expect(keys).toHaveLength(4);
     expect(new Set(keys).size).toBe(4);
     // The key is the delivery row it belongs to, and nothing else: one distinct
-    // key per (institution, event, address) row.
+    // key per (event, address) row.
     expect(new Set(keys)).toEqual(new Set(rows.map((row) => row.id)));
   }, 20000);
 
   it('OC-R1: a fresh sending row is never reclaimed (an in-flight send is not double-sent)', async () => {
     const scenario = await createScenario();
     const event = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
@@ -638,7 +609,6 @@ describe('worker email delivery idempotency', () => {
     });
 
     await stageStrandedRow({
-      institutionId: scenario.institutionId,
       eventId: event.id,
       studentId: scenario.studentId,
       ageMs: 0,
@@ -646,7 +616,7 @@ describe('worker email delivery idempotency', () => {
 
     expect(await runtime.claimSweeper.sweepOnce()).toBe(0);
 
-    const [row] = await readDeliveries(scenario.institutionId);
+    const [row] = await readDeliveries();
     expect(row.status).toBe('sending');
     expect(row.attemptCount).toBe(1);
 
@@ -655,7 +625,7 @@ describe('worker email delivery idempotency', () => {
     const duplicateId = await addDuplicateJob(deliveryJob(scenario, event.id));
     expect(await waitForJobEnd(duplicateId)).toBe('completed');
 
-    const [after] = await readDeliveries(scenario.institutionId);
+    const [after] = await readDeliveries();
     expect(after.attemptCount).toBe(1);
     expect(after.status).toBe('sending');
     expect(fake.calls).toBe(0);
@@ -666,7 +636,6 @@ describe('worker email delivery idempotency', () => {
     async () => {
       const scenario = await createScenario();
       const event = createEnrollmentWelcomedEvent({
-        institutionId: scenario.institutionId,
         payload: {
           enrollmentId: scenario.enrollmentId,
           studentId: scenario.studentId,
@@ -678,7 +647,7 @@ describe('worker email delivery idempotency', () => {
       // can race a live send.
       await runtime.emailWorker.pause();
       await runtime.emailDelivery.enqueueForEvent(event);
-      const [queued] = await waitForDeliveries(scenario.institutionId, {
+      const [queued] = await waitForDeliveries({
         status: 'queued',
         count: 1,
       });
@@ -693,9 +662,7 @@ describe('worker email delivery idempotency', () => {
       await sleep(CLAIM_STALE_MS + SEND_TIMEOUT_MS + 300);
       const reclaimed = await runtime.claimSweeper.sweepOnce();
 
-      const rows = await waitForDeliveries(
-        scenario.institutionId,
-        { status: 'sent', count: 1 },
+      const rows = await waitForDeliveries({ status: 'sent', count: 1 },
         10000
       );
 
@@ -718,7 +685,6 @@ describe('worker email delivery idempotency', () => {
   it('OC-R1: a stranded row whose job record is gone is reported as failed, not retried', async () => {
     const scenario = await createScenario();
     const event = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
@@ -726,7 +692,6 @@ describe('worker email delivery idempotency', () => {
     });
 
     await stageStrandedRow({
-      institutionId: scenario.institutionId,
       eventId: event.id,
       studentId: scenario.studentId,
       ageMs: HOUR_MS,
@@ -738,7 +703,7 @@ describe('worker email delivery idempotency', () => {
 
     expect(await runtime.claimSweeper.sweepOnce()).toBe(0);
 
-    const [row] = await readDeliveries(scenario.institutionId);
+    const [row] = await readDeliveries();
     // Claiming it is `retried` would advertise a retry that cannot happen.
     expect(row.status).toBe('failed');
     expect(row.providerError).toMatch(/job record/i);
@@ -748,7 +713,6 @@ describe('worker email delivery idempotency', () => {
   it('reclaims through the periodic pass, not only through an explicit sweep', async () => {
     const scenario = await createScenario();
     const event = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
@@ -760,7 +724,6 @@ describe('worker email delivery idempotency', () => {
     // claim guard refuses its replay, so the row leaves `sending` only if the
     // sweep reaches it.
     await stageStrandedRow({
-      institutionId: scenario.institutionId,
       eventId: event.id,
       studentId: scenario.studentId,
       ageMs: HOUR_MS,
@@ -780,9 +743,7 @@ describe('worker email delivery idempotency', () => {
     try {
       periodic.start();
 
-      const rows = await waitForDeliveries(
-        scenario.institutionId,
-        { status: 'sent', count: 1 },
+      const rows = await waitForDeliveries({ status: 'sent', count: 1 },
         10000
       );
 

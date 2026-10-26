@@ -60,7 +60,7 @@ describe('parseFilterSort', () => {
     expect(() =>
       parseFilterSort({ filter: 'password:eq:secret' }, OPTIONS)
     ).toThrow(ValidationError);
-    expect(() => parseFilterSort({ sort: 'institution_id:asc' }, OPTIONS)).toThrow(
+    expect(() => parseFilterSort({ sort: 'password:asc' }, OPTIONS)).toThrow(
       ValidationError
     );
   });

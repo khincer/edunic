@@ -140,35 +140,34 @@ export type StudentAverageRow = {
 export class DashboardsRepository {
   constructor(private readonly db: NodePgDatabase) {}
 
-  async getInstitutionContext(institutionId: string) {
+  // The single configuration row of the school: the oldest row, ties by lowest
+  // id, the same rule as single_school_id() and AuthRepository.findAuthContext.
+  async getInstitutionContext() {
     const result = await this.db.execute<InstitutionContextRow>(sql`
       select id, name
       from institutions
-      where id = ${institutionId}
+      order by created_at asc nulls last, id asc
       limit 1
     `);
 
     return result.rows[0] ?? null;
   }
 
-  async countStudents(institutionId: string) {
+  async countStudents() {
     return this.count(sql`
       select count(*)::int as count
       from students
-      where institution_id = ${institutionId}
     `);
   }
 
-  async countGuardians(institutionId: string) {
+  async countGuardians() {
     return this.count(sql`
       select count(*)::int as count
       from guardians
-      where institution_id = ${institutionId}
     `);
   }
 
-  // One school, one role per user: the count needs no institution.
-  async countUsersByRole(_institutionId: string, role: string) {
+  async countUsersByRole(role: string) {
     return this.count(sql`
       select count(*)::int as count
       from user_roles
@@ -176,12 +175,11 @@ export class DashboardsRepository {
     `);
   }
 
-  async countActiveEnrollments(institutionId: string, teacherUserId?: string) {
+  async countActiveEnrollments(teacherUserId?: string) {
     const assignmentJoin = teacherUserId
       ? sql`
         inner join teacher_classroom_assignments tca
           on tca.classroom_id = enrollments.classroom_id
-         and tca.institution_id = enrollments.institution_id
          and tca.teacher_user_id = ${teacherUserId}
       `
       : sql``;
@@ -190,20 +188,18 @@ export class DashboardsRepository {
       select count(*)::int as count
       from enrollments
       ${assignmentJoin}
-      where enrollments.institution_id = ${institutionId}
-        and enrollments.status = 'active'
+      where enrollments.status = 'active'
     `);
   }
 
-  async countClassrooms(institutionId: string) {
+  async countClassrooms() {
     return this.count(sql`
       select count(*)::int as count
       from classrooms
-      where institution_id = ${institutionId}
     `);
   }
 
-  async getActiveAcademicPeriod(institutionId: string) {
+  async getActiveAcademicPeriod() {
     const result = await this.db.execute<ActivePeriodRow>(sql`
       select
         id,
@@ -212,7 +208,6 @@ export class DashboardsRepository {
         start_date as "startDate",
         end_date as "endDate"
       from academic_periods
-      where institution_id = ${institutionId}
       order by
         case
           when coalesce(start_date::date, current_date) <= current_date
@@ -228,15 +223,13 @@ export class DashboardsRepository {
     return result.rows[0] ?? null;
   }
 
-  async getTodayAttendanceSummary(institutionId: string, teacherUserId?: string) {
+  async getTodayAttendanceSummary(teacherUserId?: string) {
     const assignmentJoin = teacherUserId
       ? sql`
         inner join enrollments e
           on e.id = attendance.enrollment_id
-         and e.institution_id = attendance.institution_id
         inner join teacher_classroom_assignments tca
           on tca.classroom_id = e.classroom_id
-         and tca.institution_id = e.institution_id
          and tca.teacher_user_id = ${teacherUserId}
       `
       : sql``;
@@ -249,15 +242,13 @@ export class DashboardsRepository {
         count(*)::int as marked
       from attendance
       ${assignmentJoin}
-      where attendance.institution_id = ${institutionId}
-        and attendance.date::date = current_date
+      where attendance.date::date = current_date
     `);
 
     return this.toAttendanceSummary(result.rows[0]);
   }
 
   async getGradeSubmissionSummary(
-    institutionId: string,
     academicPeriodId: string | null,
     teacherUserId?: string
   ) {
@@ -269,7 +260,6 @@ export class DashboardsRepository {
       ? sql`
         inner join teacher_classroom_assignments tca
           on tca.classroom_id = e.classroom_id
-         and tca.institution_id = e.institution_id
          and tca.teacher_user_id = ${teacherUserId}
       `
       : sql``;
@@ -282,9 +272,7 @@ export class DashboardsRepository {
       ${assignmentJoin}
       left join grades g
         on g.enrollment_id = e.id
-       and g.institution_id = e.institution_id
-      where e.institution_id = ${institutionId}
-        and e.academic_period_id = ${academicPeriodId}
+      where e.academic_period_id = ${academicPeriodId}
         and e.status = 'active'
     `);
 
@@ -323,7 +311,6 @@ export class DashboardsRepository {
   }
 
   async listRecentNotifications(input: {
-    institutionId: string;
     role: string;
     userId?: string;
     limit?: number;
@@ -343,8 +330,7 @@ export class DashboardsRepository {
               from guardian_user_links gul
               inner join student_guardians sg
                 on sg.guardian_id = gul.guardian_id
-              where gul.institution_id = notifications.institution_id
-                and gul.user_id = ${input.userId}
+              where gul.user_id = ${input.userId}
                 and metadata->'studentIds' ? sg.student_id::text
             )
           )
@@ -358,8 +344,7 @@ export class DashboardsRepository {
             or exists (
               select 1
               from teacher_classroom_assignments tca
-              where tca.institution_id = notifications.institution_id
-                and tca.teacher_user_id = ${input.userId}
+              where tca.teacher_user_id = ${input.userId}
                 and metadata->'classroomIds' ? tca.classroom_id::text
             )
           )
@@ -375,8 +360,7 @@ export class DashboardsRepository {
         read_at as "readAt",
         created_at as "createdAt"
       from notifications
-      where institution_id = ${input.institutionId}
-        and ${roleFilter}
+      where ${roleFilter}
         ${parentFilter}
         ${teacherFilter}
       order by created_at desc
@@ -386,7 +370,7 @@ export class DashboardsRepository {
     return result.rows;
   }
 
-  async listRecentAuditActivity(institutionId: string, limit = 5) {
+  async listRecentAuditActivity(limit = 5) {
     const result = await this.db.execute<AuditActivityRow>(sql`
       select
         id,
@@ -395,7 +379,6 @@ export class DashboardsRepository {
         entity_id as "entityId",
         created_at as "createdAt"
       from audit_logs
-      where institution_id = ${institutionId}
       order by created_at desc
       limit ${limit}
     `);
@@ -403,12 +386,11 @@ export class DashboardsRepository {
     return result.rows;
   }
 
-  async listClassroomSnapshots(institutionId: string, teacherUserId?: string) {
+  async listClassroomSnapshots(teacherUserId?: string) {
     const assignmentJoin = teacherUserId
       ? sql`
         inner join teacher_classroom_assignments tca
           on tca.classroom_id = c.id
-         and tca.institution_id = c.institution_id
          and tca.teacher_user_id = ${teacherUserId}
       `
       : sql``;
@@ -425,13 +407,10 @@ export class DashboardsRepository {
       ${assignmentJoin}
       left join enrollments e
         on e.classroom_id = c.id
-       and e.institution_id = c.institution_id
        and e.status = 'active'
       left join attendance a
         on a.enrollment_id = e.id
-       and a.institution_id = e.institution_id
        and a.date::date = current_date
-      where c.institution_id = ${institutionId}
       group by c.id, c.grade_level, c.section
       order by c.grade_level asc, c.section asc
     `);
@@ -439,12 +418,11 @@ export class DashboardsRepository {
     return result.rows;
   }
 
-  async listRecentGrades(institutionId: string, limit = 5, teacherUserId?: string) {
+  async listRecentGrades(limit = 5, teacherUserId?: string) {
     const assignmentJoin = teacherUserId
       ? sql`
         inner join teacher_classroom_assignments tca
           on tca.classroom_id = e.classroom_id
-         and tca.institution_id = e.institution_id
          and tca.teacher_user_id = ${teacherUserId}
       `
       : sql``;
@@ -461,12 +439,9 @@ export class DashboardsRepository {
       inner join subjects on subjects.id = g.subject_id
       inner join enrollments e
         on e.id = g.enrollment_id
-       and e.institution_id = g.institution_id
       ${assignmentJoin}
       inner join students s
         on s.id = e.student_id
-       and s.institution_id = e.institution_id
-      where g.institution_id = ${institutionId}
       order by g.created_at desc
       limit ${limit}
     `);
@@ -474,12 +449,11 @@ export class DashboardsRepository {
     return result.rows;
   }
 
-  async listStudentsAtRisk(institutionId: string, limit = 5, teacherUserId?: string) {
+  async listStudentsAtRisk(limit = 5, teacherUserId?: string) {
     const assignmentJoin = teacherUserId
       ? sql`
         inner join teacher_classroom_assignments tca
           on tca.classroom_id = e.classroom_id
-         and tca.institution_id = e.institution_id
          and tca.teacher_user_id = ${teacherUserId}
       `
       : sql``;
@@ -494,19 +468,14 @@ export class DashboardsRepository {
       from students s
       inner join enrollments e
         on e.student_id = s.id
-       and e.institution_id = s.institution_id
        and e.status = 'active'
       ${assignmentJoin}
       left join classrooms c
         on c.id = e.classroom_id
-       and c.institution_id = e.institution_id
       left join grades g
         on g.enrollment_id = e.id
-       and g.institution_id = e.institution_id
       left join attendance a
         on a.enrollment_id = e.id
-       and a.institution_id = e.institution_id
-      where s.institution_id = ${institutionId}
       group by s.id, s.first_name, s.last_name, c.grade_level, c.section
       having avg(g.score) < 80
           or count(a.id) filter (where a.status = 'absent') > 0
@@ -519,7 +488,7 @@ export class DashboardsRepository {
     return result.rows;
   }
 
-  async listParentStudents(institutionId: string, userId: string) {
+  async listParentStudents(userId: string) {
     const result = await this.db.execute<ParentStudentRow>(sql`
       select distinct on (s.id)
         s.id as "studentId",
@@ -534,14 +503,11 @@ export class DashboardsRepository {
       from student_guardians sg
       inner join guardian_user_links gul
         on gul.guardian_id = sg.guardian_id
-       and gul.institution_id = ${institutionId}
        and gul.user_id = ${userId}
       inner join guardians g
         on g.id = sg.guardian_id
-       and g.institution_id = gul.institution_id
       inner join students s
         on s.id = sg.student_id
-       and s.institution_id = g.institution_id
       left join lateral (
         select
           e.id,
@@ -552,26 +518,22 @@ export class DashboardsRepository {
         from enrollments e
         inner join academic_periods ap
           on ap.id = e.academic_period_id
-         and ap.institution_id = e.institution_id
         left join classrooms c
           on c.id = e.classroom_id
-         and c.institution_id = e.institution_id
         where e.student_id = s.id
-          and e.institution_id = s.institution_id
         order by
           case when e.status = 'active' then 0 else 1 end,
           ap.year desc,
           ap.term desc
         limit 1
       ) latest_enrollment on true
-      where g.institution_id = ${institutionId}
       order by s.id, g.name asc
     `);
 
     return result.rows;
   }
 
-  async getStudentAverage(institutionId: string, studentId: string, year: number) {
+  async getStudentAverage(studentId: string, year: number) {
     const result = await this.db.execute<StudentAverageRow>(sql`
       select
         avg(g.score)::numeric(10,2) as average,
@@ -580,12 +542,9 @@ export class DashboardsRepository {
       inner join subjects on subjects.id = g.subject_id
       inner join enrollments e
         on e.id = g.enrollment_id
-       and e.institution_id = g.institution_id
       inner join academic_periods ap
         on ap.id = e.academic_period_id
-       and ap.institution_id = e.institution_id
-      where g.institution_id = ${institutionId}
-        and e.student_id = ${studentId}
+      where e.student_id = ${studentId}
         and ap.year = ${year}
     `);
 
@@ -597,7 +556,7 @@ export class DashboardsRepository {
     };
   }
 
-  async getStudentAttendanceSummary(institutionId: string, studentId: string) {
+  async getStudentAttendanceSummary(studentId: string) {
     const result = await this.db.execute<AttendanceSummaryRow>(sql`
       select
         count(*) filter (where a.status = 'present')::int as present,
@@ -607,19 +566,13 @@ export class DashboardsRepository {
       from attendance a
       inner join enrollments e
         on e.id = a.enrollment_id
-       and e.institution_id = a.institution_id
-      where a.institution_id = ${institutionId}
-        and e.student_id = ${studentId}
+      where e.student_id = ${studentId}
     `);
 
     return this.toAttendanceSummary(result.rows[0]);
   }
 
-  async listStudentRecentGrades(
-    institutionId: string,
-    studentId: string,
-    limit = 3
-  ) {
+  async listStudentRecentGrades(studentId: string, limit = 3) {
     const result = await this.db.execute<RecentGradeRow>(sql`
       select
         g.id,
@@ -632,12 +585,9 @@ export class DashboardsRepository {
       inner join subjects on subjects.id = g.subject_id
       inner join enrollments e
         on e.id = g.enrollment_id
-       and e.institution_id = g.institution_id
       inner join students s
         on s.id = e.student_id
-       and s.institution_id = e.institution_id
-      where g.institution_id = ${institutionId}
-        and s.id = ${studentId}
+      where s.id = ${studentId}
       order by g.created_at desc
       limit ${limit}
     `);
@@ -646,7 +596,6 @@ export class DashboardsRepository {
   }
 
   async listUpcomingAssignments(input: {
-    institutionId: string;
     role: string;
     userId?: string;
     limit?: number;
@@ -656,7 +605,6 @@ export class DashboardsRepository {
         ? sql`
           inner join teacher_classroom_assignments tca
             on tca.classroom_id = assignments.classroom_id
-           and tca.institution_id = assignments.institution_id
            and tca.teacher_user_id = ${input.userId}
         `
         : sql``;
@@ -670,11 +618,9 @@ export class DashboardsRepository {
               on sg.guardian_id = gul.guardian_id
             inner join enrollments e
               on e.student_id = sg.student_id
-             and e.institution_id = gul.institution_id
              and e.classroom_id = assignments.classroom_id
              and e.status = 'active'
-            where gul.institution_id = assignments.institution_id
-              and gul.user_id = ${input.userId}
+            where gul.user_id = ${input.userId}
           )
         `
         : sql``;
@@ -691,9 +637,7 @@ export class DashboardsRepository {
       ${teacherJoin}
       left join classrooms
         on classrooms.id = assignments.classroom_id
-       and classrooms.institution_id = assignments.institution_id
-      where assignments.institution_id = ${input.institutionId}
-        and assignments.status = 'published'
+      where assignments.status = 'published'
         ${parentWhere}
       order by assignments.due_date asc nulls last, assignments.created_at desc
       limit ${input.limit ?? 5}
@@ -703,7 +647,6 @@ export class DashboardsRepository {
   }
 
   async listUpcomingEvents(input: {
-    institutionId: string;
     role: string;
     userId?: string;
     limit?: number;
@@ -717,7 +660,6 @@ export class DashboardsRepository {
               select 1
               from teacher_classroom_assignments tca
               where tca.classroom_id = school_events.classroom_id
-                and tca.institution_id = school_events.institution_id
                 and tca.teacher_user_id = ${input.userId}
             )
           )
@@ -735,11 +677,9 @@ export class DashboardsRepository {
                 on sg.guardian_id = gul.guardian_id
               inner join enrollments e
                 on e.student_id = sg.student_id
-               and e.institution_id = gul.institution_id
                and e.classroom_id = school_events.classroom_id
                and e.status = 'active'
-              where gul.institution_id = school_events.institution_id
-                and gul.user_id = ${input.userId}
+              where gul.user_id = ${input.userId}
             )
           )
         `
@@ -756,9 +696,7 @@ export class DashboardsRepository {
       from school_events
       left join classrooms
         on classrooms.id = school_events.classroom_id
-       and classrooms.institution_id = school_events.institution_id
-      where school_events.institution_id = ${input.institutionId}
-        and school_events.starts_at::date >= current_date
+      where school_events.starts_at::date >= current_date
         ${teacherWhere}
         ${parentWhere}
       order by school_events.starts_at asc
@@ -768,17 +706,16 @@ export class DashboardsRepository {
     return result.rows;
   }
 
-  async countUnreadMessages(institutionId: string, userId: string) {
+  async countUnreadMessages(userId: string) {
     return this.count(sql`
       select count(*)::int as count
       from messages
-      where institution_id = ${institutionId}
-        and recipient_user_id = ${userId}
+      where recipient_user_id = ${userId}
         and read_at is null
     `);
   }
 
-  async listRecentMessages(institutionId: string, userId: string, limit = 5) {
+  async listRecentMessages(userId: string, limit = 5) {
     const result = await this.db.execute<MessageRow>(sql`
       select
         messages.id,
@@ -789,9 +726,7 @@ export class DashboardsRepository {
       from messages
       inner join message_threads
         on message_threads.id = messages.thread_id
-       and message_threads.institution_id = messages.institution_id
-      where messages.institution_id = ${institutionId}
-        and messages.recipient_user_id = ${userId}
+      where messages.recipient_user_id = ${userId}
       order by messages.created_at desc
       limit ${limit}
     `);
@@ -799,7 +734,7 @@ export class DashboardsRepository {
     return result.rows;
   }
 
-  async listReportHistory(institutionId: string, limit = 10) {
+  async listReportHistory(limit = 10) {
     const result = await this.db.execute<ReportHistoryRow>(sql`
       select
         report_history.id,
@@ -811,8 +746,6 @@ export class DashboardsRepository {
       from report_history
       inner join students
         on students.id = report_history.student_id
-       and students.institution_id = report_history.institution_id
-      where report_history.institution_id = ${institutionId}
       order by report_history.created_at desc
       limit ${limit}
     `);

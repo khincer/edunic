@@ -18,7 +18,6 @@ import {
 // outbox recorded. flushOutbox proves nothing was left pending.
 describe('E2E flow: events', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
-  let institutionId: string;
   let headers: Record<string, string>;
   let studentId: string;
   let academicPeriodId: string;
@@ -30,11 +29,9 @@ describe('E2E flow: events', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture('Events Flow Institution');
-    institutionId = institution.id;
+    await createInstitutionFixture('Events Flow Institution');
 
     const admin = await createUserFixture({
-      institutionId,
       role: 'director',
       email: 'e2e-admin@events-flow.test',
       password: 'admin1234',
@@ -43,13 +40,12 @@ describe('E2E flow: events', () => {
     const login = await app.inject({
       method: 'POST',
       url: '/auth/login',
-      payload: { email: admin.email, password: admin.password, institutionId },
+      payload: { email: admin.email, password: admin.password },
     });
     expect(login.statusCode).toBe(200);
 
     headers = {
       authorization: `Bearer ${login.json().data.token}`,
-      'x-institution-id': institutionId,
     };
 
     const period = await app.inject({

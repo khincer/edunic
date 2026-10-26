@@ -25,15 +25,13 @@ describe('custom fields routes', () => {
   });
 
   it('creates field definitions and upserts typed values', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
+    const student = await createStudentFixture({});
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     const fieldResponse = await client.post('/custom-fields').set(headers).send({
@@ -63,15 +61,13 @@ describe('custom fields routes', () => {
   });
 
   it('rejects invalid typed values', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
+    const student = await createStudentFixture({});
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     const fieldResponse = await client.post('/custom-fields').set(headers).send({
@@ -95,16 +91,14 @@ describe('custom fields routes', () => {
     expect(response.status).toBe(400);
   });
 
-  it('lists, updates and deletes fields without exposing institutionId', async () => {
-    const institution = await createInstitutionFixture();
+  it('lists, updates and deletes fields without exposing a school field', async () => {
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
+    const student = await createStudentFixture({});
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     const first = await client
@@ -156,14 +150,13 @@ describe('custom fields routes', () => {
   });
 
   it('keeps every custom-field route (values included) admin only', async () => {
-    const institution = await createInstitutionFixture();
-    const student = await createStudentFixture({ institutionId: institution.id });
+    await createInstitutionFixture();
+    const student = await createStudentFixture({});
 
     for (const role of ['teacher', 'parent'] as const) {
-      const user = await createUserFixture({ institutionId: institution.id, role });
+      const user = await createUserFixture({ role });
       const headers = await createAuthHeaders({
         userId: user.id,
-        institutionId: institution.id,
       });
 
       const read = await client

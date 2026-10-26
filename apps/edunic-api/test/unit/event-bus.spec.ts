@@ -1,12 +1,18 @@
-import { InMemoryEventBus } from '@edunic/source/events';
-import { createEnrollmentCreatedEvent } from '@edunic/source/domain/events';
+import { InMemoryEventBus, createEventEnvelope } from '@edunic/source/events';
+import {
+  createAttendanceMarkedEvent,
+  createEnrollmentCreatedEvent,
+  createEnrollmentWelcomedEvent,
+  createGradeSubmittedEvent,
+} from '@edunic/source/domain/events';
+
+const LEGACY_SCHOOL_ID = '00000000-0000-0000-0000-000000000001';
 
 describe('InMemoryEventBus', () => {
   it('publishes events to subscribed handlers', async () => {
     const eventBus = new InMemoryEventBus();
     const handler = jest.fn();
     const event = createEnrollmentCreatedEvent({
-      institutionId: '00000000-0000-0000-0000-000000000001',
       payload: {
         enrollmentId: 'enrollment-1',
         studentId: 'student-1',
@@ -26,7 +32,6 @@ describe('InMemoryEventBus', () => {
     const handler = jest.fn();
     const unsubscribe = eventBus.subscribe('enrollment.created', handler);
     const event = createEnrollmentCreatedEvent({
-      institutionId: '00000000-0000-0000-0000-000000000001',
       payload: {
         enrollmentId: 'enrollment-1',
         studentId: 'student-1',
@@ -76,5 +81,51 @@ describe('InMemoryEventBus', () => {
     await eventBus.publish(JSON.parse(JSON.stringify(oldShape)));
 
     expect(handler).toHaveBeenCalledWith(oldShape);
+  });
+
+  // Callers written before the sweep may still pass the field; the creators
+  // must never emit it again (TEN-07).
+  describe('event creators drop a legacy institutionId argument', () => {
+    const creators: Array<[string, (input: never) => object, object]> = [
+      [
+        'enrollment.created',
+        createEnrollmentCreatedEvent as (input: never) => object,
+        { enrollmentId: 'e-1', studentId: 's-1', academicPeriodId: 'p-1', classroomId: null },
+      ],
+      [
+        'grade.submitted',
+        createGradeSubmittedEvent as (input: never) => object,
+        { gradeId: 'g-1', enrollmentId: 'e-1', subject: 'Math', score: 9 },
+      ],
+      [
+        'attendance.marked',
+        createAttendanceMarkedEvent as (input: never) => object,
+        { attendanceId: 'a-1', enrollmentId: 'e-1', date: '2026-01-01', status: 'present' },
+      ],
+      [
+        'enrollment.welcomed',
+        createEnrollmentWelcomedEvent as (input: never) => object,
+        { enrollmentId: 'e-1', studentId: 's-1' },
+      ],
+    ];
+
+    it.each(creators)('%s', (name, create, payload) => {
+      const event = create({ institutionId: LEGACY_SCHOOL_ID, payload } as never);
+
+      expect(event).toMatchObject({ name, payload });
+      expect(event).not.toHaveProperty('institutionId');
+      expect(JSON.stringify(event)).not.toContain(LEGACY_SCHOOL_ID);
+    });
+
+    it('createEventEnvelope drops it too', () => {
+      const event = createEventEnvelope({
+        name: 'enrollment.created',
+        institutionId: LEGACY_SCHOOL_ID,
+        payload: { enrollmentId: 'e-1' },
+      } as never);
+
+      expect(event).toMatchObject({ name: 'enrollment.created' });
+      expect(event).not.toHaveProperty('institutionId');
+    });
   });
 });

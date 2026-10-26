@@ -18,7 +18,7 @@ const PAGE_SIZE = 10;
 
 export default function InstitutionAuditLogsPage() {
   const { school } = useSchool();
-  const institutionId = school?.id ?? '';
+  const schoolId = school?.id ?? '';
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
@@ -28,7 +28,7 @@ export default function InstitutionAuditLogsPage() {
 
   useEffect(() => {
     async function loadData() {
-      if (!institutionId) {
+      if (!schoolId) {
         return;
       }
 
@@ -53,7 +53,7 @@ export default function InstitutionAuditLogsPage() {
     }
 
     void loadData();
-  }, [institutionId, offset]);
+  }, [schoolId, offset]);
 
   const columns = useMemo<DataTableColumn<AuditLog>[]>(
     () => [

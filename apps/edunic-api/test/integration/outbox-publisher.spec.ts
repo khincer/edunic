@@ -11,7 +11,6 @@ const POLL_WAIT_MS = 1200;
 function buildEvent() {
   return createEventEnvelope({
     name: 'enrollment.created',
-    institutionId: randomUUID(),
     payload: { enrollmentId: randomUUID() },
   });
 }

@@ -5,7 +5,6 @@ import {
   DashboardsRepository,
 } from '@edunic/source/domain/dashboards';
 import { PaymentsRepository } from '@edunic/source/domain/payments';
-import { parseWithSchema, getInstitutionId } from '@edunic/source/domain/shared';
 import { ADMIN_ROLES, adminAnd, toAudienceRole } from '@edunic/source/domain/authorization';
 
 function getAuthenticatedUser(request: FastifyRequest) {
@@ -28,10 +27,9 @@ export async function dashboardRoutes(app: FastifyInstance) {
       preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
     },
     async (request) => {
-      const institutionId = getInstitutionId(request);
       const user = getAuthenticatedUser(request);
 
-      return dashboardsService.getAdminDashboard(institutionId, user.id);
+      return dashboardsService.getAdminDashboard(user.id);
     }
   );
 
@@ -41,11 +39,9 @@ export async function dashboardRoutes(app: FastifyInstance) {
       preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher'))],
     },
     async (request) => {
-      const institutionId = getInstitutionId(request);
       const user = getAuthenticatedUser(request);
 
       return dashboardsService.getTeacherDashboard({
-        institutionId,
         userId: user.id,
         role: toAudienceRole(user.role),
       });
@@ -58,10 +54,9 @@ export async function dashboardRoutes(app: FastifyInstance) {
       preHandler: [app.authenticate, app.authorizeRoles(['parent'])],
     },
     async (request) => {
-      const institutionId = getInstitutionId(request);
       const user = getAuthenticatedUser(request);
 
-      return dashboardsService.getParentDashboard(institutionId, user.id);
+      return dashboardsService.getParentDashboard(user.id);
     }
   );
 }

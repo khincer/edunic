@@ -1,71 +1,34 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 
-// Guard for the single-school sweep (TEN-05, AUTH-05). Each sweep slice adds
-// the paths it cleans here first (RED), then removes the references (GREEN).
-// A path is a file or a directory (scanned recursively).
+// Guard for the single-school sweep (TEN-05, TEN-07, AUTH-05). A path is a
+// file or a directory (scanned recursively).
 const REPO_ROOT = join(__dirname, '../../../..');
 
+// S1.4h: the guard is repo-wide for runtime code. Every module is swept, so
+// the roots below are scanned whole instead of listing modules one by one.
 const SWEPT: string[] = [
-  // S1.4b-1: feature flags are global
-  'libs/domain/src/feature-flags',
-  'apps/edunic-api/src/routes/feature-flags.routes.ts',
-  // S1.4b-2: extensions are global
-  'libs/domain/src/extensions',
-  'apps/edunic-api/src/routes/extensions.routes.ts',
-  // S1.4c: notifications and email delivery. libs/domain/src/events.ts and
-  // libs/events keep an OPTIONAL institutionId (events already queued still
-  // carry it) until S1.4h, so they are deliberately not listed yet.
-  'libs/domain/src/notifications',
-  'apps/edunic-api/src/routes/notifications.routes.ts',
-  'apps/edunic-worker/src/bootstrap.ts',
-  // S1.4d-1: academic periods, classrooms and academic averages. Their
-  // UNIQUE (institution_id, year, term) / (institution_id, grade_level,
-  // section) keys keep the column until 0015: with one school they behave as
-  // (year, term) / (grade_level, section) and the 409 checks stay in the app.
-  'libs/domain/src/academic-periods',
-  'apps/edunic-api/src/routes/academic-periods.routes.ts',
-  'libs/domain/src/classrooms',
-  'apps/edunic-api/src/routes/classrooms.routes.ts',
-  'libs/domain/src/academic-averages',
-  'apps/edunic-api/src/routes/academic-averages.routes.ts',
-  // S1.4d-2: custom fields and audit logs. custom_fields has no unique key
-  // that includes institution_id, so there is no duplicate check to keep.
-  // plugins/audit-logs.plugin.ts is NOT listed: resolveEntityId still reads
-  // the `:institutionId` route param of the institutions routes (S1.4h).
-  'libs/domain/src/custom-fields',
-  'apps/edunic-api/src/routes/custom-fields.routes.ts',
-  'libs/domain/src/audit-logs',
-  'apps/edunic-api/src/routes/audit-logs.routes.ts',
-  // S1.4e-1: students and guardians. student_guardians has no institution
-  // column (PK (student_id, guardian_id)); guardian_user_links keeps its
-  // (institution_id, guardian_id, user_id) PK until 0015 and is written by
-  // other modules, not these.
-  'libs/domain/src/students',
-  'apps/edunic-api/src/routes/students.routes.ts',
-  'libs/domain/src/guardians',
-  'apps/edunic-api/src/routes/guardians.routes.ts',
-  // S1.4e-2: enrollments. UNIQUE (student_id, academic_period_id) never
-  // included institution_id, so the 409 duplicate check is unchanged. The
-  // enrollment.* events stop carrying institutionId (the optional field stays
-  // on the event types until S1.4h).
-  'libs/domain/src/enrollments',
-  'apps/edunic-api/src/routes/enrollments.routes.ts',
-  // S1.4f: attendance, grades and reports. UNIQUE (enrollment_id, date) on
-  // attendance never included institution_id; grades has no unique key. The
-  // grade.submitted / attendance.marked events stop carrying institutionId
-  // (the optional field stays on the event types until S1.4h).
-  'libs/domain/src/attendance',
-  'apps/edunic-api/src/routes/attendance.routes.ts',
-  'libs/domain/src/grades',
-  'apps/edunic-api/src/routes/grades.routes.ts',
-  'libs/domain/src/reports',
-  'apps/edunic-api/src/routes/reports.routes.ts',
+  'apps/edunic-api/src',
+  'libs/domain/src',
+  'libs/events/src',
+  'apps/edunic-worker/src',
+  'apps/edunic-fe/src',
+  'tools',
 ];
 
-// Also the per-school tables, which stay in the DB only until 0015.
+// Deliberately NOT scanned:
+//  - libs/db (Drizzle schema + migrations keep the columns until 0015, S1.8b)
+//    and every test directory (fixtures, S1.8a) are outside the roots above.
+//    Nothing inside the roots is excluded. tools/ (seed, create-user,
+//    reset-db) is scanned since S1.7.
+
+// The pattern targets the tenant identifier, never the `institutions` table:
+// the school profile and the single-school context lookups legitimately read
+// `from institutions` (the one configuration row), and none of these tokens
+// appear in them. Also the per-school tables, which stay in the DB only until
+// 0015, the removed request header, and the removed per-user tenant tables.
 const FORBIDDEN =
-  /institutionId|institution_id|getInstitutionId|institution_feature_flags|institutionFeatureFlags|institution_extensions|institutionExtensions/;
+  /institutionId|institution_id|getInstitutionId|InstitutionNotResolvedError|x-institution-id|user_institution_roles|institution_feature_flags|institutionFeatureFlags|institution_extensions|institutionExtensions/;
 
 function listFiles(path: string): string[] {
   if (!statSync(path).isDirectory()) {
@@ -76,10 +39,40 @@ function listFiles(path: string): string[] {
 }
 
 describe('single-school sweep guard', () => {
-  const files = SWEPT.flatMap((path) => listFiles(join(REPO_ROOT, path)));
+  const files = SWEPT.flatMap((path) =>
+    listFiles(join(REPO_ROOT, path))
+  ).filter((file) => /\.(ts|tsx|css|mjs|json)$/.test(file));
 
-  it('scans real files', () => {
-    expect(files.length).toBeGreaterThanOrEqual(10);
+  it('scans real files across every runtime root', () => {
+    const relativeFiles = files.map((file) =>
+      relative(REPO_ROOT, file).split(sep).join('/')
+    );
+
+    expect(files.length).toBeGreaterThanOrEqual(150);
+    for (const root of SWEPT) {
+      expect(
+        relativeFiles.filter((file) => file.startsWith(`${root}/`)).length
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  // AUTH-05: the helper is gone from the whole API workspace, tests included.
+  // This file is skipped: it names the helper to look for.
+  it('has no getInstitutionId anywhere in the API src or test trees', () => {
+    const helper = ['get', 'InstitutionId'].join('');
+    const offending = ['apps/edunic-api/src', 'apps/edunic-api/test']
+      .flatMap((path) => listFiles(join(REPO_ROOT, path)))
+      .filter((file) => file.endsWith('.ts') && file !== __filename)
+      .filter((file) => readFileSync(file, 'utf8').includes(helper))
+      .map((file) => relative(REPO_ROOT, file));
+
+    expect(offending).toEqual([]);
+  });
+
+  it('scans the OpenAPI document like every other runtime file', () => {
+    expect(
+      files.map((file) => relative(REPO_ROOT, file).split(sep).join('/'))
+    ).toContain('apps/edunic-api/src/docs/openapi.ts');
   });
 
   it.each(files.map((file) => [relative(REPO_ROOT, file), file]))(
@@ -94,4 +87,84 @@ describe('single-school sweep guard', () => {
       expect(offending).toEqual([]);
     }
   );
+});
+
+// S1.8a: the API test tree stops passing, inserting or asserting the tenant
+// identifier, so migration 0015 (S1.8b) can drop the columns without touching
+// the suite. Fixtures rely on the `single_school_id()` default of 0014.
+const TEST_ROOT = 'apps/edunic-api/test';
+
+// Specs whose subject IS the database itself: the institution_id columns, the
+// 0014 default, the institutions table or the seed. S1.8b adapts them together
+// with the migration, so they are excluded on purpose (not temporarily).
+const TEST_EXCLUDED: RegExp[] = [
+  /^integration\/migration-[^/]+\.spec\.ts$/,
+  /^integration\/db-constraints\.spec\.ts$/,
+  /^integration\/seed-single-school\.spec\.ts$/,
+  /^integration\/single-school-request-context\.spec\.ts$/,
+  /^integration\/dashboards-school-context\.spec\.ts$/,
+  /^unit\/single-school-sweep\.spec\.ts$/,
+  // Legacy-payload tolerance: events and idempotency scopes queued by an
+  // instance that still sends the school must keep being accepted (rolling
+  // deploy), so these specs name the field on purpose.
+  /^unit\/(event-bus|email-delivery\.service|notifications\.service|idempotency)\.spec\.ts$/,
+  // TRUNCATE names the two per-school tables that migration 0015 drops.
+  /^helpers\/db\.ts$/,
+];
+
+// An assertion that a value does NOT carry the field proves the contract is
+// free of the school, so it is allowed (it survives the column drop).
+const ABSENCE_ASSERTION =
+  /not\s*\.(toHaveProperty|toContain|toMatch)\(\s*(?:'[\w.]*'|\/[\w|.]*\/)\s*\)/g;
+
+// Files not yet cleaned. Empty since S1.8a part 2: nothing may be added back.
+const TEST_PENDING: string[] = [];
+
+describe('single-school sweep guard (API test tree)', () => {
+  const testFiles = listFiles(join(REPO_ROOT, TEST_ROOT))
+    .filter((file) => /\.ts$/.test(file))
+    .map((file) => ({
+      file,
+      name: relative(join(REPO_ROOT, TEST_ROOT), file).split(sep).join('/'),
+    }));
+
+  const isExcluded = (name: string) =>
+    TEST_EXCLUDED.some((pattern) => pattern.test(name));
+
+  const offendingLines = (file: string) =>
+    readFileSync(file, 'utf8')
+      .replace(ABSENCE_ASSERTION, (match) => match.replace(/[^\n]/g, ''))
+      .split('\n')
+      .map((line, index) => ({ line, number: index + 1 }))
+      .filter(({ line }) => FORBIDDEN.test(line))
+      .map(({ line, number }) => `${number}: ${line.trim()}`);
+
+  it('scans helpers, unit, integration and e2e files', () => {
+    for (const dir of ['helpers/', 'unit/', 'integration/', 'e2e/']) {
+      expect(
+        testFiles.filter(({ name }) => name.startsWith(dir)).length
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('only lists existing files in the exclusion and pending lists', () => {
+    const names = testFiles.map(({ name }) => name);
+
+    expect(TEST_PENDING.filter((name) => !names.includes(name))).toEqual([]);
+    expect(
+      TEST_EXCLUDED.filter((pattern) => !names.some((n) => pattern.test(n)))
+    ).toEqual([]);
+  });
+
+  it('has no pending file left', () => {
+    expect(TEST_PENDING).toEqual([]);
+  });
+
+  it.each(
+    testFiles
+      .filter(({ name }) => !isExcluded(name) && !TEST_PENDING.includes(name))
+      .map(({ name, file }) => [name, file])
+  )('%s has no institution reference', (_name, file) => {
+    expect(offendingLines(file)).toEqual([]);
+  });
 });

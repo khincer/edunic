@@ -10,7 +10,6 @@ export type UserRecord = {
 
 export type UserRoleRecord = {
   role: string;
-  institutionId: string | null;
 };
 
 export class AuthRepository {
@@ -32,20 +31,11 @@ export class AuthRepository {
   }
 
   // The role comes from `user_roles` (one role per user, the single-school
-  // model). The school is the single `institutions` row, resolved on the
-  // server -- never from the client. The tenant columns survive until the
-  // contract migration, so `institutionId` stays on the request user for the
-  // domain code that still filters by it.
-  // shortcut: drop `institutionId` when the domain stops filtering by it.
+  // model). The school is configuration, not identity: nothing here reads the
+  // `institutions` row, so a missing school profile never blocks sign-in.
   async findAuthContext(userId: string) {
     const result = await this.db.execute<UserRoleRecord>(sql`
-      select
-        role as "role",
-        (
-          select id from institutions
-          order by created_at asc nulls last, id asc
-          limit 1
-        ) as "institutionId"
+      select role as "role"
       from user_roles
       where user_id = ${userId}
       limit 1

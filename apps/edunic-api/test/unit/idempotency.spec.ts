@@ -35,17 +35,15 @@ function createFakeStore() {
 }
 
 const baseKey = {
-  institutionId: 'inst-1',
   route: 'POST /students',
   actorId: 'user-1',
   key: 'client-abc',
 };
 
 describe('idempotency key scoping', () => {
-  it('builds a key scoped by institution, route, actor, and client key', () => {
+  it('builds a key scoped by route, actor, and client key', () => {
     const scoped = buildIdempotencyKey(baseKey);
 
-    expect(scoped).toContain('inst-1');
     expect(scoped).toContain('POST /students');
     expect(scoped).toContain('user-1');
     expect(scoped).toContain('client-abc');
@@ -54,11 +52,19 @@ describe('idempotency key scoping', () => {
   it('produces distinct keys when any single scope component changes', () => {
     const scoped = buildIdempotencyKey(baseKey);
 
-    expect(buildIdempotencyKey({ ...baseKey, institutionId: 'inst-2' })).not.toBe(scoped);
     expect(buildIdempotencyKey({ ...baseKey, route: 'PATCH /students' })).not.toBe(scoped);
     expect(buildIdempotencyKey({ ...baseKey, actorId: 'user-2' })).not.toBe(scoped);
     expect(buildIdempotencyKey({ ...baseKey, key: 'client-xyz' })).not.toBe(scoped);
     expect(buildIdempotencyKey(baseKey)).toBe(scoped);
+  });
+});
+
+describe('idempotency key without a school', () => {
+  it('ignores a legacy institutionId on the scope: the actor id is already global', () => {
+    const legacy = { ...baseKey, institutionId: 'inst-1' } as typeof baseKey;
+
+    expect(buildIdempotencyKey(legacy)).toBe(buildIdempotencyKey(baseKey));
+    expect(buildIdempotencyKey(legacy)).not.toContain('inst-1');
   });
 });
 

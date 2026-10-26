@@ -82,14 +82,12 @@ describe('email deliveries admin panel', () => {
   });
 
   it('lists the ledger newest-first with the CursorPage envelope', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
-      institutionId: institution.id,
     });
 
     await stageDelivery({
@@ -159,14 +157,12 @@ describe('email deliveries admin panel', () => {
   });
 
   it('filters by status and eventName and rejects unknown statuses', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
-      institutionId: institution.id,
     });
 
     await stageDelivery({
@@ -210,12 +206,10 @@ describe('email deliveries admin panel', () => {
   it('reports the effective flag and sender-identity state', async () => {
     const institution = await createInstitutionFixture();
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
-      institutionId: institution.id,
     });
 
     const disabledResponse = await client
@@ -245,22 +239,18 @@ describe('email deliveries admin panel', () => {
   });
 
   it('rejects non-admin roles on both delivery endpoints', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     const parent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     const teacherHeaders = await createAuthHeaders({
       userId: teacher.id,
-      institutionId: institution.id,
     });
     const parentHeaders = await createAuthHeaders({
       userId: parent.id,
-      institutionId: institution.id,
     });
 
     for (const headers of [teacherHeaders, parentHeaders]) {
@@ -277,14 +267,12 @@ describe('email deliveries admin panel', () => {
   });
 
   it('keeps the panel visible and lists rows while the flag is off', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
-      institutionId: institution.id,
     });
 
     await stageDelivery({
@@ -307,14 +295,12 @@ describe('email deliveries admin panel', () => {
   });
 
   it('exposes no mutating route under /notifications/deliveries', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
-      institutionId: institution.id,
     });
 
     const subtree = notificationSubtreeLines(app);

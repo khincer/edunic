@@ -33,7 +33,6 @@ describe('feature flag routes (global, single school)', () => {
   async function headersFor(role: string) {
     const institution = await createInstitutionFixture();
     const user = await createUserFixture({
-      institutionId: institution.id,
       role,
     });
 
@@ -41,7 +40,6 @@ describe('feature flag routes (global, single school)', () => {
       institution,
       headers: await createAuthHeaders({
         userId: user.id,
-        institutionId: institution.id,
       }),
     };
   }
@@ -146,27 +144,8 @@ describe('feature flag routes (global, single school)', () => {
     expect(invalid.status).toBe(400);
   });
 
-  it('ignores legacy per-school override rows', async () => {
-    const { institution, headers } = await headersFor('director');
-    await db.execute(sql`
-      insert into institution_feature_flags (institution_id, feature_key, enabled)
-      values (${institution.id}, 'parent_portal', true)
-    `);
-
-    const response = await client.get('/feature-flags').set(headers);
-
-    expect(response.body.data).toContainEqual({
-      key: 'parent_portal',
-      enabled: false,
-    });
-  });
-
   it('reads the dashboard feature modules from the global flags', async () => {
-    const { institution, headers } = await headersFor('director');
-    await db.execute(sql`
-      insert into institution_feature_flags (institution_id, feature_key, enabled)
-      values (${institution.id}, 'parent_portal', true)
-    `);
+    const { headers } = await headersFor('director');
     await client
       .patch('/feature-flags/teacher_gradebook')
       .set(headers)

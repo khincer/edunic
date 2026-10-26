@@ -36,7 +36,6 @@ function makeEvent(id = randomUUID()): EventEnvelope {
   return {
     id,
     name: 'enrollment.created',
-    institutionId: 'inst-consumer-1',
     payload: { enrollmentId: 'enr-1', studentId: 'stu-1' },
     occurredAt: new Date().toISOString(),
   };

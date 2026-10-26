@@ -27,14 +27,12 @@ describe('students routes', () => {
   });
 
   it('supports full CRUD for tenant-scoped students', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const tenantHeaders = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     const createResponse = await client.post('/students').set(tenantHeaders).send({
@@ -81,15 +79,13 @@ describe('students routes', () => {
   });
 
   it('returns 409 when deleting a student with enrollments', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
-    const period = await createAcademicPeriodFixture({ institutionId: institution.id });
+    const student = await createStudentFixture({});
+    const period = await createAcademicPeriodFixture({});
     await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
     });
@@ -99,7 +95,6 @@ describe('students routes', () => {
       .set(
         await createAuthHeaders({
           userId: adminUser.id,
-          institutionId: institution.id,
         })
       );
 

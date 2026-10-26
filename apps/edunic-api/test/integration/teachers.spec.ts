@@ -25,37 +25,31 @@ describe('teachers routes', () => {
   });
 
   async function createDirector() {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const director = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
     return {
-      institution,
       director,
       headers: await createAuthHeaders({
         userId: director.id,
-        institutionId: institution.id,
       }),
     };
   }
 
   it('lists the teachers of the school', async () => {
-    const { institution, headers } = await createDirector();
+    const { headers } = await createDirector();
     await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
       email: 'teacher.one@school.edu',
     });
     await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
       email: 'teacher.two@school.edu',
     });
     // A parent is not a teacher.
     await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
       email: 'parent@school.edu',
     });
@@ -70,14 +64,12 @@ describe('teachers routes', () => {
   });
 
   it('keeps the teacher list away from a teacher', async () => {
-    const { institution } = await createDirector();
+    await createDirector();
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     const headers = await createAuthHeaders({
       userId: teacher.id,
-      institutionId: institution.id,
     });
 
     const response = await client.get('/teachers').set(headers);
@@ -86,9 +78,8 @@ describe('teachers routes', () => {
   });
 
   it('creates a teacher account', async () => {
-    const { institution, headers } = await createDirector();
+    const { headers } = await createDirector();
     const classroom = await createClassroomFixture({
-      institutionId: institution.id,
       gradeLevel: 5,
       section: 'A',
     });
@@ -124,9 +115,8 @@ describe('teachers routes', () => {
   });
 
   it('refuses a duplicate teacher account', async () => {
-    const { institution, headers } = await createDirector();
+    const { headers } = await createDirector();
     await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
       email: 'taken@school.edu',
     });
@@ -140,18 +130,15 @@ describe('teachers routes', () => {
   });
 
   it('assigns a teacher to one or more classrooms', async () => {
-    const { institution, headers } = await createDirector();
+    const { headers } = await createDirector();
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     const first = await createClassroomFixture({
-      institutionId: institution.id,
       gradeLevel: 5,
       section: 'A',
     });
     const second = await createClassroomFixture({
-      institutionId: institution.id,
       gradeLevel: 6,
       section: 'B',
     });
@@ -175,9 +162,8 @@ describe('teachers routes', () => {
   });
 
   it('refuses an assignment to a classroom that does not exist', async () => {
-    const { institution, headers } = await createDirector();
+    const { headers } = await createDirector();
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
 
@@ -190,14 +176,11 @@ describe('teachers routes', () => {
   });
 
   it('removes a classroom from a teacher', async () => {
-    const { institution, headers } = await createDirector();
+    const { headers } = await createDirector();
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
-    const classroom = await createClassroomFixture({
-      institutionId: institution.id,
-    });
+    const classroom = await createClassroomFixture({});
 
     await client
       .post(`/teachers/${teacher.id}/classrooms`)
@@ -218,18 +201,15 @@ describe('teachers routes', () => {
   });
 
   it('lets a teacher read their own record but not another one', async () => {
-    const { institution } = await createDirector();
+    await createDirector();
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     const other = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     const headers = await createAuthHeaders({
       userId: teacher.id,
-      institutionId: institution.id,
     });
 
     const own = await client.get(`/teachers/${teacher.id}`).set(headers);
@@ -240,9 +220,8 @@ describe('teachers routes', () => {
   });
 
   it('changes the role of a teacher', async () => {
-    const { institution, headers } = await createDirector();
+    const { headers } = await createDirector();
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
 

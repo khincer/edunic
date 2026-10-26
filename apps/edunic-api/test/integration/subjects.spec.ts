@@ -31,30 +31,23 @@ describe('subjects routes', () => {
   });
 
   async function createSchool() {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
-    const classroom = await createClassroomFixture({
-      institutionId: institution.id,
-    });
+    const classroom = await createClassroomFixture({});
 
     return {
-      institution,
       classroom,
       teacher,
       adminHeaders: await createAuthHeaders({
         userId: admin.id,
-        institutionId: institution.id,
       }),
       teacherHeaders: await createAuthHeaders({
         userId: teacher.id,
-        institutionId: institution.id,
       }),
     };
   }
@@ -210,7 +203,7 @@ describe('subjects routes', () => {
   });
 
   it('shows a parent the materias their children study', async () => {
-    const { adminHeaders, classroom, institution } = await createSchool();
+    const { adminHeaders, classroom } = await createSchool();
 
     const subject = await client
       .post('/subjects')
@@ -221,39 +214,29 @@ describe('subjects routes', () => {
       .set(adminHeaders)
       .send({ subjectIds: [subject.body.data.id] });
 
-    const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
-    });
-    const student = await createStudentFixture({
-      institutionId: institution.id,
-    });
-    const guardian = await createGuardianFixture({
-      institutionId: institution.id,
-    });
+    const period = await createAcademicPeriodFixture({});
+    const student = await createStudentFixture({});
+    const guardian = await createGuardianFixture({});
     await db.insert(studentGuardians).values({
       studentId: student.id,
       guardianId: guardian.id,
     });
 
     await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
       classroomId: classroom.id,
     });
 
     const parent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: institution.id,
       guardianId: guardian.id,
       userId: parent.id,
     });
     const parentHeaders = await createAuthHeaders({
       userId: parent.id,
-      institutionId: institution.id,
     });
 
     const list = await client.get('/subjects').set(parentHeaders);

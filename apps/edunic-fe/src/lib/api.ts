@@ -35,7 +35,6 @@ export type EmailDeliveryStatus =
 
 export type EmailDelivery = {
   id: string;
-  institutionId: string;
   eventId: string;
   eventName: string;
   recipientAddress: string;
@@ -66,7 +65,6 @@ export type Student = {
 
 export type AcademicPeriod = {
   id: string;
-  institutionId: string;
   year: number;
   term: number;
   startDate: string | null;
@@ -76,7 +74,6 @@ export type AcademicPeriod = {
 
 export type Classroom = {
   id: string;
-  institutionId: string;
   gradeLevel: number;
   section: string | null;
   name: string;
@@ -203,21 +200,18 @@ export type DashboardReportHistory = {
 };
 
 export type WorkflowAssignment = DashboardAssignment & {
-  institutionId: string;
   classroomId: string | null;
   createdByUserId: string | null;
   createdAt: string | null;
 };
 
 export type WorkflowEvent = DashboardEvent & {
-  institutionId: string;
   classroomId: string | null;
   createdByUserId: string | null;
   createdAt: string | null;
 };
 
 export type WorkflowMessage = DashboardMessage & {
-  institutionId: string;
   threadId: string;
   senderUserId: string | null;
   recipientUserId: string | null;

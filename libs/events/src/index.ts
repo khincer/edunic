@@ -13,9 +13,8 @@ export {
 export type EventEnvelope<TName extends string = string, TPayload = unknown> = {
   id: string;
   name: TName;
-  // Optional since S1.4c (single school). Entries queued before the sweep
-  // still carry it and must keep parsing; new events omit it. Removed in S1.4h.
-  institutionId?: string;
+  // No school field (single school). Entries queued before the sweep may still
+  // carry a legacy school key: consumers JSON.parse them and ignore it.
   payload: TPayload;
   occurredAt: string;
 };
@@ -34,15 +33,11 @@ export interface EventBus {
 
 export function createEventEnvelope<TName extends string, TPayload>(input: {
   name: TName;
-  institutionId?: string;
   payload: TPayload;
 }): EventEnvelope<TName, TPayload> {
   return {
     id: randomUUID(),
     name: input.name,
-    ...(input.institutionId === undefined
-      ? {}
-      : { institutionId: input.institutionId }),
     payload: input.payload,
     occurredAt: new Date().toISOString(),
   };

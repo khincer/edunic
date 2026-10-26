@@ -5,7 +5,6 @@ import { env } from '../config/env.js';
 const ALLOWED_HEADERS = [
   'authorization',
   'content-type',
-  'x-institution-id',
   'x-request-id',
 ].join(', ');
 

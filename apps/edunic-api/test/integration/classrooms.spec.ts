@@ -29,14 +29,12 @@ describe('classrooms routes', () => {
   });
 
   it('supports CRUD and duplicate protection', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     const createResponse = await client.post('/classrooms').set(headers).send({
@@ -64,8 +62,7 @@ describe('classrooms routes', () => {
       expect(item).not.toHaveProperty('institutionId');
     }
 
-    // The UNIQUE key still carries institution_id until 0015: with one school
-    // the app-level check is what keeps (grade_level, section) unique.
+    // The app-level check is what keeps (grade_level, section) unique.
     const sectionB = await client.post('/classrooms').set(headers).send({
       gradeLevel: 5,
       section: 'B',
@@ -95,20 +92,17 @@ describe('classrooms routes', () => {
   });
 
   it('allows teachers to read classrooms but not mutate them', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const teacherUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
-    const classroom = await createClassroomFixture({ institutionId: institution.id });
+    const classroom = await createClassroomFixture({});
     await createTeacherClassroomAssignmentFixture({
-      institutionId: institution.id,
       teacherUserId: teacherUser.id,
       classroomId: classroom.id,
     });
     const headers = await createAuthHeaders({
       userId: teacherUser.id,
-      institutionId: institution.id,
     });
 
     const listResponse = await client.get('/classrooms').set(headers);
@@ -126,16 +120,14 @@ describe('classrooms routes', () => {
   });
 
   it('returns 409 when deleting a classroom with enrollments', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
-    const classroom = await createClassroomFixture({ institutionId: institution.id });
-    const student = await createStudentFixture({ institutionId: institution.id });
-    const period = await createAcademicPeriodFixture({ institutionId: institution.id });
+    const classroom = await createClassroomFixture({});
+    const student = await createStudentFixture({});
+    const period = await createAcademicPeriodFixture({});
     await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
       classroomId: classroom.id,
@@ -146,7 +138,6 @@ describe('classrooms routes', () => {
       .set(
         await createAuthHeaders({
           userId: adminUser.id,
-          institutionId: institution.id,
         })
       );
 

@@ -38,74 +38,58 @@ describe('grade and attendance read scoping', () => {
   });
 
   async function createSchool() {
-    const institution = await createInstitutionFixture();
-    const myClassroom = await createClassroomFixture({
-      institutionId: institution.id,
-    });
+    await createInstitutionFixture();
+    const myClassroom = await createClassroomFixture({});
     const otherClassroom = await createClassroomFixture({
-      institutionId: institution.id,
       section: 'B',
     });
-    const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
-    });
+    const period = await createAcademicPeriodFixture({});
 
     const myStudent = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'Jane',
       lastName: 'Doe',
     });
     const otherStudent = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'John',
       lastName: 'Roe',
     });
     const myEnrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: myStudent.id,
       academicPeriodId: period.id,
       classroomId: myClassroom.id,
     });
     const otherEnrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: otherStudent.id,
       academicPeriodId: period.id,
       classroomId: otherClassroom.id,
     });
 
     const myGrade = await createGradeFixture({
-      institutionId: institution.id,
       enrollmentId: myEnrollment.id,
       score: 91,
     });
     const myGradeTwo = await createGradeFixture({
-      institutionId: institution.id,
       enrollmentId: myEnrollment.id,
       subject: 'Science',
       score: 85,
     });
     const otherGrade = await createGradeFixture({
-      institutionId: institution.id,
       enrollmentId: otherEnrollment.id,
       score: 42,
     });
     const myAttendance = await createAttendanceFixture({
-      institutionId: institution.id,
       enrollmentId: myEnrollment.id,
       status: 'present',
     });
     const otherAttendance = await createAttendanceFixture({
-      institutionId: institution.id,
       enrollmentId: otherEnrollment.id,
       status: 'absent',
     });
 
     const myGuardian = await createGuardianFixture({
-      institutionId: institution.id,
       name: 'Ana Doe',
     });
     const otherGuardian = await createGuardianFixture({
-      institutionId: institution.id,
       name: 'Rosa Roe',
     });
     await db.insert(studentGuardians).values([
@@ -114,37 +98,31 @@ describe('grade and attendance read scoping', () => {
     ]);
 
     const parent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: institution.id,
       guardianId: myGuardian.id,
       userId: parent.id,
     });
     // A parent account that is not linked to any guardian sees nothing.
     const strayParent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
 
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     await createTeacherClassroomAssignmentFixture({
-      institutionId: institution.id,
       teacherUserId: teacher.id,
       classroomId: myClassroom.id,
     });
 
     const director = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
     const headersFor = (userId: string) =>
-      createAuthHeaders({ userId, institutionId: institution.id });
+      createAuthHeaders({ userId });
 
     return {
       myGrade,

@@ -13,10 +13,8 @@ export interface IdempotencyStore {
 }
 
 export interface IdempotencyScope {
-  // The institution is no longer part of the key: the actor id is a global
-  // uuid, so it already separates two callers. It stays optional while the
-  // tenant columns survive.
-  institutionId?: string;
+  // No school in the key: the actor id is a global uuid, so it already
+  // separates two callers.
   route: string;
   actorId: string;
   key: string;
@@ -30,7 +28,6 @@ export type IdempotencyLookup =
 export function buildIdempotencyKey(scope: IdempotencyScope): string {
   return [
     'idempotency',
-    ...(scope.institutionId ? [scope.institutionId] : []),
     scope.route,
     scope.actorId,
     scope.key,

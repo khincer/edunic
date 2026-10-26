@@ -90,9 +90,7 @@ describe('worker email delivery', () => {
     return jobs.length;
   };
 
-  const readDeliveries = async (
-    institutionId: string
-  ): Promise<DeliveryRow[]> => {
+  const readDeliveries = async (): Promise<DeliveryRow[]> => {
     const result = await db.execute<DeliveryRow>(sql`
       select
         recipient_address as "recipientAddress",
@@ -102,7 +100,6 @@ describe('worker email delivery', () => {
         provider_message_id as "providerMessageId",
         provider_error as "providerError"
       from email_deliveries
-      where institution_id = ${institutionId}
       order by recipient_address asc
     `);
 
@@ -110,7 +107,6 @@ describe('worker email delivery', () => {
   };
 
   const waitForDeliveries = async (
-    institutionId: string,
     expected: { status: string; count: number },
     timeoutMs = 10000
   ): Promise<DeliveryRow[]> => {
@@ -118,7 +114,7 @@ describe('worker email delivery', () => {
     let rows: DeliveryRow[] = [];
 
     while (Date.now() < deadline) {
-      rows = await readDeliveries(institutionId);
+      rows = await readDeliveries();
       if (
         rows.length === expected.count &&
         rows.every((row) => row.status === expected.status)
@@ -159,32 +155,30 @@ describe('worker email delivery', () => {
     }
 
     const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
     });
     const student = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'Wren',
       lastName: 'Vasquez',
     });
     const enrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
     });
 
     return {
-      institutionId: institution.id,
+      // Only the old-shape tests read it: a queued legacy payload still
+      // carries the field and must be ignored.
+      legacyInstitutionId: institution.id,
       studentId: student.id,
       enrollmentId: enrollment.id,
     };
   };
 
   const addGuardian = async (
-    institutionId: string,
     studentId: string,
     email: string | null
   ) => {
-    const guardian = await createGuardianFixture({ institutionId, email });
+    const guardian = await createGuardianFixture({ email });
     await db
       .insert(studentGuardians)
       .values({ studentId, guardianId: guardian.id });
@@ -238,34 +232,19 @@ describe('worker email delivery', () => {
     const scenario = await createScenario();
     // Two guardians on record share one address (differing only in case); the
     // third has no email and reaches the second address through a linked user.
-    await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      'Maria@Example.com'
-    );
-    await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      'maria@example.com'
-    );
-    const silentGuardian = await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      null
-    );
+    await addGuardian(scenario.studentId, 'Maria@Example.com');
+    await addGuardian(scenario.studentId, 'maria@example.com');
+    const silentGuardian = await addGuardian(scenario.studentId, null);
     const linkedUser = await createUserFixture({
-      institutionId: scenario.institutionId,
       role: 'parent',
       email: 'Dad@Example.com',
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: scenario.institutionId,
       guardianId: silentGuardian.id,
       userId: linkedUser.id,
     });
 
     const event = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
@@ -275,7 +254,7 @@ describe('worker email delivery', () => {
 
     expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
 
-    const rows = await waitForDeliveries(scenario.institutionId, {
+    const rows = await waitForDeliveries({
       status: 'sent',
       count: 2,
     });
@@ -297,7 +276,7 @@ describe('worker email delivery', () => {
       'dad@example.com',
       'maria@example.com',
     ]);
-    // The platform address stays the envelope sender; the institution's
+    // The platform address stays the envelope sender; the school's
     // configured sender name travels beside it (P8: the From: display name).
     expect(fake.sent[0].from).toBe(FROM_ADDRESS);
     expect(fake.sent[0].fromName).toBe('Central School');
@@ -319,20 +298,40 @@ describe('worker email delivery', () => {
     expect(job?.opts.removeOnFail).toEqual({ age: EMAIL_JOB_KEEP_FAILED_MS });
   });
 
+  // Entries queued before the sweep carry institutionId. They must still turn
+  // into exactly one delivery, and the field must not change the outcome.
+  it('delivers for an old-shape enrollment.welcomed that still carries institutionId (TEN-07)', async () => {
+    const scenario = await createScenario();
+    await addGuardian(scenario.studentId, 'old@example.com');
+
+    const event = createEnrollmentWelcomedEvent({
+      payload: {
+        enrollmentId: scenario.enrollmentId,
+        studentId: scenario.studentId,
+      },
+    });
+    await publish({ ...event, institutionId: scenario.legacyInstitutionId });
+
+    expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
+
+    const rows = await waitForDeliveries({
+      status: 'sent',
+      count: 1,
+    });
+    expect(rows.map((row) => row.recipientAddress)).toEqual(['old@example.com']);
+    expect(fake.calls).toBe(1);
+    expect(fake.sent[0].fromName).toBe('Central School');
+  });
+
   it('sends a grade notice for grade.submitted using the institution reply-to (EV-R1, SI-R1)', async () => {
     const scenario = await createScenario({
       senderName: 'North School',
       replyToEmail: 'academics@north.test',
     });
-    await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      'maria@example.com'
-    );
+    await addGuardian(scenario.studentId, 'maria@example.com');
 
     await publish(
       createGradeSubmittedEvent({
-        institutionId: scenario.institutionId,
         payload: {
           gradeId: randomUUID(),
           enrollmentId: scenario.enrollmentId,
@@ -343,7 +342,7 @@ describe('worker email delivery', () => {
     );
 
     expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
-    await waitForDeliveries(scenario.institutionId, {
+    await waitForDeliveries({
       status: 'sent',
       count: 1,
     });
@@ -357,15 +356,10 @@ describe('worker email delivery', () => {
 
   it('sends an absence notice for attendance.marked (EV-R1)', async () => {
     const scenario = await createScenario();
-    await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      'maria@example.com'
-    );
+    await addGuardian(scenario.studentId, 'maria@example.com');
 
     await publish(
       createAttendanceMarkedEvent({
-        institutionId: scenario.institutionId,
         payload: {
           attendanceId: randomUUID(),
           enrollmentId: scenario.enrollmentId,
@@ -376,7 +370,7 @@ describe('worker email delivery', () => {
     );
 
     expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
-    await waitForDeliveries(scenario.institutionId, {
+    await waitForDeliveries({
       status: 'sent',
       count: 1,
     });
@@ -403,15 +397,10 @@ describe('worker email delivery', () => {
     'branches the attendance copy by status: $status (EV-R1)',
     async ({ status, date, subject, sentence }) => {
       const scenario = await createScenario();
-      await addGuardian(
-        scenario.institutionId,
-        scenario.studentId,
-        'maria@example.com'
-      );
+      await addGuardian(scenario.studentId, 'maria@example.com');
 
       await publish(
         createAttendanceMarkedEvent({
-          institutionId: scenario.institutionId,
           payload: {
             attendanceId: randomUUID(),
             enrollmentId: scenario.enrollmentId,
@@ -422,7 +411,7 @@ describe('worker email delivery', () => {
       );
 
       expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
-      await waitForDeliveries(scenario.institutionId, {
+      await waitForDeliveries({
         status: 'sent',
         count: 1,
       });
@@ -435,11 +424,10 @@ describe('worker email delivery', () => {
 
   it('resolves no recipients and does not fail when the guardian has no email and no linked user (RS-R1)', async () => {
     const scenario = await createScenario();
-    await addGuardian(scenario.institutionId, scenario.studentId, null);
+    await addGuardian(scenario.studentId, null);
 
     await publish(
       createEnrollmentWelcomedEvent({
-        institutionId: scenario.institutionId,
         payload: {
           enrollmentId: scenario.enrollmentId,
           studentId: scenario.studentId,
@@ -451,21 +439,16 @@ describe('worker email delivery', () => {
     expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
     await sleep(150);
 
-    expect(await readDeliveries(scenario.institutionId)).toEqual([]);
+    expect(await readDeliveries()).toEqual([]);
     expect(await countJobs()).toBe(0);
     expect(fake.calls).toBe(0);
   });
 
   it('OC-R1: a duplicate stream entry produces exactly one send', async () => {
     const scenario = await createScenario();
-    await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      'maria@example.com'
-    );
+    await addGuardian(scenario.studentId, 'maria@example.com');
 
     const event = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
@@ -480,7 +463,7 @@ describe('worker email delivery', () => {
     await redis.xadd(STREAM, '*', 'event', raw);
     expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(0);
 
-    const rows = await waitForDeliveries(scenario.institutionId, {
+    const rows = await waitForDeliveries({
       status: 'sent',
       count: 1,
     });
@@ -493,7 +476,6 @@ describe('worker email delivery', () => {
     const scenario = await createScenario();
     const eventId = randomUUID();
     const delivery: EmailDeliveryJob = {
-      institutionId: scenario.institutionId,
       eventId,
       recipientAddress: 'maria@example.com',
       from: FROM_ADDRESS,
@@ -508,7 +490,6 @@ describe('worker email delivery', () => {
     // it. Stages the fixture only — every assertion below is unchanged.
     await db.execute(sql`
       insert into email_deliveries (
-        institution_id,
         event_id,
         event_name,
         recipient_address,
@@ -516,7 +497,6 @@ describe('worker email delivery', () => {
         student_id
       )
       values (
-        ${scenario.institutionId},
         ${eventId},
         'enrollment.welcomed',
         'maria@example.com',
@@ -543,14 +523,9 @@ describe('worker email delivery', () => {
 
   it('OC-R1: re-enqueuing the same event is a no-op, not an error', async () => {
     const scenario = await createScenario();
-    await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      'maria@example.com'
-    );
+    await addGuardian(scenario.studentId, 'maria@example.com');
 
     const event = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
@@ -559,7 +534,7 @@ describe('worker email delivery', () => {
 
     await publish(event);
     expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
-    await waitForDeliveries(scenario.institutionId, {
+    await waitForDeliveries({
       status: 'sent',
       count: 1,
     });
@@ -571,7 +546,7 @@ describe('worker email delivery', () => {
     ).resolves.toBeUndefined();
     await sleep(150);
 
-    const rows = await readDeliveries(scenario.institutionId);
+    const rows = await readDeliveries();
     expect(rows).toHaveLength(1);
     expect(await countJobs()).toBe(1);
     expect(fake.calls).toBe(1);
@@ -579,15 +554,10 @@ describe('worker email delivery', () => {
 
   it('FL-R2: with the flag off nothing is enqueued and nothing is sent', async () => {
     const scenario = await createScenario({ enabled: false });
-    await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      'maria@example.com'
-    );
+    await addGuardian(scenario.studentId, 'maria@example.com');
 
     await publish(
       createEnrollmentWelcomedEvent({
-        institutionId: scenario.institutionId,
         payload: {
           enrollmentId: scenario.enrollmentId,
           studentId: scenario.studentId,
@@ -598,22 +568,17 @@ describe('worker email delivery', () => {
     expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
     await sleep(150);
 
-    expect(await readDeliveries(scenario.institutionId)).toEqual([]);
+    expect(await readDeliveries()).toEqual([]);
     expect(await countJobs()).toBe(0);
     expect(fake.calls).toBe(0);
   });
 
   it('SI-R3: an institution without a sender identity enqueues and sends nothing', async () => {
     const scenario = await createScenario({ senderName: null });
-    await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      'maria@example.com'
-    );
+    await addGuardian(scenario.studentId, 'maria@example.com');
 
     await publish(
       createEnrollmentWelcomedEvent({
-        institutionId: scenario.institutionId,
         payload: {
           enrollmentId: scenario.enrollmentId,
           studentId: scenario.studentId,
@@ -624,22 +589,17 @@ describe('worker email delivery', () => {
     expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
     await sleep(150);
 
-    expect(await readDeliveries(scenario.institutionId)).toEqual([]);
+    expect(await readDeliveries()).toEqual([]);
     expect(await countJobs()).toBe(0);
     expect(fake.calls).toBe(0);
   });
 
   it('DR-R1: a retryable provider failure is recorded as retried and retried', async () => {
     const scenario = await createScenario();
-    await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      'maria@example.com'
-    );
+    await addGuardian(scenario.studentId, 'maria@example.com');
     fake.failRetryable('provider 503 unavailable');
 
     const event = createEnrollmentWelcomedEvent({
-      institutionId: scenario.institutionId,
       payload: {
         enrollmentId: scenario.enrollmentId,
         studentId: scenario.studentId,
@@ -648,7 +608,7 @@ describe('worker email delivery', () => {
     await publish(event);
     expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
 
-    const rows = await waitForDeliveries(scenario.institutionId, {
+    const rows = await waitForDeliveries({
       status: 'retried',
       count: 1,
     });
@@ -664,16 +624,11 @@ describe('worker email delivery', () => {
 
   it('DR-R1: a non-retryable provider failure is recorded as failed and not retried', async () => {
     const scenario = await createScenario();
-    await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      'maria@example.com'
-    );
+    await addGuardian(scenario.studentId, 'maria@example.com');
     fake.failNonRetryable('provider 422 invalid from address');
 
     await publish(
       createEnrollmentWelcomedEvent({
-        institutionId: scenario.institutionId,
         payload: {
           enrollmentId: scenario.enrollmentId,
           studentId: scenario.studentId,
@@ -682,7 +637,7 @@ describe('worker email delivery', () => {
     );
     expect(await runtime.consumer.pollOnce({ blockMs: 0 })).toBe(1);
 
-    const rows = await waitForDeliveries(scenario.institutionId, {
+    const rows = await waitForDeliveries({
       status: 'failed',
       count: 1,
     });
@@ -694,13 +649,8 @@ describe('worker email delivery', () => {
 
   it('RS-R1: the originating enrollment write survives a failing email path', async () => {
     const scenario = await createScenario();
-    await addGuardian(
-      scenario.institutionId,
-      scenario.studentId,
-      'maria@example.com'
-    );
+    await addGuardian(scenario.studentId, 'maria@example.com');
     const admin = await createUserFixture({
-      institutionId: scenario.institutionId,
       role: 'director',
       email: 'rsr1-admin@worker.test',
       password: 'admin1234',
@@ -715,13 +665,11 @@ describe('worker email delivery', () => {
         payload: {
           email: admin.email,
           password: admin.password,
-          institutionId: scenario.institutionId,
         },
       });
       expect(login.statusCode).toBe(200);
       const headers = {
         authorization: `Bearer ${login.json().data.token}`,
-        'x-institution-id': scenario.institutionId,
       };
 
       const period = await app.inject({
@@ -758,7 +706,7 @@ describe('worker email delivery', () => {
       expect(
         await runtime.consumer.pollOnce({ blockMs: 0 })
       ).toBeGreaterThanOrEqual(1);
-      const rows = await waitForDeliveries(scenario.institutionId, {
+      const rows = await waitForDeliveries({
         status: 'retried',
         count: 1,
       });

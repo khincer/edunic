@@ -38,67 +38,52 @@ describe('parent feed', () => {
   // One school, two families: the parent of the first family must never see
   // the second one.
   async function createSchool() {
-    const institution = await createInstitutionFixture();
-    const classroom = await createClassroomFixture({
-      institutionId: institution.id,
-    });
-    const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
-    });
+    await createInstitutionFixture();
+    const classroom = await createClassroomFixture({});
+    const period = await createAcademicPeriodFixture({});
 
     const myStudent = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'Jane',
       lastName: 'Doe',
     });
     const otherStudent = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'John',
       lastName: 'Roe',
     });
 
     const myEnrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: myStudent.id,
       academicPeriodId: period.id,
       classroomId: classroom.id,
     });
     const otherEnrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: otherStudent.id,
       academicPeriodId: period.id,
       classroomId: classroom.id,
     });
 
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const adminHeaders = await createAuthHeaders({
       userId: admin.id,
-      institutionId: institution.id,
     });
 
-    const guardian = await createGuardianFixture({
-      institutionId: institution.id,
-    });
+    const guardian = await createGuardianFixture({});
     await db.insert(studentGuardians).values({
       studentId: myStudent.id,
       guardianId: guardian.id,
     });
 
     const parent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: institution.id,
       guardianId: guardian.id,
       userId: parent.id,
     });
 
     return {
-      institution,
       classroom,
       myStudent,
       otherStudent,
@@ -107,7 +92,6 @@ describe('parent feed', () => {
       adminHeaders,
       parentHeaders: await createAuthHeaders({
         userId: parent.id,
-        institutionId: institution.id,
       }),
     };
   }
@@ -156,12 +140,11 @@ describe('parent feed', () => {
   });
 
   it('shows the parent the pending exams of their child', async () => {
-    const { institution, classroom, adminHeaders, parentHeaders } =
+    const { classroom, adminHeaders, parentHeaders } =
       await createSchool();
 
     await db.insert(assignments).values({
       id: '77777777-0000-4000-8000-000000000001',
-      institutionId: institution.id,
       classroomId: classroom.id,
       title: 'Examen de Matematicas',
       type: 'exam',

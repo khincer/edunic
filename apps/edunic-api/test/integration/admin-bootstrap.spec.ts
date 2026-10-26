@@ -28,9 +28,8 @@ describe('admin bootstrap route', () => {
   });
 
   it('runs migration and seed successfully', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const response = await client
@@ -38,7 +37,6 @@ describe('admin bootstrap route', () => {
       .set({
         authorization: `Bearer ${await createBearerToken({
           userId: adminUser.id,
-          institutionId: institution.id,
         })}`,
       })
       .send();
@@ -53,9 +51,8 @@ describe('admin bootstrap route', () => {
 
   it('returns 500 when migration fails', async () => {
     await ensureTestDatabaseReady();
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const originalDatabaseUrl = process.env.DATABASE_URL;
@@ -66,7 +63,6 @@ describe('admin bootstrap route', () => {
       .set({
         authorization: `Bearer ${await createBearerToken({
           userId: adminUser.id,
-          institutionId: institution.id,
         })}`,
       })
       .send();

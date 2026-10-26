@@ -32,53 +32,40 @@ describe('teacher write scoping', () => {
 
   // One school, two classrooms: the teacher owns the first one only.
   async function createSchool() {
-    const institution = await createInstitutionFixture();
-    const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
-    });
+    await createInstitutionFixture();
+    const period = await createAcademicPeriodFixture({});
     const ownClassroom = await createClassroomFixture({
-      institutionId: institution.id,
       gradeLevel: 5,
       section: 'A',
     });
     const otherClassroom = await createClassroomFixture({
-      institutionId: institution.id,
       gradeLevel: 6,
       section: 'B',
     });
 
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     await createTeacherClassroomAssignmentFixture({
-      institutionId: institution.id,
       teacherUserId: teacher.id,
       classroomId: ownClassroom.id,
     });
 
-    const ownStudent = await createStudentFixture({
-      institutionId: institution.id,
-    });
-    const otherStudent = await createStudentFixture({
-      institutionId: institution.id,
-    });
+    const ownStudent = await createStudentFixture({});
+    const otherStudent = await createStudentFixture({});
 
     const ownEnrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: ownStudent.id,
       academicPeriodId: period.id,
       classroomId: ownClassroom.id,
     });
     const otherEnrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: otherStudent.id,
       academicPeriodId: period.id,
       classroomId: otherClassroom.id,
     });
 
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
@@ -88,16 +75,13 @@ describe('teacher write scoping', () => {
 
     return {
       subjectId: subject.id,
-      institution,
       ownEnrollment,
       otherEnrollment,
       teacherHeaders: await createAuthHeaders({
         userId: teacher.id,
-        institutionId: institution.id,
       }),
       adminHeaders: await createAuthHeaders({
         userId: admin.id,
-        institutionId: institution.id,
       }),
     };
   }
@@ -181,16 +165,14 @@ describe('teacher write scoping', () => {
   });
 
   it('refuses a teacher editing a grade of another classroom', async () => {
-    const { institution, otherEnrollment, teacherHeaders, subjectId } =
+    const { otherEnrollment, teacherHeaders, subjectId } =
       await createSchool();
 
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const adminHeaders = await createAuthHeaders({
       userId: admin.id,
-      institutionId: institution.id,
     });
 
     const created = await client
@@ -212,16 +194,14 @@ describe('teacher write scoping', () => {
   });
 
   it('refuses a teacher deleting attendance of another classroom', async () => {
-    const { institution, otherEnrollment, teacherHeaders, subjectId } =
+    const { otherEnrollment, teacherHeaders, subjectId } =
       await createSchool();
 
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const adminHeaders = await createAuthHeaders({
       userId: admin.id,
-      institutionId: institution.id,
     });
 
     const created = await client

@@ -29,29 +29,24 @@ describe('payments routes', () => {
   });
 
   async function createSchool() {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const student = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'Jane',
       lastName: 'Doe',
     });
     const otherStudent = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'John',
       lastName: 'Roe',
     });
 
     return {
-      institution,
       student,
       otherStudent,
       adminHeaders: await createAuthHeaders({
         userId: admin.id,
-        institutionId: institution.id,
       }),
     };
   }
@@ -122,14 +117,12 @@ describe('payments routes', () => {
   });
 
   it('keeps the ledger away from a teacher', async () => {
-    const { institution } = await createSchool();
+    await createSchool();
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     const headers = await createAuthHeaders({
       userId: teacher.id,
-      institutionId: institution.id,
     });
 
     const response = await client.get('/payments').set(headers);
@@ -203,7 +196,7 @@ describe('payments routes', () => {
   });
 
   it('shows a parent only the payments of their own children', async () => {
-    const { institution, student, otherStudent, adminHeaders } =
+    const { student, otherStudent, adminHeaders } =
       await createSchool();
 
     await client
@@ -225,26 +218,21 @@ describe('payments routes', () => {
         method: 'cash',
       });
 
-    const guardian = await createGuardianFixture({
-      institutionId: institution.id,
-    });
+    const guardian = await createGuardianFixture({});
     await db.insert(studentGuardians).values({
       studentId: student.id,
       guardianId: guardian.id,
     });
 
     const parent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: institution.id,
       guardianId: guardian.id,
       userId: parent.id,
     });
     const parentHeaders = await createAuthHeaders({
       userId: parent.id,
-      institutionId: institution.id,
     });
 
     const list = await client.get('/payments').set(parentHeaders);
@@ -255,7 +243,7 @@ describe('payments routes', () => {
   });
 
   it('refuses a parent reading the payment of another child', async () => {
-    const { institution, otherStudent, adminHeaders } = await createSchool();
+    const { otherStudent, adminHeaders } = await createSchool();
 
     const created = await client
       .post('/payments')
@@ -267,21 +255,16 @@ describe('payments routes', () => {
         method: 'cash',
       });
 
-    const guardian = await createGuardianFixture({
-      institutionId: institution.id,
-    });
+    const guardian = await createGuardianFixture({});
     const parent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: institution.id,
       guardianId: guardian.id,
       userId: parent.id,
     });
     const parentHeaders = await createAuthHeaders({
       userId: parent.id,
-      institutionId: institution.id,
     });
 
     const response = await client
@@ -314,7 +297,7 @@ describe('payments routes', () => {
   });
 
   it('gives the parent of the student the receipt', async () => {
-    const { institution, student, adminHeaders } = await createSchool();
+    const { student, adminHeaders } = await createSchool();
 
     const created = await client
       .post('/payments')
@@ -326,26 +309,21 @@ describe('payments routes', () => {
         method: 'cash',
       });
 
-    const guardian = await createGuardianFixture({
-      institutionId: institution.id,
-    });
+    const guardian = await createGuardianFixture({});
     await db.insert(studentGuardians).values({
       studentId: student.id,
       guardianId: guardian.id,
     });
 
     const parent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: institution.id,
       guardianId: guardian.id,
       userId: parent.id,
     });
     const parentHeaders = await createAuthHeaders({
       userId: parent.id,
-      institutionId: institution.id,
     });
 
     const response = await client
@@ -357,7 +335,7 @@ describe('payments routes', () => {
   });
 
   it('refuses a parent the receipt of another child', async () => {
-    const { institution, otherStudent, adminHeaders } = await createSchool();
+    const { otherStudent, adminHeaders } = await createSchool();
 
     const created = await client
       .post('/payments')
@@ -369,21 +347,16 @@ describe('payments routes', () => {
         method: 'cash',
       });
 
-    const guardian = await createGuardianFixture({
-      institutionId: institution.id,
-    });
+    const guardian = await createGuardianFixture({});
     const parent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: institution.id,
       guardianId: guardian.id,
       userId: parent.id,
     });
     const parentHeaders = await createAuthHeaders({
       userId: parent.id,
-      institutionId: institution.id,
     });
 
     const response = await client

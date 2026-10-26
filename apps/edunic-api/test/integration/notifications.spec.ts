@@ -28,23 +28,18 @@ describe('notifications routes', () => {
   });
 
   it('creates notifications from domain events when enabled', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
-    const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
-    });
+    const student = await createStudentFixture({});
+    const period = await createAcademicPeriodFixture({});
     const enrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     await client.post('/extensions').set(headers).send({
@@ -74,23 +69,18 @@ describe('notifications routes', () => {
   });
 
   it('creates no notifications while the extension has no config', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
-    const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
-    });
+    const student = await createStudentFixture({});
+    const period = await createAcademicPeriodFixture({});
     const enrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     await client.post('/extensions').set(headers).send({
@@ -114,9 +104,8 @@ describe('notifications routes', () => {
   });
 
   it('allows parent users to read scoped notifications', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const parentUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
 
@@ -125,7 +114,6 @@ describe('notifications routes', () => {
       .set(
         await createAuthHeaders({
           userId: parentUser.id,
-          institutionId: institution.id,
         })
       );
 

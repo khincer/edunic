@@ -24,7 +24,6 @@ async function countStudents() {
 describe('idempotency plugin', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let client: ReturnType<typeof createHttpClient>;
-  let institutionId: string;
   let headers: Record<string, string>;
 
   beforeAll(async () => {
@@ -35,16 +34,13 @@ describe('idempotency plugin', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
-    institutionId = institution.id;
     headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
   });
 
@@ -102,12 +98,10 @@ describe('idempotency plugin', () => {
 
   it('executes normally when requests carry different keys or actors', async () => {
     const otherAdmin = await createUserFixture({
-      institutionId,
       role: 'director',
     });
     const otherHeaders = await createAuthHeaders({
       userId: otherAdmin.id,
-      institutionId,
     });
     // Random per-run key: fixture IDs are deterministic per spec file, so a
     // fixed literal would replay against 24h-TTL Redis entries from earlier
@@ -149,7 +143,6 @@ describe('idempotency plugin', () => {
 describe('idempotency plugin with Redis unavailable', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let client: ReturnType<typeof createHttpClient>;
-  let institutionId: string;
   let headers: Record<string, string>;
   const previousUrl = process.env.IDEMPOTENCY_REDIS_URL;
 
@@ -163,16 +156,13 @@ describe('idempotency plugin with Redis unavailable', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
-    institutionId = institution.id;
     headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
   });
 

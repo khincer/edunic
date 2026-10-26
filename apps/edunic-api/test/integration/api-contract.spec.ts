@@ -107,14 +107,12 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
     );
 
     it('rejects an expired token with the UNAUTHORIZED envelope', async () => {
-      const institution = await createInstitutionFixture();
+      await createInstitutionFixture();
       const adminUser = await createUserFixture({
-        institutionId: institution.id,
         role: 'director',
       });
       const expired = await createAuthHeaders({
         userId: adminUser.id,
-        institutionId: institution.id,
         expiresAt: Math.floor(Date.now() / 1000) - 1,
       });
 
@@ -133,21 +131,17 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
   });
 
   describe('RBAC 403 envelope', () => {
-    let institutionId: string;
 
     beforeEach(async () => {
-      const institution = await createInstitutionFixture();
-      institutionId = institution.id;
+      await createInstitutionFixture();
     });
 
     it('answers the FORBIDDEN envelope when a teacher hits an admin-only mutation', async () => {
       const teacherUser = await createUserFixture({
-        institutionId,
         role: 'teacher',
       });
       const teacherHeaders = await createAuthHeaders({
         userId: teacherUser.id,
-        institutionId,
       });
 
       const response = await app.inject({
@@ -167,12 +161,10 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
 
     it('answers the FORBIDDEN envelope when a parent reads an admin-only resource', async () => {
       const parentUser = await createUserFixture({
-        institutionId,
         role: 'parent',
       });
       const parentHeaders = await createAuthHeaders({
         userId: parentUser.id,
-        institutionId,
       });
 
       for (const route of ['/school-profile', '/audit-logs']) {
@@ -186,42 +178,18 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
         expect(response.json().code).toBe('FORBIDDEN');
       }
     });
-
-    it('ignores an x-institution-id header: the school comes from the user', async () => {
-      const adminUser = await createUserFixture({
-        institutionId,
-        role: 'director',
-      });
-      const otherInstitution = await createInstitutionFixture('Other');
-      const adminHeaders = await createAuthHeaders({
-        userId: adminUser.id,
-        institutionId,
-      });
-
-      const response = await app.inject({
-        method: 'GET',
-        url: '/students',
-        headers: { ...adminHeaders, 'x-institution-id': otherInstitution.id },
-      });
-
-      // The tenant header no longer selects a school, so a mismatched value
-      // is ignored instead of rejected.
-      expect(response.statusCode).toBe(200);
-    });
   });
 
   describe('validation 400 envelope', () => {
     let headers: Record<string, string>;
 
     beforeEach(async () => {
-      const institution = await createInstitutionFixture();
+      await createInstitutionFixture();
       const adminUser = await createUserFixture({
-        institutionId: institution.id,
         role: 'director',
       });
       headers = await createAuthHeaders({
         userId: adminUser.id,
-        institutionId: institution.id,
       });
     });
 
@@ -271,14 +239,12 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
     let headers: Record<string, string>;
 
     beforeEach(async () => {
-      const institution = await createInstitutionFixture();
+      await createInstitutionFixture();
       const adminUser = await createUserFixture({
-        institutionId: institution.id,
         role: 'director',
       });
       headers = await createAuthHeaders({
         userId: adminUser.id,
-        institutionId: institution.id,
       });
     });
 
@@ -336,14 +302,12 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
     let headers: Record<string, string>;
 
     beforeEach(async () => {
-      const institution = await createInstitutionFixture();
+      await createInstitutionFixture();
       const adminUser = await createUserFixture({
-        institutionId: institution.id,
         role: 'director',
       });
       headers = await createAuthHeaders({
         userId: adminUser.id,
-        institutionId: institution.id,
       });
 
       const names = [
@@ -354,7 +318,7 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
         { firstName: 'Dario', lastName: 'Gamma' },
       ];
       for (const name of names) {
-        await createStudentFixture({ institutionId: institution.id, ...name });
+        await createStudentFixture({ ...name });
       }
     });
 

@@ -28,7 +28,6 @@ describe('extensions routes (global, single school)', () => {
   async function headersFor(role: string) {
     const institution = await createInstitutionFixture();
     const user = await createUserFixture({
-      institutionId: institution.id,
       role,
     });
 
@@ -36,7 +35,6 @@ describe('extensions routes (global, single school)', () => {
       institution,
       headers: await createAuthHeaders({
         userId: user.id,
-        institutionId: institution.id,
       }),
     };
   }
@@ -149,7 +147,7 @@ describe('extensions routes (global, single school)', () => {
   });
 
   it('shows dashboard extension modules enabled only with global enabled and a config', async () => {
-    const { institution, headers } = await headersFor('director');
+    const { headers } = await headersFor('director');
     await createNotifications(headers);
     await client
       .post('/extensions')
@@ -167,11 +165,6 @@ describe('extensions routes (global, single school)', () => {
       .put('/extensions/billing/config')
       .set(headers)
       .send({ config: {} });
-    // A legacy per-school row must not turn `plain` on.
-    await db.execute(sql`
-      insert into institution_extensions (institution_id, extension_key)
-      values (${institution.id}, 'plain')
-    `);
 
     const response = await client.get('/dashboard/admin').set(headers);
 

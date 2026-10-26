@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import Redis from 'ioredis';
 import type { EventEnvelope } from '@edunic/source/events';
 import {
@@ -27,7 +28,8 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
   let redis: Redis;
   let runtime: ReturnType<typeof bootstrapWorker>;
   let consumer: ReturnType<typeof bootstrapWorker>['consumer'];
-  let institutionId: string;
+  // Only the old-shape test reads it: a queued legacy event still carries it.
+  let legacyInstitutionId: string;
   let headers: Record<string, string>;
   let studentId: string;
   let academicPeriodId: string;
@@ -99,10 +101,9 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
     await consumer.ensureGroup();
 
     const institution = await createInstitutionFixture('Workflow Institution');
-    institutionId = institution.id;
+    legacyInstitutionId = institution.id;
 
     const admin = await createUserFixture({
-      institutionId,
       role: 'director',
       email: 'workflow-admin@worker.test',
       password: 'admin1234',
@@ -114,14 +115,12 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
       payload: {
         email: admin.email,
         password: admin.password,
-        institutionId,
       },
     });
     expect(login.statusCode).toBe(200);
 
     headers = {
       authorization: `Bearer ${login.json().data.token}`,
-      'x-institution-id': institutionId,
     };
 
     const period = await app.inject({
@@ -243,5 +242,32 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
     await consumer.pollOnce({ blockMs: 0 });
 
     expect(await welcomesFor(enrollment.id)).toHaveLength(1);
+  });
+
+  // Events already on the stream when the sweep deploys still carry the
+  // tenant field. The consumer must handle and ack them, and the side effect
+  // must not propagate the field (TEN-07).
+  it('consumes an old-shape enrollment.created that still carries institutionId', async () => {
+    const enrollment = await createEnrollment();
+    const created = (await readStream())[0];
+    await redis.del(STREAM);
+    await consumer.ensureGroup();
+
+    const oldShape = {
+      ...created,
+      // A fresh id per run: the consumer's `processed:<id>` marker lives in
+      // Redis across runs, so a fixed id would be skipped as a duplicate.
+      id: randomUUID(),
+      institutionId: legacyInstitutionId,
+    };
+    await redis.xadd(STREAM, '*', 'event', JSON.stringify(oldShape));
+
+    expect(await consumer.pollOnce({ blockMs: 0 })).toBe(1);
+
+    const welcomes = await welcomesFor(enrollment.id);
+    expect(welcomes).toHaveLength(1);
+    expect(welcomes[0]).not.toHaveProperty('institutionId');
+    expect(await redis.exists(`processed:${oldShape.id}`)).toBe(1);
+    expect(await pendingEntryIds()).toEqual([]);
   });
 });

@@ -29,30 +29,24 @@ describe('attendance routes', () => {
   });
 
   it('supports CRUD for attendance', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const teacherUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
-    const classroom = await createClassroomFixture({
-      institutionId: institution.id,
-    });
+    const classroom = await createClassroomFixture({});
     await createTeacherClassroomAssignmentFixture({
-      institutionId: institution.id,
       teacherUserId: teacherUser.id,
       classroomId: classroom.id,
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
-    const period = await createAcademicPeriodFixture({ institutionId: institution.id });
+    const student = await createStudentFixture({});
+    const period = await createAcademicPeriodFixture({});
     const enrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
       classroomId: classroom.id,
     });
     const headers = await createAuthHeaders({
       userId: teacherUser.id,
-      institutionId: institution.id,
     });
 
     const createResponse = await client.post('/attendance').set(headers).send({
@@ -78,9 +72,8 @@ describe('attendance routes', () => {
   });
 
   it('returns 404 when the enrollment does not exist', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const teacherUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
 
@@ -89,7 +82,6 @@ describe('attendance routes', () => {
       .set(
         await createAuthHeaders({
           userId: teacherUser.id,
-          institutionId: institution.id,
         })
       )
       .send({
@@ -101,22 +93,19 @@ describe('attendance routes', () => {
     expect(response.status).toBe(404);
   });
 
-  it('answers without institutionId and keeps one mark per enrollment and date', async () => {
-    const institution = await createInstitutionFixture();
+  it('answers without a school field and keeps one mark per enrollment and date', async () => {
+    await createInstitutionFixture();
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
-    const period = await createAcademicPeriodFixture({ institutionId: institution.id });
+    const student = await createStudentFixture({});
+    const period = await createAcademicPeriodFixture({});
     const enrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
     });
     const headers = await createAuthHeaders({
       userId: admin.id,
-      institutionId: institution.id,
     });
     const body = {
       enrollmentId: enrollment.id,

@@ -43,13 +43,8 @@ const authPluginHandler: FastifyPluginAsync = async (app) => {
         throw new ErrorWithStatus('User role was not found', 403);
       }
 
-      if (!authContext.institutionId) {
-        throw new ErrorWithStatus('The school was not found', 403);
-      }
-
       request.user = {
         id: payload.sub,
-        institutionId: authContext.institutionId,
         role: authContext.role,
       };
     }) satisfies preHandlerHookHandler

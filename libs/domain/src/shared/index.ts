@@ -8,10 +8,6 @@ export {
 export { parseWithSchema } from './parse-with-schema.js';
 
 export {
-  getInstitutionId,
-} from './institution.js';
-
-export {
   computeAverage,
   buildSubjectAverages,
   toRoundedAverage,
