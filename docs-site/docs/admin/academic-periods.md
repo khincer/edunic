@@ -11,7 +11,8 @@ Create the school terms that enrollments, grades, and reports hang off.
 
 ## Prerequisites
 
-- `admin` role (teachers and parents can read periods, but only admins can change them).
+- An administration role (teachers and parents can read periods, but only the
+  administration can change them).
 - A year between 2000 and 2100 and a term between 1 and 4.
 
 ## In the app
@@ -86,7 +87,6 @@ untouched.
 {
   "data": {
     "id": "<uuid>",
-    "institutionId": "<uuid>",
     "year": 2026,
     "term": 1,
     "startDate": "2026-02-01T00:00:00.000Z",
@@ -108,7 +108,7 @@ Create returns `201`; list returns `{ "data": [ ... ], "hasMore": false, "nextCu
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | Teacher or parent tried to write |
 | 404 | `NOT_FOUND` | `Academic period not found` | Wrong UUID |
-| 409 | `CONFLICT` | `Academic period already exists for this year and term` | One period per year and term per institution |
+| 409 | `CONFLICT` | `Academic period already exists for this year and term` | One period per year and term |
 | 409 | `CONFLICT` | `Academic period cannot be deleted while enrollments exist` | Remove or move the enrollments first |
 
 ## What is not available yet

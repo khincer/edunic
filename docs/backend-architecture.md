@@ -54,12 +54,12 @@ flowchart LR
 | Auth | `plugins/auth.plugin.ts` (`preHandler`) | Verifies the JWT and resolves the caller's role before the handler runs. |
 | Validation | `libs/domain/src/shared/parse-with-schema.ts` | Rejects malformed input at the boundary. Called **inside each route handler**, not as a Fastify `preValidation` hook. |
 | Service | `libs/domain/src/<module>/application/*.service.ts` | Orchestrates the use case, enforces rules, maps DB errors to HTTP status codes. |
-| Repository | `libs/domain/src/<module>/infrastructure/*.repository.ts` | The only place that talks to the database. Every tenant-scoped query filters by `institutionId`; the catalog reads that deliberately do not are listed in section 4. |
+| Repository | `libs/domain/src/<module>/infrastructure/*.repository.ts` | The only place that talks to the database. Read scoping (which students a caller may see) arrives as a list of student ids from `AccessService`. |
 | Events | `libs/events`, service constructor | Publishes domain events after a state change so other parts of the system can react. |
 
 **Worked example (`POST /enrollments`):** `apps/edunic-api/src/routes/enrollments.routes.ts` builds
 `EnrollmentsService` with `EnrollmentsRepository` and `app.eventBus`, gates it behind
-`app.authenticate` + `app.authorizeRoles(['admin', 'teacher'])`, parses the body with
+`app.authenticate` + `app.authorizeRoles(adminAnd('teacher'))`, parses the body with
 `parseWithSchema(createEnrollmentBodySchema, request.body)`, then calls
 `createEnrollment()`. The service (`libs/domain/src/enrollments/application/enrollments.service.ts`)
 verifies related rows exist, writes through the repository, and finally
@@ -115,47 +115,47 @@ the `/health` prefix, `/ready` via `readyRoutes` at the root. Both paths are lis
 
 `notifications` stays last.
 
-## 3. Auth, RBAC and multi-tenancy
+## 3. Auth, RBAC and the single school
 
 ### Authentication (JWT)
 
 - Tokens are signed and verified with **`jose`** (HS256), in `libs/domain/src/auth/application/jwt.ts`
   (`signJwt`, `verifyJwt`).
-- The payload is `{ sub, institutionId, exp }`; tokens expire after 12 hours by default.
+- The payload is `{ sub, exp }`; tokens expire after 12 hours by default. The token carries no school
+  and no role.
 - `plugins/auth.plugin.ts` decorates `app.authenticate`. It reads the `Authorization: Bearer` header,
-  calls `verifyJwt(token, env.JWT_SECRET)`, then loads the user's role for the token's institution via
-  `AuthRepository.findUserRole`. Missing/invalid tokens return `401`; a missing role returns `403`.
+  calls `verifyJwt(token, env.JWT_SECRET)`, then loads the user's role with
+  `AuthRepository.findAuthContext`. The request user is `{ id, role }`. Missing/invalid tokens return
+  `401`; a user without a role returns `403`.
 - `AuthService.login` (`libs/domain/src/auth/application/auth.service.ts`) verifies the password hash
   and issues the token.
 
 ### Authorization (RBAC)
 
+- Five roles: `director`, `vice_director`, `subdirector` (the administrative group, `ADMIN_ROLES` in
+  `libs/domain/src/authorization/roles.ts`), `teacher` and `parent`. A user holds exactly one role
+  (`user_roles.user_id` is unique).
 - `app.authorizeRoles([...])` returns a `preHandler` that returns `403` unless `request.user.role` is
-  in the allowed list.
-- Roles in use include `admin`, `teacher` and `parent` (see
-  `apps/edunic-api/src/routes/enrollments.routes.ts`).
+  in the allowed list. Routes name the group with `ADMIN_ROLES` or `adminAnd('teacher', ...)` instead
+  of repeating it.
 - Protection is opt-in per route: each route attaches `preHandler: [app.authenticate, app.authorizeRoles([...])]`.
   There is no global "all routes are protected" default, so every new route must add it explicitly.
+- Record ownership lives in `AccessService` (`libs/domain/src/authorization`), not in the route
+  guards: a teacher owns the classrooms assigned to them (and their students), a parent the students
+  linked through `guardian_user_links`. Read services call `resolveReadableStudents` or
+  `assertCanReadStudent` before the lookup, so a refusal never reveals whether a record exists.
 
-### Multi-tenancy
+### One school per deployment
 
-- Every core table carries `institution_id` with a foreign key to `institutions`
-  (`libs/db/src/schema/index.ts`).
-- The tenant is read from the **`x-institution-id`** header via
-  `getInstitutionId(request)` (`libs/domain/src/shared/institution.ts`), which validates it as a UUID.
-- To close the cross-tenant hole, `authenticate` (in `plugins/auth.plugin.ts`) rejects the request with
-  `403` when the `x-institution-id` header does not match the institution embedded in the token.
-- Repositories receive `institutionId` and include it in the `where` clause of every tenant-scoped
-  query, so tenant isolation is enforced at the data-access layer as well as at the edge. Reading the
-  `institutions` and `extensions` catalogs is the documented exception — see section 4.
-- **Catalog reads stay global; the identity write does not.** `GET /institutions` and
-  `GET /institutions/:institutionId` remain unscoped reads, but `PATCH /institutions/:institutionId`
-  now compares the token's institution with the path parameter and answers `403` for any other
-  institution (`assertInstitutionAccess` in `institutions.routes.ts`, mirroring
-  `feature-flags.routes.ts`) — added with the per-institution sender identity (SI-R2). `POST` and
-  `DELETE` on `/institutions` remain platform-level operations with no tenant comparison. So
-  `institutions` is a global catalog for reads and creation and a tenant-scoped resource for updates;
-  an admin can therefore no longer rename or configure a school that is not its own.
+- There is no tenant dimension. Since migration `0015_single_school_contract` no table has a school
+  column, and no request header or token selects a school.
+- The `institutions` table survives as the single configuration row (name, email sender identity,
+  reply-to), read and written through `GET/PATCH /school-profile`. Where several rows could exist, the
+  code picks the oldest (`created_at` ascending, then `id`) — the rule `AuthRepository.findAuthContext`
+  and the dashboards use.
+- Feature flags and extensions are global (`feature_flags.default_value`, `extensions.config`).
+- `apps/edunic-api/test/unit/single-school-sweep.spec.ts` guards the runtime code, the Drizzle schema,
+  the test tree and the documentation against the removed tenant identifiers.
 
 ## 4. Database patterns
 
@@ -166,11 +166,12 @@ the `/health` prefix, `/ready` via `readyRoutes` at the root. Both paths are lis
 - **Schema:** a single `libs/db/src/schema/index.ts` defines all tables as `pgTable` definitions,
   including the constraints that enforce data integrity:
   - `unique` — e.g. one enrollment per student per academic period (`uniqueStudentPeriod`), one
-    attendance row per enrollment per day (`uniqueEnrollmentDate`), unique `(year, term)` per institution.
+    attendance row per enrollment per day (`uniqueEnrollmentDate`), unique `(year, term)` per academic
+    period and `(grade_level, section)` per classroom.
   - `check` — e.g. grade `score` between 0 and 100, attendance `status` in `('present','absent','late')`,
     academic period `term` between 1 and 4, `startDate <= endDate`.
-  - foreign keys on `institution_id` and relationships (`student_id`, `enrollment_id`, …).
-- **Migrations:** SQL files under `libs/db/src/migrations` (`0000`–`0008`), each with a sibling
+  - foreign keys on the relationships (`student_id`, `enrollment_id`, …).
+- **Migrations:** SQL files under `libs/db/src/migrations` (`0000`–`0015`), each with a sibling
   `.down.sql`, plus Drizzle's `meta/_journal.json`. `drizzle-kit` config lives in
   `libs/db/src/drizzle.config.ts` (schema `./libs/db/src/schema`, out `./libs/db/src/migrations`).
   `runMigrations()` (`libs/db/src/run-migrations.ts`) applies them with `migrate()` against
@@ -194,11 +195,10 @@ be aware of the eager singleton.
 ### List conventions (cursor pagination, filter and sort)
 
 List endpoints follow two shared conventions implemented in
-`libs/domain/src/shared/http/{pagination,filter-sort}.ts`. They are wired on **13 of the 21** route
-modules: the four migrated first (`students`, `enrollments`, `grades`, `attendance`) and the nine that
-followed (`academic-periods`, `audit-logs`, `classrooms`, `custom-fields`, `extensions`, `guardians`,
-`institutions`, `notifications`, `workflows` — 15 endpoints, since `workflows` shares one wire across
-its three list routes). The other nine modules deliberately do not paginate; the disposition table
+`libs/domain/src/shared/http/{pagination,filter-sort}.ts`. They are wired on **13** route modules: the four migrated first (`students`, `enrollments`, `grades`,
+`attendance`) and the nine that followed (`academic-periods`, `audit-logs`, `classrooms`,
+`custom-fields`, `extensions`, `guardians`, `notifications`, `reports`, `workflows` — 15 endpoints,
+since `workflows` shares one wire across its three list routes). The other nine modules deliberately do not paginate; the disposition table
 below says which and why.
 
 - **Dual-parameter pagination.** `?cursor=<value>&limit=<n>` selects keyset (cursor) pagination;
@@ -241,14 +241,13 @@ five-part wire; a module without one is recorded `N/A` with a reason class. Nine
 | 7 | `custom-fields` | paginate | `GET /custom-fields`; its nested values GET is bounded by the parent entity → N/A within this row |
 | 8 | `dashboards` | N/A | Three aggregate GETs; no query schema |
 | 9 | `docs` | N/A | Static OpenAPI-document GETs (`/docs`, `/docs/json`) |
-| 10 | `extensions` | paginate | `GET /extensions`; nested by-institution GET bounded → N/A within this row |
+| 10 | `extensions` | paginate | `GET /extensions` |
 | 11 | `feature-flags` | N/A | Result bounded by the flag-key set; no `limit`/`offset` |
 | 12 | `guardians` | paginate | `GET /guardians`; nested by-student GET bounded → N/A within this row |
 | 13 | `health` | N/A | Dependency-free liveness probe; no query schema |
 | 14 | `ready` | N/A | Readiness probe, envelope-excluded; no query schema |
-| 15 | `institutions` | paginate | `GET /institutions` |
 | 16 | `notifications` | paginate | `GET /notifications` |
-| 17 | `reports` | N/A | Per-student report documents; no `limit`/`offset` |
+| 15 | `reports` | paginate | `GET /reports/history`; the per-student documents and the CSV export are not lists → N/A within this row |
 | 18 | `workflows` | paginate | `GET /assignments`, `GET /messages`, `GET /school-events` (one shared schema, repository and service) |
 
 Reason classes behind the nine `N/A` rows: **POST-only**, **no list surface** (singleton, aggregate or
@@ -259,18 +258,14 @@ module's row, whose disposition stays `paginate`).
 Every paginated module declares one constant keyset order (`<M>_CURSOR_ORDER`) beside its repository,
 always ending on the unique `id` so the order is total. A module whose leading order column is a
 high-precision `timestamp` inherits the `toCursorSortKey(Date)` millisecond-truncation caveat
-(`notifications`, `workflows`); `institutions` deliberately leads on `name` instead of its legacy
-`created_at desc` so that caveat stays unreachable there. `workflows` aliases its three base tables to
+(`notifications`, `workflows`, `reports`). `workflows` aliases its three base tables to
 `w` so a single constant order serves all three endpoints — which is why its uniform whitelist is only
 `createdAt`.
 
-Two of the paginated lists are global catalog **reads** rather than tenant-scoped collections, so their
-`WHERE` clause is assembled from optional filters and is empty when none are supplied: `institutions`
-and the `extensions` catalog (`GET /extensions`). Everything else keeps the tenant filter described in
-section 1; the tenant-scoped nested GETs (`/guardians` by student, `/custom-fields/values/...`,
-`/institutions/:institutionId/extensions`) still filter by their parent entity. The exception covers
-reads only: writing an institution (`PATCH /institutions/:institutionId`) is tenant-scoped — see
-section 3.
+A list's `WHERE` clause is assembled from its optional filters plus, for teachers and parents, the
+student scope `AccessService` resolves (section 3); for the administration it is empty when no filter
+is supplied. The nested GETs (`/guardians` by student, `/custom-fields/values/...`) filter by their
+parent entity.
 
 ## 5. Events and Redis
 
@@ -278,7 +273,8 @@ section 3.
 
 `libs/events/src/index.ts` defines:
 
-- `EventEnvelope<TName, TPayload>` — `{ id, name, institutionId, payload, occurredAt }`.
+- `EventEnvelope<TName, TPayload>` — `{ id, name, payload, occurredAt }`. Consumers still accept an
+  old-shape envelope that carries a school id, so entries queued before the change keep working.
 - `createEventEnvelope(...)` — assigns a UUID and timestamp.
 - `EventBus` — `publish(event)` and `subscribe(eventName, handler)`.
 - `InMemoryEventBus` — the **default**. Handlers run in-process, synchronously.
@@ -298,8 +294,8 @@ section 3.
 | `attendance.marked` | `createAttendanceMarkedEvent` | `attendanceId`, `enrollmentId`, `date`, `status` |
 
 `plugins/notifications.plugin.ts` subscribes to all three and forwards each to
-`NotificationsService.handleDomainEvent`, which writes a `notifications` row when the institution has
-the notifications extension enabled. A fourth event, `enrollment.welcomed`
+`NotificationsService.handleDomainEvent`, which writes a `notifications` row when the notifications
+extension is enabled. A fourth event, `enrollment.welcomed`
 (`createEnrollmentWelcomedEvent`), exists only as the worker's side effect and is deliberately **not**
 part of `AcademicDomainEvent` — that union is the notifications subscriber's contract.
 
@@ -335,7 +331,7 @@ event on edunic:domain-events — enrollment.welcomed | grade.submitted | attend
      1 flag off  (findEffective('email_notifications'); a missing key reads as off)
                  → STOP: no recipient read, no ledger row, no job
      2 institutions.sender_name is null → STOP (no sender identity, no platform fallback)
-     3 recipients of the student, institution-scoped and deduped:
+     3 recipients of the student, deduped:
           guardians.email  ∪  users.email reachable through guardian_user_links
      4 insert email_deliveries ... on conflict do nothing   (status 'queued', attempt_count 0)
      5 queue.add('email-send', job) with the deterministic job id; the job carries
@@ -377,7 +373,7 @@ closing a different crash window:
 | Layer | Where it lives | The window it closes |
 |-------|----------------|----------------------|
 | the **job id** | `queue.add` under `email-<eventId>-<sha256(trimmed, lowercased address)>` (`emailJobId()`) | a redelivered event, or a second enqueue of the same event: BullMQ refuses a duplicate id while the record exists. Bounded by job-record retention. |
-| the **ledger claim** | the `email_deliveries` unique key `(institution_id, event_id, recipient_address)` makes the re-insert a no-op, and the claim `status in ('queued','retried') -> 'sending'` admits exactly one job to the transport | two *jobs* racing one row — the loser claims zero rows and sends nothing. Bounded only by the ledger row, which never expires. |
+| the **ledger claim** | the `email_deliveries` unique key `(event_id, recipient_address)` makes the re-insert a no-op, and the claim `status in ('queued','retried') -> 'sending'` admits exactly one job to the transport | two *jobs* racing one row — the loser claims zero rows and sends nothing. Bounded only by the ledger row, which never expires. |
 | the **provider key** | `idempotencyKey` on `SendEmailInput`, carried to Resend as its `Idempotency-Key` request option | a *send* whose acceptance the ledger never recorded — the worker dying between the provider accepting the message and the completion write, and any reclaim that follows: the provider has already accepted that key, so it absorbs the re-send instead of delivering a second message. |
 
 The first two layers only ever fence *jobs*. Neither can fence a send that has already passed the
@@ -392,13 +388,13 @@ is bounded by those windows: once a job record is evicted the id is addable agai
 is what still keeps a *concurrent* job to one send.
 
 **The provider key (P10).** The key is the ledger row's own primary key: `email_deliveries.id`, the
-uuid minted once for the `(institution, event, recipient address)` row. The delivery service does not
+uuid minted once for the `(event, recipient address)` row. The delivery service does not
 invent it — `claimDelivery()` returns it with the claim it just took, and
 `EmailDeliveryService.handleDeliveryJob` puts it on the send. It is stable across every attempt of one
 logical delivery because the row is: the unique key makes a redelivered event a no-op rather than a new
 row, a reclaim and a BullMQ retry transition *that* row instead of inserting one, and nothing in the
-pipeline deletes a row. It separates deliveries because the row does: a different event, a different
-address or a different institution is a different row and therefore a different key, so no two logical
+pipeline deletes a row. It separates deliveries because the row does: a different event or a different
+address is a different row and therefore a different key, so no two logical
 deliveries can ever share one. `ResendEmailTransport` hands it to the SDK's request options beside the
 P9 deadline (`{ signal, idempotencyKey }`; the SDK's `CreateEmailRequestOptions` extends
 `PostOptions, IdempotentRequest`, and `idempotencyKey` is the option that becomes the
@@ -462,7 +458,7 @@ pair — the threshold must be at least twice the deadline and never under 1 s �
 combination fails startup with `EMAIL_CLAIM_STALE_MS` named in the message instead of silently
 reintroducing the duplicate-send window.
 `EMAIL_FROM_ADDRESS` is the platform envelope sender — Resend
-only sends from a domain verified in the account, and per institution the display name
+only sends from a domain verified in the account, and the school's display name
 (`sender_name`, rendered as the `From:` name) and `reply_to_email` are configurable. The API's schema is
 untouched, so a missing Resend key never fails API startup.
 
@@ -480,7 +476,7 @@ would promise a retry that cannot happen.
 |-----------|--------|--------------|
 | Request → route → validation → service → repository → DB | Current | This document, section 1 |
 | Plugins: cors, db, event-bus, auth, audit-logs, envelope, idempotency, error-handler, outbox-publisher, notifications | Current | `plugins/index.ts` |
-| JWT auth + RBAC + `institution_id` scoping | Current | `plugins/auth.plugin.ts`, shared/institution |
+| JWT auth + RBAC + record ownership (one school per deployment) | Current | `plugins/auth.plugin.ts`, `libs/domain/src/authorization` |
 | Drizzle schema + migrations (with `.down.sql` + runbook) | Current | `libs/db/src`, `docs/migrations-runbook.md` |
 | In-memory event bus, 3 domain events, notifications subscriber | Current | `libs/events`, `libs/domain/src/events.ts` |
 | Response envelope + error codes | Current | `libs/domain/src/shared/http/response-envelope.ts`, `plugins/envelope.plugin.ts`, `plugins/error-handler.plugin.ts` |

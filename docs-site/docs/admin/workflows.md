@@ -12,12 +12,12 @@ console.
 
 ## Prerequisites
 
-- `admin` or `teacher` role to publish assignments and events; all three roles can send
+- An administration or `teacher` role to publish assignments and events; all three roles can send
   messages.
 - For a classroom-specific item, the classroom UUID. The page loads classrooms itself and
   offers a **School-wide** option.
 - For a message, the recipient's **user** UUID (not their email). The recipient must hold a
-  role in the same institution.
+  role at the school.
 
 ## In the app
 
@@ -60,7 +60,6 @@ Publish an assignment:
 ```bash
 curl -X POST "http://localhost:3000/assignments" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "classroomId": "20000000-0000-0000-0000-000000000001",
@@ -76,7 +75,6 @@ Mark it reviewed:
 ```bash
 curl -X PATCH "http://localhost:3000/assignments/$ASSIGNMENT_ID" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{ "status": "reviewed" }'
 ```
@@ -86,7 +84,6 @@ Schedule an event:
 ```bash
 curl -X POST "http://localhost:3000/school-events" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "classroomId": null,
@@ -101,7 +98,6 @@ Send a message:
 ```bash
 curl -X POST "http://localhost:3000/messages" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "recipientUserId": "70000000-0000-0000-0000-000000000002",
@@ -126,7 +122,6 @@ Required body fields:
 {
   "data": {
     "id": "<uuid>",
-    "institutionId": "<uuid>",
     "classroomId": "<uuid or null>",
     "title": "Fractions practice set",
     "type": "homework",
@@ -154,7 +149,7 @@ audiences attached to that classroom (or school-wide).
 | 403 | `FORBIDDEN` | `Parents cannot create assignments` / `Parents cannot create events` / `Parents cannot update assignments` | Parent token on a staff write |
 | 404 | `NOT_FOUND` | `Classroom not found` | Wrong classroom UUID |
 | 404 | `NOT_FOUND` | `Assignment not found` / `Event not found` / `Message not found` | Wrong UUID |
-| 404 | `NOT_FOUND` | `Message recipient not found` | The recipient has no role in this institution |
+| 404 | `NOT_FOUND` | `Message recipient not found` | The recipient has no role |
 
 ## What is not available yet
 

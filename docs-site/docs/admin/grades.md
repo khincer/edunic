@@ -11,7 +11,8 @@ Submit a grade for an enrollment and correct a grade when needed.
 
 ## Prerequisites
 
-- `admin` or `teacher` role to write; all three roles can read.
+- An administration or `teacher` role to write; every role can read (teachers and parents
+  only their own students).
 - An existing enrollment UUID.
 - A subject name (1–120 characters) and an integer score from 0 to 100.
 
@@ -37,7 +38,6 @@ Create a grade:
 ```bash
 curl -X POST "http://localhost:3000/grades" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "enrollmentId": "40000000-0000-0000-0000-000000000001",
@@ -51,7 +51,6 @@ Correct a grade:
 ```bash
 curl -X PATCH "http://localhost:3000/grades/$GRADE_ID" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{ "score": 95 }'
 ```
@@ -60,16 +59,14 @@ Filter by subject:
 
 ```bash
 curl "http://localhost:3000/grades?subject=Mathematics&limit=50&sortBy=createdAt&sortOrder=desc" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Delete a grade:
 
 ```bash
 curl -X DELETE "http://localhost:3000/grades/$GRADE_ID" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Required body fields:
@@ -87,7 +84,6 @@ Numeric strings are coerced, so `"score": "90"` is accepted.
 {
   "data": {
     "id": "<grade uuid>",
-    "institutionId": "<uuid>",
     "enrollmentId": "<uuid>",
     "subject": "Mathematics",
     "score": 90,
@@ -107,7 +103,7 @@ Create returns `201`. Submitting a grade publishes an event that feeds notificat
 | 400 | `VALIDATION_ERROR` | `At least one field must be provided` | Empty PATCH |
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | Parent tried to write |
-| 404 | `NOT_FOUND` | `Enrollment not found` | Wrong enrollment UUID or wrong institution |
+| 404 | `NOT_FOUND` | `Enrollment not found` | Wrong enrollment UUID |
 | 404 | `NOT_FOUND` | `Grade not found` | Wrong grade UUID |
 
 ## What is not available yet

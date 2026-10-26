@@ -12,9 +12,10 @@ student is promoted or retained.
 
 ## Prerequisites
 
-- `admin` or `teacher` role to write; all three roles can read.
+- An administration or `teacher` role to write; every role can read (teachers and parents
+  only their own students).
 - The student UUID, the academic period UUID, and optionally the classroom UUID.
-- A classroom and period that belong to the same institution.
+- The student, the academic period and (optionally) the classroom exist.
 
 ## In the app
 
@@ -41,7 +42,6 @@ Create an enrollment:
 ```bash
 curl -X POST "http://localhost:3000/enrollments" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "studentId": "30000000-0000-0000-0000-000000000001",
@@ -56,7 +56,6 @@ Change classroom or status:
 ```bash
 curl -X PATCH "http://localhost:3000/enrollments/$ENROLLMENT_ID" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{ "status": "completed" }'
 ```
@@ -65,16 +64,14 @@ Evaluate promotion for the enrollment:
 
 ```bash
 curl -X POST "http://localhost:3000/enrollments/$ENROLLMENT_ID/promotion" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 List with filters:
 
 ```bash
 curl "http://localhost:3000/enrollments?academicPeriodId=$PERIOD_ID&status=active&limit=50" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Required body fields:
@@ -93,7 +90,6 @@ Create returns `201`:
 {
   "data": {
     "id": "<enrollment uuid>",
-    "institutionId": "<uuid>",
     "studentId": "<uuid>",
     "academicPeriodId": "<uuid>",
     "classroomId": "<uuid or null>",
@@ -138,9 +134,9 @@ enrollment.
 | 400 | `VALIDATION_ERROR` | `At least one field must be provided` | Empty PATCH |
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | Parent tried to write |
-| 404 | `NOT_FOUND` | `Student not found` | Student is not in this institution |
-| 404 | `NOT_FOUND` | `Academic period not found` | Period is not in this institution |
-| 404 | `NOT_FOUND` | `Classroom not found` | Classroom is not in this institution |
+| 404 | `NOT_FOUND` | `Student not found` | Unknown student UUID |
+| 404 | `NOT_FOUND` | `Academic period not found` | Unknown academic period UUID |
+| 404 | `NOT_FOUND` | `Classroom not found` | Unknown classroom UUID |
 | 404 | `NOT_FOUND` | `Enrollment not found` | Wrong enrollment UUID |
 | 409 | `CONFLICT` | `Student is already enrolled in this academic period` | One enrollment per student per period |
 | 409 | `CONFLICT` | `Enrollment cannot be deleted while grades or attendance records exist` | Delete the dependent records first |

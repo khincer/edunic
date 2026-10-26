@@ -7,12 +7,11 @@ sidebar_label: Audit logs
 
 ## Goal
 
-Read the institution's create, update, and delete trail.
+Read the school's create, update, and delete trail.
 
 ## Prerequisites
 
-- `admin` role.
-- An institution UUID. The audit page is opened from that institution's detail page.
+- An administration role (`director`, `vice_director` or `subdirector`).
 
 ## What gets recorded
 
@@ -31,13 +30,11 @@ Each row stores:
 
 ## In the app
 
-1. Open `/admin/institutions`.
-2. Select **Open** on the institution.
-3. Select **Audit logs**. The URL is
-   `/admin/institutions/<institutionId>/audit-logs`.
-4. The table shows **Action**, **Entity** (with entity id), **User** (or `System` when
+1. Open `/admin/settings` (**School** in the console navigation).
+2. Select **Audit logs**. The URL is `/admin/settings/audit-logs`.
+3. The table shows **Action**, **Entity** (with entity id), **User** (or `System` when
    `userId` is null), and **Created**.
-5. Use **Previous** and **Next**. The page size is 10 and the footer shows
+4. Use **Previous** and **Next**. The page size is 10 and the footer shows
    `Showing N of M audit entries`.
 
 There are no filters and no export on this page.
@@ -46,16 +43,14 @@ There are no filters and no export on this page.
 
 ```bash
 curl "http://localhost:3000/audit-logs?limit=10&offset=0&sortOrder=desc" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Filter by entity, action, or user:
 
 ```bash
 curl "http://localhost:3000/audit-logs?entity=enrollments&action=create&userId=$USER_ID&limit=25" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Query parameters:
@@ -77,7 +72,6 @@ Query parameters:
   "data": [
     {
       "id": "<uuid>",
-      "institutionId": "<uuid>",
       "userId": "<uuid>",
       "action": "create",
       "entity": "grades",

@@ -33,7 +33,6 @@ without any score, the page says `Enter at least one score before submitting gra
 ```bash
 curl -X POST "http://localhost:3000/grades" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "enrollmentId": "<enrollment uuid>",
@@ -46,8 +45,7 @@ Read the grades you have submitted:
 
 ```bash
 curl "http://localhost:3000/grades?subject=Mathematics&limit=25" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Required body fields: `enrollmentId` (UUID), `subject` (1–120 characters), `score`
@@ -59,7 +57,6 @@ Required body fields: `enrollmentId` (UUID), `subject` (1–120 characters), `sc
 {
   "data": {
     "id": "<grade uuid>",
-    "institutionId": "<uuid>",
     "enrollmentId": "<uuid>",
     "subject": "Mathematics",
     "score": 88,
@@ -79,7 +76,7 @@ subscriber turns into a notification.
 | 400 | `VALIDATION_ERROR` | `Subject is required` | Blank subject |
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
 | 403 | `FORBIDDEN` | `You do not have permission to perform this action` | Parent token |
-| 404 | `NOT_FOUND` | `Enrollment not found` | Wrong enrollment or another institution |
+| 404 | `NOT_FOUND` | `Enrollment not found` | Wrong enrollment UUID |
 
 ## What is not available yet
 

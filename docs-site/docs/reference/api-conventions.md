@@ -22,7 +22,6 @@ written for one module works for the rest.
 |--------|----------|-------|
 | `Authorization: Bearer <token>` | Yes, except on public routes | Login, health, readiness, and docs are public |
 | `Content-Type: application/json` | On any request with a body | |
-| `X-Institution-Id` | No | If present it must equal the token's institution, otherwise 403 |
 | `Idempotency-Key` | No | See [Idempotency](#idempotency) |
 
 ## Success envelope
@@ -63,8 +62,7 @@ Send `cursor` to switch a list endpoint into keyset mode:
 
 ```bash
 curl "http://localhost:3000/students?cursor=start&limit=25" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 - `cursor=start` is the sentinel for the first page in stable keyset order.
@@ -83,7 +81,7 @@ X-Pagination-Deprecated: offset
 ```
 
 Use `cursor` in new integrations. Offset mode still works and is what the admin
-institutions and audit pages use today.
+audit and report history pages use today.
 
 ## Filtering and sorting
 
@@ -99,8 +97,7 @@ Operators: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains` (case-insensitive s
 
 ```bash
 curl "http://localhost:3000/audit-logs?filter=entity:eq:grades&filter=action:in:create,update&sort=createdAt:desc" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Each resource whitelists its filterable and sortable fields. An unknown field or operator is
@@ -117,7 +114,6 @@ safe:
 ```bash
 curl -X POST "http://localhost:3000/grades" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   -H "Idempotency-Key: 8f1c0b0e-2f0a-4d3a-9a0e-1b2c3d4e5f60" \
   -H "Content-Type: application/json" \
   -d '{ "enrollmentId": "<uuid>", "subject": "Mathematics", "score": 90 }'
@@ -125,7 +121,7 @@ curl -X POST "http://localhost:3000/grades" \
 
 Behaviour:
 
-- The key is scoped to your institution, the route, and your user id.
+- The key is scoped to the route and your user id.
 - A repeated key with a stored successful response replays it, with the header
   `idempotency-replayed: true`. The replayed status and body are identical.
 - A key that is still in flight returns 409 `IDEMPOTENCY_CONFLICT`

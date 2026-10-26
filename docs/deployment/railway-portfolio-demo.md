@@ -55,12 +55,13 @@ The API demo config runs this before startup:
 npm run db:migrate && npm run db:seed
 ```
 
-The seed script is idempotent and creates demo institutions, users, students, enrollments, grades, attendance, extensions, and feature flags. Demo login accounts:
+The seed script is idempotent and creates the school profile, one user per role, classrooms, materias, students, enrollments, grades, attendance, extensions, and feature flags. One deployment serves one school. Demo login accounts (passwords in `tools/seed.ts`):
 
-- `admin@central.edu` / `admin1234`
-- `teacher@central.edu` / `teacher1234`
-- `parent@central.edu` / `parent1234`
-- `admin@north.edu` / `admin1234`
+- `admin@central.edu` (director)
+- `vicedirector@central.edu` (vice director)
+- `subdirector@central.edu` (subdirector)
+- `teacher@central.edu` (teacher)
+- `parent@central.edu` (parent)
 
 Use `/railway.api.json` instead of `/railway.demo-api.json` for non-demo environments where automatic seeding is not desired.
 

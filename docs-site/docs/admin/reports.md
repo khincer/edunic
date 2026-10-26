@@ -7,22 +7,29 @@ sidebar_label: Reports
 
 ## Goal
 
-Read a student's academic summary for a year and download the PDF version.
+Read a student's academic summary for a year, download it as PDF, export the grades of a
+year as CSV, and review the history of every export.
 
 ## Prerequisites
 
-- Any signed-in role. `admin`, `teacher`, and `parent` can read reports.
-- The student UUID.
-- The report year (2000–2100). The API requires it; the app supplies the active period's
-  year, or the current year when there is no active period.
+- The administration reads and exports every student. Teachers and parents use the same
+  endpoints for their own students and children (see
+  [Roles and permissions](../getting-started/roles-and-permissions.md)).
+- The report year (2000–2100). The API requires it.
 
 ## In the app
 
-1. Open `/admin/reports`. The page title is **Academic summaries**.
-2. The **Students** card lists up to 100 students sorted by last name.
-3. Select **PDF** next to a student.
-4. The browser downloads `student-report-<studentId>-<year>.pdf`.
-5. **Generated reports** shows the rows returned in the dashboard's `reportHistory`.
+1. Open `/admin/reports` (**Reports** in the console navigation).
+2. Set the **School year**.
+3. Under **Academic summaries**, select **PDF** next to a student to download their
+   summary for that year.
+4. Under **Grades as CSV**, keep **Whole school** and **Every student**, or narrow the
+   export to one classroom or one student, and select **Export CSV**.
+5. **History** lists every export, newest first: when, which student, which report and
+   which year. Use **Older** and **Newer** to page through it.
+
+Every PDF download and every CSV export is recorded in the history (one row per student
+included in a CSV). Viewing the JSON summary is not an export and is not recorded.
 
 ## Through the API
 
@@ -30,8 +37,7 @@ JSON summary:
 
 ```bash
 curl "http://localhost:3000/reports/students/$STUDENT_ID/academic-summary?year=2026" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 PDF:
@@ -39,27 +45,45 @@ PDF:
 ```bash
 curl "http://localhost:3000/reports/students/$STUDENT_ID/academic-summary/pdf?year=2026" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Institution-Id: $INSTITUTION_ID" \
   --output student-report.pdf
 ```
 
-Required query parameter: `year` (integer 2000–2100). There is no request body.
+CSV export (`classroomId` and `studentId` are optional):
+
+```bash
+curl "http://localhost:3000/reports/export.csv?year=2026&classroomId=$CLASSROOM_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  --output grades-2026.csv
+```
+
+The CSV has one row per grade with the columns
+`student_id,student_name,grade_level,section,year,term,subject,score`, comma separated
+with CRLF line endings. Cells with a comma, a quote or a line break are quoted. A text
+cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return is prefixed with a
+single quote so a spreadsheet never runs it as a formula.
+
+Export history (administration and teachers; `studentId`, `year`, `limit`, `offset` and
+`cursor` are optional):
+
+```bash
+curl "http://localhost:3000/reports/history?limit=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
 ## Expected result
 
-The JSON endpoint returns the envelope:
+The JSON summary returns:
 
 ```json
 {
   "data": {
-    "institutionId": "<uuid>",
     "year": 2026,
     "student": {
       "id": "<uuid>",
       "firstName": "John",
       "lastName": "Doe",
       "fullName": "John Doe",
-      "dateOfBirth": "2015-04-12T00:00:00.000Z"
+      "dateOfBirth": "2015-04-12"
     },
     "annualAverage": 82.33,
     "annualSubjects": [
@@ -88,24 +112,34 @@ The JSON endpoint returns the envelope:
 }
 ```
 
-Averages are rounded to two decimals and are `null` when the student has no grades in the
-year. The PDF endpoint returns `Content-Type: application/pdf` with
-`Content-Disposition: attachment` and the same data rendered as a document.
+A history row looks like:
+
+```json
+{
+  "id": "<uuid>",
+  "studentId": "<uuid>",
+  "studentName": "John Doe",
+  "year": 2026,
+  "reportType": "academic_summary_pdf",
+  "createdByUserId": "<uuid>",
+  "createdAt": "2026-10-18 12:00:00"
+}
+```
+
+`reportType` is `academic_summary_pdf` for a PDF and `grades_csv` for a CSV export.
 
 ## If it fails
 
 | Status | Code | Message | Cause |
 |--------|------|---------|-------|
-| 400 | `VALIDATION_ERROR` | Zod message for `year` | Missing year, non-numeric year, or out of range |
+| 400 | `VALIDATION_ERROR` | Zod message for `year`, `studentId` or `classroomId` | Missing or invalid query |
 | 401 | `UNAUTHORIZED` | `Authentication is required` / `Token expired` | Sign in again |
-| 403 | `FORBIDDEN` | `You do not have permission to perform this action` | Role not in admin, teacher, parent |
-| 404 | `NOT_FOUND` | `Student not found` | Wrong student UUID or wrong institution |
+| 403 | `FORBIDDEN` | `The student is not in a classroom of this teacher` / `This student is not linked to your account` | Outside the caller's students |
+| 403 | `FORBIDDEN` | `You do not have permission to perform this action` | A parent reading the history |
+| 404 | `NOT_FOUND` | `Student not found` | Wrong student UUID |
 
 ## What is not available yet
 
-- **Downloading a PDF does not add a report-history row.** `report_history` is written by
-  the seed in the current build; the reports endpoint is read-only. Treat the **Generated
-  reports** panel as seeded history, not an audit of downloads.
-- No asynchronous generation, no email delivery, and no stored PDF files.
-- No institution-wide report, class report, or MINED compliance export.
-- The PDF is built on request from the same data the JSON endpoint returns.
+- No asynchronous generation, no email delivery, and no stored PDF files: the PDF is built
+  on request from the same data the JSON endpoint returns.
+- No MINED compliance export format.

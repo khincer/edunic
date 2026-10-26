@@ -174,3 +174,39 @@ describe('single-school sweep guard (API test tree)', () => {
     expect(offendingLines(file)).toEqual([]);
   });
 });
+
+// S10 (NFR-05): the user and developer documentation describes the
+// single-school product: no school header, no school id in payloads or
+// paths, no /institutions routes and no stale demo passwords. The migrations
+// runbook is excluded: it documents the migrations that removed the column.
+const DOC_ROOTS = ['README.md', 'docs', 'docs-site/docs', 'docs-site/sidebars.ts'];
+const DOC_EXCLUDED = ['docs/migrations-runbook.md'];
+const DOC_FORBIDDEN =
+  /x-institution-id|institutionId|institution_id|getInstitutionId|\/institutions\b|admin1234|teacher1234|parent1234/i;
+
+describe('single-school sweep guard (documentation)', () => {
+  const docFiles = DOC_ROOTS.flatMap((path) => listFiles(join(REPO_ROOT, path)))
+    .filter((file) => /\.(md|mdx|ts)$/.test(file))
+    .map((file) => ({
+      file,
+      name: relative(REPO_ROOT, file).split(sep).join('/'),
+    }))
+    .filter(({ name }) => !DOC_EXCLUDED.includes(name));
+
+  it('scans the README, the docs and the docs site', () => {
+    expect(docFiles.length).toBeGreaterThan(20);
+  });
+
+  it.each(docFiles.map(({ name, file }) => [name, file]))(
+    '%s describes the single-school product',
+    (_name, file) => {
+      const offending = readFileSync(file, 'utf8')
+        .split('\n')
+        .map((line, index) => ({ line, number: index + 1 }))
+        .filter(({ line }) => DOC_FORBIDDEN.test(line))
+        .map(({ line, number }) => `${number}: ${line.trim()}`);
+
+      expect(offending).toEqual([]);
+    }
+  );
+});
