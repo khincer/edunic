@@ -101,7 +101,7 @@ export class RedisStreamsEventBus implements EventBus {
   }
 }
 
-export function createEventBusFromEnv() {
+export function createEventBusFromEnv(): EventBus {
   if (process.env.EVENT_BUS_BACKEND === 'redis') {
     if (!process.env.REDIS_URL) {
       throw new Error('REDIS_URL is required when EVENT_BUS_BACKEND=redis');

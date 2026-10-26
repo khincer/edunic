@@ -1,6 +1,5 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
-import * as schema from './schema';
 
 export interface CreateDbOptions {
   databaseUrl?: string;
@@ -21,7 +20,9 @@ export function createDb(opts: CreateDbOptions = {}) {
       (process.env.NODE_ENV === 'test' || Boolean(process.env.JEST_WORKER_ID)),
   });
 
-  const db = drizzle(pool, { schema });
+  // No schema: nothing uses drizzle's relational `db.query` API, and without
+  // it the instance has the plain NodePgDatabase type every repository takes.
+  const db = drizzle(pool);
 
   return { pool, db };
 }

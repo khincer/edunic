@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import {
   parseWithSchema,
   parseFilterSort,
@@ -6,7 +6,6 @@ import {
 import {
   ClassroomActivityRepository,
   ClassroomsService,
-  ClassroomsServiceError,
   ClassroomsRepository,
   classroomActivityQuerySchema,
   classroomParamsSchema,

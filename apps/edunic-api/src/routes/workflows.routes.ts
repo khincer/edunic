@@ -11,7 +11,6 @@ import {
   assignmentParamsSchema,
   createAssignmentBodySchema,
   updateAssignmentBodySchema,
-  eventParamsSchema,
   createEventBodySchema,
   messageParamsSchema,
   createMessageBodySchema,

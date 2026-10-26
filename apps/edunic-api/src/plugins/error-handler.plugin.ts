@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyError, FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
 import { createErrorEnvelope, ErrorCode } from '@edunic/source/domain/shared';
 
@@ -20,7 +20,7 @@ const errorHandlerPluginHandler: FastifyPluginAsync = async (app) => {
     request.log = request.log.child({ correlationId: request.correlationId });
   });
 
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler<FastifyError>((error, request, reply) => {
     const statusCode = resolveStatusCode(error);
     const isExpected = typeof error.statusCode === 'number';
 

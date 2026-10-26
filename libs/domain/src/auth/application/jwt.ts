@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify } from 'jose';
+import { SignJWT, jwtVerify, type JWTVerifyResult } from 'jose';
 
 export type JwtPayload = {
   sub: string;
@@ -26,7 +26,7 @@ export async function signJwt(
 }
 
 export async function verifyJwt(token: string, secret: string): Promise<JwtPayload> {
-  let verified: Awaited<ReturnType<typeof jwtVerify>>;
+  let verified: JWTVerifyResult;
 
   try {
     verified = await jwtVerify(token, keyFor(secret));
