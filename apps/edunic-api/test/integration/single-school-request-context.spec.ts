@@ -46,7 +46,6 @@ describe('single-school request context', () => {
       headers: {
         authorization: `Bearer ${await createBearerToken({
           userId,
-          institutionId: 'unused',
         })}`,
         ...extraHeaders,
       },
@@ -56,7 +55,6 @@ describe('single-school request context', () => {
   it('exposes exactly {id, role} on request.user (AUTH-03)', async () => {
     await createInstitutionFixture('Colegio Central');
     const director = await createUserFixture({
-      institutionId: 'unused',
       role: 'director',
     });
 
@@ -69,7 +67,6 @@ describe('single-school request context', () => {
   it('authenticates a teacher with the same shape (AUTH-03)', async () => {
     await createInstitutionFixture('Colegio Central');
     const teacher = await createUserFixture({
-      institutionId: 'unused',
       role: 'teacher',
     });
 
@@ -81,7 +78,6 @@ describe('single-school request context', () => {
 
   it('authenticates when no institutions row exists: the school profile is configuration, not identity', async () => {
     const parent = await createUserFixture({
-      institutionId: 'unused',
       role: 'parent',
     });
 
@@ -108,7 +104,6 @@ describe('single-school request context', () => {
   it('ignores an x-institution-id header, valid or not (AUTH-04)', async () => {
     const other = await createInstitutionFixture('Other');
     const director = await createUserFixture({
-      institutionId: 'unused',
       role: 'director',
     });
 
@@ -126,7 +121,6 @@ describe('single-school request context', () => {
   it('findAuthContext returns the role only (AUTH-03)', async () => {
     await createInstitutionFixture('Colegio Central');
     const teacher = await createUserFixture({
-      institutionId: 'unused',
       role: 'teacher',
     });
 

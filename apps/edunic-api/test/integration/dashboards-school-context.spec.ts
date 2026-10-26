@@ -41,12 +41,10 @@ describe('admin dashboard school context', () => {
     `);
 
     const director = await createUserFixture({
-      institutionId: oldest,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: director.id,
-      institutionId: oldest,
     });
 
     const response = await client.get('/dashboard/admin').set(headers);
