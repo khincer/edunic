@@ -4,6 +4,7 @@ import {
   ReportsService,
   ReportsPdfService,
   ReportsRepository,
+  exportGradesCsvQuerySchema,
   listReportHistoryQuerySchema,
   studentReportParamsSchema,
   studentReportQuerySchema,
@@ -39,6 +40,20 @@ export async function reportRoutes(app: FastifyInstance) {
       ...query,
       actor: actorOf(request),
     });
+  });
+
+  app.get('/export.csv', readAccess, async (request, reply) => {
+    const query = parseWithSchema(exportGradesCsvQuerySchema, request.query);
+
+    const result = await reportsService.exportGradesCsv({
+      ...query,
+      actor: actorOf(request),
+    });
+
+    return reply
+      .header('Content-Type', 'text/csv; charset=utf-8')
+      .header('Content-Disposition', `attachment; filename="${result.filename}"`)
+      .send(result.csv);
   });
 
   app.get('/students/:studentId/academic-summary', readAccess, async (request) => {

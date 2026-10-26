@@ -20,3 +20,11 @@ export const listReportHistoryQuerySchema = z.object({
 });
 
 export type ListReportHistoryQuery = z.infer<typeof listReportHistoryQuerySchema>;
+
+export const exportGradesCsvQuerySchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2100),
+  studentId: uuidSchema.optional(),
+  classroomId: uuidSchema.optional(),
+});
+
+export type ExportGradesCsvQuery = z.infer<typeof exportGradesCsvQuerySchema>;

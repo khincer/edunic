@@ -1723,6 +1723,51 @@ export function buildOpenApiDocument() {
           },
         },
       },
+      '/reports/export.csv': {
+        get: {
+          tags: ['Reports'],
+          summary: 'Export the grades of a year as CSV',
+          description:
+            'One row per grade (student_id, student_name, grade_level, section, year, term, subject, score), RFC 4180 escaped. A text cell starting with =, +, -, @, tab or carriage return is prefixed with a single quote so spreadsheets never run it as a formula. The administration exports any student, a teacher the students of their classrooms, a parent their own children. Each exported student is recorded in the report history.',
+          parameters: [
+            {
+              name: 'year',
+              in: 'query',
+              required: true,
+              schema: { type: 'integer', minimum: 2000, maximum: 2100 },
+            },
+            {
+              name: 'studentId',
+              in: 'query',
+              required: false,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            {
+              name: 'classroomId',
+              in: 'query',
+              required: false,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'CSV file',
+              content: {
+                'text/csv': {
+                  schema: {
+                    type: 'string',
+                    example:
+                      'student_id,student_name,grade_level,section,year,term,subject,score',
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
       '/reports/history': {
         get: {
           tags: ['Reports'],

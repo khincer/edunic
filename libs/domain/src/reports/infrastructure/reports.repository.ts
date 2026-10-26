@@ -5,7 +5,10 @@ import {
   buildStudentIdCondition,
   type CursorOrderSpec,
 } from '@edunic/source/domain/shared';
-import type { ListReportHistoryQuery } from '../schemas/reports.schemas.js';
+import type {
+  ExportGradesCsvQuery,
+  ListReportHistoryQuery,
+} from '../schemas/reports.schemas.js';
 
 // Stable keyset order for the history list: newest first, the uuid closing the
 // order because two exports can share a created_at. Qualified: the list joins
@@ -58,6 +61,23 @@ export type RecordReportExportInput = {
 
 export type ListReportHistoryInput = ListReportHistoryQuery & {
   // Restricts the list to these students; undefined means unscoped.
+  studentIds?: string[];
+};
+
+export type GradeExportRow = {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  gradeLevel: number | null;
+  section: string | null;
+  year: number;
+  term: number;
+  subject: string;
+  score: number;
+};
+
+export type ListGradesForExportInput = ExportGradesCsvQuery & {
+  // Restricts the export to these students; undefined means unscoped.
   studentIds?: string[];
 };
 
@@ -126,15 +146,81 @@ export class ReportsRepository {
   }
 
   async recordExport(input: RecordReportExportInput) {
+    await this.recordExports([input]);
+  }
+
+  async recordExports(inputs: RecordReportExportInput[]) {
+    if (inputs.length === 0) {
+      return;
+    }
+
     await this.db.execute(sql`
       insert into report_history (student_id, year, report_type, created_by_user_id)
-      values (
-        ${input.studentId},
-        ${input.year},
-        ${input.reportType},
-        ${input.createdByUserId}
-      )
+      values ${sql.join(
+        inputs.map(
+          (input) => sql`(
+            ${input.studentId},
+            ${input.year},
+            ${input.reportType},
+            ${input.createdByUserId}
+          )`
+        ),
+        sql`, `
+      )}
     `);
+  }
+
+  // One row per grade of the year, in a stable order: student, term, materia.
+  async listGradesForExport(input: ListGradesForExportInput) {
+    const filters: SQL[] = [sql`ap.year = ${input.year}`];
+    const scope = buildStudentIdCondition('e.student_id', input.studentIds);
+
+    if (scope) {
+      filters.push(scope);
+    }
+
+    if (input.studentId) {
+      filters.push(sql`e.student_id = ${input.studentId}`);
+    }
+
+    if (input.classroomId) {
+      filters.push(sql`e.classroom_id = ${input.classroomId}`);
+    }
+
+    const result = await this.db.execute<GradeExportRow>(sql`
+      select
+        st.id as "studentId",
+        st.first_name as "firstName",
+        st.last_name as "lastName",
+        c.grade_level as "gradeLevel",
+        c.section,
+        ap.year,
+        ap.term,
+        s.name as subject,
+        g.score
+      from grades g
+      inner join enrollments e
+        on e.id = g.enrollment_id
+      inner join students st
+        on st.id = e.student_id
+      inner join academic_periods ap
+        on ap.id = e.academic_period_id
+      inner join subjects s
+        on s.id = g.subject_id
+      left join classrooms c
+        on c.id = e.classroom_id
+      where ${sql.join(filters, sql` and `)}
+      order by
+        st.last_name asc,
+        st.first_name asc,
+        st.id asc,
+        ap.term asc,
+        s.name asc,
+        g.created_at asc,
+        g.id asc
+    `);
+
+    return result.rows;
   }
 
   async listHistory(input: ListReportHistoryInput) {
