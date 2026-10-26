@@ -16,6 +16,11 @@ import {
   type WorkflowMessage,
 } from '@/lib/api';
 
+const assignmentStatusLabels: Record<string, string> = {
+  published: 'Publicada',
+  reviewed: 'Revisada',
+};
+
 function getLocalDateTime(offsetDays = 1) {
   const value = new Date();
   value.setDate(value.getDate() + offsetDays);
@@ -86,7 +91,7 @@ export default function AdminWorkflowsPage() {
       setAssignmentClassroomId((current) => current || classroomResult.data[0]?.id || '');
       setEventClassroomId((current) => current || '');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load workflow data');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar los datos del flujo de trabajo');
     } finally {
       setLoading(false);
     }
@@ -113,10 +118,10 @@ export default function AdminWorkflowsPage() {
           dueDate: toIsoDateTime(assignmentDueDate),
         },
       });
-      setNotice('Assignment published.');
+      setNotice('Tarea publicada.');
       await loadWorkflowData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create assignment');
+      setError(err instanceof Error ? err.message : 'No se pudo crear la tarea');
     } finally {
       setSaving('');
     }
@@ -134,10 +139,10 @@ export default function AdminWorkflowsPage() {
         method: 'PATCH',
         body: { status },
       });
-      setNotice(`Assignment marked ${status}.`);
+      setNotice(`Tarea marcada como ${assignmentStatusLabels[status] ?? status}.`);
       await loadWorkflowData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to update assignment');
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar la tarea');
     } finally {
       setSaving('');
     }
@@ -163,10 +168,10 @@ export default function AdminWorkflowsPage() {
           startsAt: new Date(eventStartsAt).toISOString(),
         },
       });
-      setNotice('Event scheduled.');
+      setNotice('Evento programado.');
       await loadWorkflowData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create event');
+      setError(err instanceof Error ? err.message : 'No se pudo crear el evento');
     } finally {
       setSaving('');
     }
@@ -191,11 +196,11 @@ export default function AdminWorkflowsPage() {
           body: messageBody,
         },
       });
-      setNotice('Message sent.');
+      setNotice('Mensaje enviado.');
       setMessageBody('');
       await loadWorkflowData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send message');
+      setError(err instanceof Error ? err.message : 'No se pudo enviar el mensaje');
     } finally {
       setSaving('');
     }
@@ -213,7 +218,7 @@ export default function AdminWorkflowsPage() {
       });
       await loadWorkflowData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to mark message read');
+      setError(err instanceof Error ? err.message : 'No se pudo marcar el mensaje como leído');
     } finally {
       setSaving('');
     }
@@ -223,12 +228,12 @@ export default function AdminWorkflowsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Workflows</p>
-          <h1 className="page-title">Assignments, calendar, and messaging</h1>
-          <p className="body-copy">Publish assignments, schedule events and message families.</p>
+          <p className="eyebrow">Flujos de trabajo</p>
+          <h1 className="page-title">Tareas, calendario y mensajería</h1>
+          <p className="body-copy">Publique tareas, programe eventos y envíe mensajes a las familias.</p>
         </div>
         <Button onClick={() => void loadWorkflowData()} variant="secondary">
-          Refresh
+          Actualizar
         </Button>
       </header>
 
@@ -239,32 +244,32 @@ export default function AdminWorkflowsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Assignments</p>
-              <h2 className="section-title">Publish work</h2>
+              <p className="eyebrow">Tareas</p>
+              <h2 className="section-title">Publicar trabajo</h2>
             </div>
           </div>
           <div className="form">
-            <FormField label="Title" name="assignmentTitle" onChange={(event) => setAssignmentTitle(event.target.value)} value={assignmentTitle} />
+            <FormField label="Título" name="assignmentTitle" onChange={(event) => setAssignmentTitle(event.target.value)} value={assignmentTitle} />
             <label className="form-field" htmlFor="assignmentType">
-              <span>Type</span>
+              <span>Tipo</span>
               <select id="assignmentType" onChange={(event) => setAssignmentType(event.target.value as 'assignment' | 'homework' | 'exam')} value={assignmentType}>
-                <option value="assignment">assignment</option>
-                <option value="homework">homework</option>
-                <option value="exam">exam</option>
+                <option value="assignment">Tarea</option>
+                <option value="homework">Deberes</option>
+                <option value="exam">Examen</option>
               </select>
             </label>
             <label className="form-field" htmlFor="assignmentClassroom">
-              <span>Classroom</span>
+              <span>Aula</span>
               <select id="assignmentClassroom" onChange={(event) => setAssignmentClassroomId(event.target.value)} value={assignmentClassroomId}>
-                <option value="">School-wide</option>
+                <option value="">Todo el colegio</option>
                 {classrooms.map((classroom) => (
                   <option key={classroom.id} value={classroom.id}>{classroom.name}</option>
                 ))}
               </select>
             </label>
-            <FormField label="Due date" name="assignmentDueDate" onChange={(event) => setAssignmentDueDate(event.target.value)} type="datetime-local" value={assignmentDueDate} />
+            <FormField label="Fecha de entrega" name="assignmentDueDate" onChange={(event) => setAssignmentDueDate(event.target.value)} type="datetime-local" value={assignmentDueDate} />
             <Button disabled={saving === 'assignment' || !assignmentTitle.trim()} onClick={() => void createAssignment()}>
-              {saving === 'assignment' ? 'Publishing...' : 'Publish assignment'}
+              {saving === 'assignment' ? 'Publicando…' : 'Publicar tarea'}
             </Button>
           </div>
         </Card>
@@ -272,25 +277,25 @@ export default function AdminWorkflowsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Calendar</p>
-              <h2 className="section-title">Schedule event</h2>
+              <p className="eyebrow">Calendario</p>
+              <h2 className="section-title">Programar evento</h2>
             </div>
           </div>
           <div className="form">
-            <FormField label="Title" name="eventTitle" onChange={(event) => setEventTitle(event.target.value)} value={eventTitle} />
-            <FormField label="Event type" name="eventType" onChange={(event) => setEventType(event.target.value)} value={eventType} />
+            <FormField label="Título" name="eventTitle" onChange={(event) => setEventTitle(event.target.value)} value={eventTitle} />
+            <FormField label="Tipo de evento" name="eventType" onChange={(event) => setEventType(event.target.value)} value={eventType} />
             <label className="form-field" htmlFor="eventClassroom">
-              <span>Classroom</span>
+              <span>Aula</span>
               <select id="eventClassroom" onChange={(event) => setEventClassroomId(event.target.value)} value={eventClassroomId}>
-                <option value="">School-wide</option>
+                <option value="">Todo el colegio</option>
                 {classrooms.map((classroom) => (
                   <option key={classroom.id} value={classroom.id}>{classroom.name}</option>
                 ))}
               </select>
             </label>
-            <FormField label="Starts at" name="eventStartsAt" onChange={(event) => setEventStartsAt(event.target.value)} type="datetime-local" value={eventStartsAt} />
+            <FormField label="Comienza" name="eventStartsAt" onChange={(event) => setEventStartsAt(event.target.value)} type="datetime-local" value={eventStartsAt} />
             <Button disabled={saving === 'event' || !eventTitle.trim()} onClick={() => void createEvent()}>
-              {saving === 'event' ? 'Scheduling...' : 'Schedule event'}
+              {saving === 'event' ? 'Programando…' : 'Programar evento'}
             </Button>
           </div>
         </Card>
@@ -298,16 +303,16 @@ export default function AdminWorkflowsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Messaging</p>
-              <h2 className="section-title">Send thread</h2>
+              <p className="eyebrow">Mensajería</p>
+              <h2 className="section-title">Enviar mensaje</h2>
             </div>
           </div>
           <div className="form">
-            <FormField label="Recipient user ID" name="recipientUserId" onChange={(event) => setRecipientUserId(event.target.value)} value={recipientUserId} />
-            <FormField label="Subject" name="messageSubject" onChange={(event) => setMessageSubject(event.target.value)} value={messageSubject} />
-            <TextAreaField label="Message" name="messageBody" onChange={(event) => setMessageBody(event.target.value)} rows={4} value={messageBody} />
+            <FormField label="ID de usuario destinatario" name="recipientUserId" onChange={(event) => setRecipientUserId(event.target.value)} value={recipientUserId} />
+            <FormField label="Asunto" name="messageSubject" onChange={(event) => setMessageSubject(event.target.value)} value={messageSubject} />
+            <TextAreaField label="Mensaje" name="messageBody" onChange={(event) => setMessageBody(event.target.value)} rows={4} value={messageBody} />
             <Button disabled={saving === 'message' || !recipientUserId.trim() || !messageSubject.trim() || !messageBody.trim()} onClick={() => void sendMessage()}>
-              {saving === 'message' ? 'Sending...' : 'Send message'}
+              {saving === 'message' ? 'Enviando…' : 'Enviar mensaje'}
             </Button>
           </div>
         </Card>
@@ -317,8 +322,8 @@ export default function AdminWorkflowsPage() {
         <Card className="dashboard-panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Assignments</p>
-              <h2 className="section-title">{assignments.length} visible items</h2>
+              <p className="eyebrow">Tareas</p>
+              <h2 className="section-title">{assignments.length} elementos visibles</h2>
             </div>
           </div>
           <div className="activity-list">
@@ -328,23 +333,23 @@ export default function AdminWorkflowsPage() {
                 <span>
                   <strong>{assignment.title}</strong>
                   <p className="field-help">
-                    {assignment.classroomName ?? 'School-wide'} - {assignment.status}
+                    {assignment.classroomName ?? 'Todo el colegio'} - {assignmentStatusLabels[assignment.status] ?? assignment.status}
                   </p>
                 </span>
                 <Button disabled={saving === assignment.id || assignment.status === 'reviewed'} onClick={() => void updateAssignmentStatus(assignment.id, 'reviewed')} variant="secondary">
-                  Review
+                  Revisar
                 </Button>
               </article>
             ))}
-            {!loading && assignments.length === 0 ? <div className="empty-state body-copy">No assignments found.</div> : null}
+            {!loading && assignments.length === 0 ? <div className="empty-state body-copy">No se encontraron tareas.</div> : null}
           </div>
         </Card>
 
         <Card className="dashboard-panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Events</p>
-              <h2 className="section-title">{events.length} calendar items</h2>
+              <p className="eyebrow">Eventos</p>
+              <h2 className="section-title">{events.length} elementos del calendario</h2>
             </div>
           </div>
           <div className="activity-list">
@@ -354,12 +359,12 @@ export default function AdminWorkflowsPage() {
                 <span>
                   <strong>{event.title}</strong>
                   <p className="field-help">
-                    {event.classroomName ?? 'School-wide'} - {event.startsAt.slice(0, 10)}
+                    {event.classroomName ?? 'Todo el colegio'} - {event.startsAt.slice(0, 10)}
                   </p>
                 </span>
               </article>
             ))}
-            {!loading && events.length === 0 ? <div className="empty-state body-copy">No events found.</div> : null}
+            {!loading && events.length === 0 ? <div className="empty-state body-copy">No se encontraron eventos.</div> : null}
           </div>
         </Card>
       </section>
@@ -367,8 +372,8 @@ export default function AdminWorkflowsPage() {
       <section className="card section-stack">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Inbox</p>
-            <h2 className="section-title">{messages.filter((message) => !message.readAt).length} unread messages</h2>
+            <p className="eyebrow">Bandeja de entrada</p>
+            <h2 className="section-title">{messages.filter((message) => !message.readAt).length} mensajes sin leer</h2>
           </div>
         </div>
         <div className="activity-list">
@@ -380,11 +385,11 @@ export default function AdminWorkflowsPage() {
                 <p className="field-help">{message.body}</p>
               </span>
               <Button disabled={Boolean(message.readAt) || saving === message.id} onClick={() => void markMessageRead(message.id)} variant="secondary">
-                {message.readAt ? 'Read' : 'Mark read'}
+                {message.readAt ? 'Leída' : 'Marcar como leída'}
               </Button>
             </article>
           ))}
-          {!loading && messages.length === 0 ? <div className="empty-state body-copy">No messages found.</div> : null}
+          {!loading && messages.length === 0 ? <div className="empty-state body-copy">No se encontraron mensajes.</div> : null}
         </div>
       </section>
     </AdminShell>

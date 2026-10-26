@@ -117,7 +117,7 @@ function getLoginErrorMessage(payload: LoginResponse | { message?: string } | nu
     return payload.message;
   }
 
-  return 'Unable to sign in';
+  return 'No se pudo iniciar sesión';
 }
 
 function resetCachedSession() {

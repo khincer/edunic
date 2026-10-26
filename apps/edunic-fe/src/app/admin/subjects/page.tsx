@@ -71,7 +71,7 @@ export default function AdminSubjectsPage() {
       setClassrooms(classroomResult.data);
       setTeachers(teacherResult.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load materias');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar las materias');
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ export default function AdminSubjectsPage() {
       const result = await apiRequest<ApiListResponse<Topic>>(`/subjects/${subjectId}/topics`);
       setTopics(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load temas');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar los temas');
     }
   }
 
@@ -101,7 +101,7 @@ export default function AdminSubjectsPage() {
       const result = await apiRequest<ApiListResponse<Subject>>(`/subjects/classroom/${id}`);
       setClassroomSubjects(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load the grade level');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar el curso');
     }
   }
 
@@ -115,7 +115,7 @@ export default function AdminSubjectsPage() {
       const result = await apiRequest<ApiListResponse<Subject>>(`/subjects/teacher/${id}`);
       setTeacherSubjects(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load the teacher's materias");
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar las materias del docente');
     }
   }
 
@@ -150,8 +150,8 @@ export default function AdminSubjectsPage() {
         setDescription('');
         await loadCatalog();
       },
-      'Materia created.',
-      'Unable to create the materia'
+      'Materia creada.',
+      'No se pudo crear la materia'
     );
   }
 
@@ -164,8 +164,8 @@ export default function AdminSubjectsPage() {
         });
         await loadCatalog();
       },
-      subject.active ? 'Materia deactivated.' : 'Materia activated.',
-      'Unable to update the materia'
+      subject.active ? 'Materia desactivada.' : 'Materia activada.',
+      'No se pudo actualizar la materia'
     );
   }
 
@@ -179,8 +179,8 @@ export default function AdminSubjectsPage() {
         setTopicName('');
         await loadTopics(topicSubjectId);
       },
-      'Tema added.',
-      'Unable to add the tema'
+      'Tema agregado.',
+      'No se pudo agregar el tema'
     );
   }
 
@@ -194,8 +194,8 @@ export default function AdminSubjectsPage() {
         setClassroomAddId('');
         await loadClassroomSubjects(classroomId);
       },
-      'Materia offered in the grade level.',
-      'Unable to offer the materia'
+      'Materia asignada al curso.',
+      'No se pudo asignar la materia al curso'
     );
   }
 
@@ -207,8 +207,8 @@ export default function AdminSubjectsPage() {
         });
         await loadClassroomSubjects(classroomId);
       },
-      'Materia removed from the grade level.',
-      'Unable to remove the materia'
+      'Materia quitada del curso.',
+      'No se pudo quitar la materia'
     );
   }
 
@@ -222,8 +222,8 @@ export default function AdminSubjectsPage() {
         setTeacherAddId('');
         await loadTeacherSubjects(teacherId);
       },
-      'Materia assigned to the teacher.',
-      'Unable to assign the materia'
+      'Materia asignada al docente.',
+      'No se pudo asignar la materia'
     );
   }
 
@@ -235,8 +235,8 @@ export default function AdminSubjectsPage() {
         });
         await loadTeacherSubjects(teacherId);
       },
-      'Materia removed from the teacher.',
-      'Unable to remove the materia'
+      'Materia quitada del docente.',
+      'No se pudo quitar la materia'
     );
   }
 
@@ -247,10 +247,9 @@ export default function AdminSubjectsPage() {
       <header className="page-header">
         <div>
           <p className="eyebrow">Materias</p>
-          <h1 className="page-title">Subjects</h1>
+          <h1 className="page-title">Materias</h1>
           <p className="body-copy">
-            Create materias and their temas, offer them in each grade level and assign them to
-            teachers.
+            Cree materias y sus temas, ofrézcalas en cada curso y asígnelas a los docentes.
           </p>
         </div>
       </header>
@@ -262,21 +261,21 @@ export default function AdminSubjectsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Create</p>
-              <h2 className="section-title">New materia</h2>
+              <p className="eyebrow">Crear</p>
+              <h2 className="section-title">Nueva materia</h2>
             </div>
           </div>
           <div className="form">
-            <FormField label="Name" name="subjectName" onChange={(event) => setName(event.target.value)} value={name} />
-            <FormField label="Code" name="subjectCode" onChange={(event) => setCode(event.target.value)} value={code} />
+            <FormField label="Nombre" name="subjectName" onChange={(event) => setName(event.target.value)} value={name} />
+            <FormField label="Código" name="subjectCode" onChange={(event) => setCode(event.target.value)} value={code} />
             <FormField
-              label="Description"
+              label="Descripción"
               name="subjectDescription"
               onChange={(event) => setDescription(event.target.value)}
               value={description}
             />
             <Button disabled={saving || !name.trim()} onClick={createSubject}>
-              Create materia
+              Crear materia
             </Button>
           </div>
         </Card>
@@ -285,14 +284,14 @@ export default function AdminSubjectsPage() {
           <div className="panel-header">
             <div>
               <p className="eyebrow">Temas</p>
-              <h2 className="section-title">Topics of a materia</h2>
+              <h2 className="section-title">Temas de una materia</h2>
             </div>
           </div>
           <div className="form">
             <div className="form-field">
               <label htmlFor="topicSubject">Materia</label>
               <select id="topicSubject" onChange={(event) => setTopicSubjectId(event.target.value)} value={topicSubjectId}>
-                <option value="">Choose a materia</option>
+                <option value="">Elija una materia</option>
                 {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.name}
@@ -303,16 +302,16 @@ export default function AdminSubjectsPage() {
             {topicSubjectId ? (
               <>
                 <div className="button-row">
-                  {topics.length === 0 ? <span className="field-help">No temas yet.</span> : null}
+                  {topics.length === 0 ? <span className="field-help">Todavía no hay temas.</span> : null}
                   {topics.map((topic) => (
                     <span className="badge badge-blue" key={topic.id}>
                       {topic.name}
                     </span>
                   ))}
                 </div>
-                <FormField label="New tema" name="topicName" onChange={(event) => setTopicName(event.target.value)} value={topicName} />
+                <FormField label="Nuevo tema" name="topicName" onChange={(event) => setTopicName(event.target.value)} value={topicName} />
                 <Button disabled={saving || !topicName.trim()} onClick={addTopic} variant="secondary">
-                  Add tema
+                  Agregar tema
                 </Button>
               </>
             ) : null}
@@ -323,25 +322,25 @@ export default function AdminSubjectsPage() {
       <section className="card section-stack">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Catalog</p>
+            <p className="eyebrow">Catálogo</p>
             <h2 className="section-title">
               {subjects.length} {subjects.length === 1 ? 'materia' : 'materias'}
             </h2>
           </div>
         </div>
         {loading ? (
-          <PanelState message="Loading materias..." tone="loading" />
+          <PanelState message="Cargando materias…" tone="loading" />
         ) : (
           <DataTable
             columns={[
               { key: 'name', header: 'Materia', render: (subject) => <strong>{subject.name}</strong> },
-              { key: 'code', header: 'Code', render: (subject) => subject.code ?? '-' },
+              { key: 'code', header: 'Código', render: (subject) => subject.code ?? '-' },
               {
                 key: 'status',
-                header: 'Status',
+                header: 'Estado',
                 render: (subject) => (
                   <span className={subject.active ? 'badge badge-green' : 'badge'}>
-                    {subject.active ? 'Active' : 'Inactive'}
+                    {subject.active ? 'Activa' : 'Inactiva'}
                   </span>
                 ),
               },
@@ -351,12 +350,12 @@ export default function AdminSubjectsPage() {
                 align: 'right',
                 render: (subject) => (
                   <Button disabled={saving} onClick={() => toggleActive(subject)} variant="ghost">
-                    {subject.active ? 'Deactivate' : 'Activate'}
+                    {subject.active ? 'Desactivar' : 'Activar'}
                   </Button>
                 ),
               },
             ]}
-            emptyMessage="No materias yet."
+            emptyMessage="Todavía no hay materias."
             getRowKey={(subject) => subject.id}
             rows={subjects}
           />
@@ -367,15 +366,15 @@ export default function AdminSubjectsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Grade levels</p>
-              <h2 className="section-title">Materias offered</h2>
+              <p className="eyebrow">Cursos</p>
+              <h2 className="section-title">Materias ofrecidas</h2>
             </div>
           </div>
           <div className="form">
             <div className="form-field">
-              <label htmlFor="offerClassroom">Classroom</label>
+              <label htmlFor="offerClassroom">Aula</label>
               <select id="offerClassroom" onChange={(event) => setClassroomId(event.target.value)} value={classroomId}>
-                <option value="">Choose a classroom</option>
+                <option value="">Elija un aula</option>
                 {classrooms.map((classroom) => (
                   <option key={classroom.id} value={classroom.id}>
                     {formatClassroom(classroom)}
@@ -403,15 +402,15 @@ export default function AdminSubjectsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Teachers</p>
-              <h2 className="section-title">Materias a teacher is responsible for</h2>
+              <p className="eyebrow">Docentes</p>
+              <h2 className="section-title">Materias a cargo del docente</h2>
             </div>
           </div>
           <div className="form">
             <div className="form-field">
-              <label htmlFor="subjectTeacher">Teacher</label>
+              <label htmlFor="subjectTeacher">Docente</label>
               <select id="subjectTeacher" onChange={(event) => setTeacherId(event.target.value)} value={teacherId}>
-                <option value="">Choose a teacher</option>
+                <option value="">Elija un docente</option>
                 {teachers.map((teacher) => (
                   <option key={teacher.id} value={teacher.id}>
                     {teacher.email}
@@ -464,12 +463,12 @@ function SubjectLinks({
   return (
     <>
       <div className="button-row">
-        {linked.length === 0 ? <span className="field-help">None yet.</span> : null}
+        {linked.length === 0 ? <span className="field-help">Ninguna todavía.</span> : null}
         {linked.map((subject) => (
           <span className="badge badge-blue" key={subject.id}>
             {subject.name}{' '}
             <button
-              aria-label={`Remove ${subject.name}`}
+              aria-label={`Quitar ${subject.name}`}
               className="badge-remove"
               disabled={saving}
               onClick={() => onRemove(subject.id)}
@@ -481,9 +480,9 @@ function SubjectLinks({
         ))}
       </div>
       <div className="form-field">
-        <label htmlFor={selectId}>Add a materia</label>
+        <label htmlFor={selectId}>Agregar una materia</label>
         <select id={selectId} onChange={(event) => onAddIdChange(event.target.value)} value={addId}>
-          <option value="">Choose a materia</option>
+          <option value="">Elija una materia</option>
           {available.map((subject) => (
             <option key={subject.id} value={subject.id}>
               {subject.name}
@@ -492,7 +491,7 @@ function SubjectLinks({
         </select>
       </div>
       <Button disabled={saving || !addId} onClick={onAdd} variant="secondary">
-        Add
+        Agregar
       </Button>
     </>
   );

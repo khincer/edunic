@@ -34,7 +34,7 @@ export default function SchoolSettingsPage() {
         );
         setInstitution(result.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unable to load the school');
+        setError(err instanceof Error ? err.message : 'No se pudo cargar el colegio');
       } finally {
         setLoading(false);
       }
@@ -47,14 +47,14 @@ export default function SchoolSettingsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">School settings</p>
+          <p className="eyebrow">Configuración del colegio</p>
           <h1 className="page-title">
-            {institution?.name ?? (loading ? 'Loading school…' : 'School')}
+            {institution?.name ?? (loading ? 'Cargando colegio…' : 'Colegio')}
           </h1>
         </div>
         <div className="button-row">
           <ButtonLink href="/admin/settings/edit" variant="secondary">
-            Edit
+            Editar
           </ButtonLink>
         </div>
       </header>
@@ -64,40 +64,40 @@ export default function SchoolSettingsPage() {
       {institution ? (
         <section className="grid grid-2">
           <Card>
-            <h2 className="section-title">Details</h2>
+            <h2 className="section-title">Detalles</h2>
             <div className="timeline-list section-stack">
               <div className="timeline-row">
-                <span>Name</span>
+                <span>Nombre</span>
                 <strong>{institution.name}</strong>
               </div>
               <div className="timeline-row">
-                <span>Sender name</span>
-                <strong>{institution.senderName || 'Not set'}</strong>
+                <span>Nombre del remitente</span>
+                <strong>{institution.senderName || 'Sin definir'}</strong>
               </div>
               <div className="timeline-row">
-                <span>Reply-to email</span>
-                <strong className="break-value">{institution.replyToEmail || 'Not set'}</strong>
+                <span>Correo de respuesta</span>
+                <strong className="break-value">{institution.replyToEmail || 'Sin definir'}</strong>
               </div>
               <div className="timeline-row">
-                <span>Created</span>
+                <span>Creado</span>
                 <strong>{formatDate(institution.createdAt)}</strong>
               </div>
             </div>
           </Card>
           <Card>
-            <h2 className="section-title">Configuration</h2>
+            <h2 className="section-title">Configuración</h2>
             <p className="body-copy">
-              Extensions, feature flags and the audit log for this school.
+              Extensiones, funcionalidades y el registro de auditoría de este colegio.
             </p>
             <div className="button-row">
               <ButtonLink href="/admin/settings/extensions" variant="secondary">
-                Extensions
+                Extensiones
               </ButtonLink>
               <ButtonLink href="/admin/settings/feature-flags" variant="secondary">
-                Feature flags
+                Funcionalidades
               </ButtonLink>
               <ButtonLink href="/admin/settings/audit-logs" variant="secondary">
-                Audit log
+                Registro de auditoría
               </ButtonLink>
             </div>
           </Card>

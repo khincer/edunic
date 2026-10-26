@@ -46,7 +46,7 @@ export default function InstitutionAuditLogsPage() {
         setLogs(logsResult.data);
         setTotal(logsResult.meta.total);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unable to load audit logs');
+        setError(err instanceof Error ? err.message : 'No se pudieron cargar los registros de auditoría');
       } finally {
         setLoading(false);
       }
@@ -59,27 +59,27 @@ export default function InstitutionAuditLogsPage() {
     () => [
       {
         key: 'action',
-        header: 'Action',
+        header: 'Acción',
         render: (log) => <span className="badge badge-blue">{log.action}</span>,
       },
       {
         key: 'entity',
-        header: 'Entity',
+        header: 'Entidad',
         render: (log) => (
           <>
             <strong>{log.entity}</strong>
-            <p className="field-help">{log.entityId ?? 'No entity id'}</p>
+            <p className="field-help">{log.entityId ?? 'Sin identificador de entidad'}</p>
           </>
         ),
       },
       {
         key: 'user',
-        header: 'User',
-        render: (log) => log.userId ?? 'System',
+        header: 'Usuario',
+        render: (log) => log.userId ?? 'Sistema',
       },
       {
         key: 'created',
-        header: 'Created',
+        header: 'Creado',
         render: (log) => formatDate(log.createdAt),
       },
     ],
@@ -90,23 +90,24 @@ export default function InstitutionAuditLogsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">School settings</p>
-          <h1 className="page-title">Audit log</h1>
+          <p className="eyebrow">Configuración del colegio</p>
+          <h1 className="page-title">Registro de auditoría</h1>
           <p className="body-copy">
-            Every create, update and delete recorded for {institution?.name ?? 'the school'}.
+            Todas las altas, modificaciones y eliminaciones registradas para{' '}
+            {institution?.name ?? 'el colegio'}.
           </p>
         </div>
         <ButtonLink href={`/admin/settings`} variant="secondary">
-          Back to settings
+          Volver a configuración
         </ButtonLink>
       </header>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
-      {loading ? <div className="empty-state body-copy">Loading audit logs...</div> : null}
+      {loading ? <div className="empty-state body-copy">Cargando registros de auditoría…</div> : null}
       {!loading ? (
         <DataTable
           columns={columns}
-          emptyMessage="No audit logs have been recorded for this institution."
+          emptyMessage="Todavía no se han registrado entradas de auditoría para este colegio."
           getRowKey={(log) => log.id}
           rows={logs}
         />
@@ -114,7 +115,7 @@ export default function InstitutionAuditLogsPage() {
 
       <div className="page-header pager-row">
         <p className="field-help">
-          Showing {logs.length} of {total} audit entries
+          Mostrando {logs.length} de {total} entradas de auditoría
         </p>
         <div className="button-row">
           <Button
@@ -122,14 +123,14 @@ export default function InstitutionAuditLogsPage() {
             onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
             variant="secondary"
           >
-            Previous
+            Anterior
           </Button>
           <Button
             disabled={offset + PAGE_SIZE >= total}
             onClick={() => setOffset(offset + PAGE_SIZE)}
             variant="secondary"
           >
-            Next
+            Siguiente
           </Button>
         </div>
       </div>

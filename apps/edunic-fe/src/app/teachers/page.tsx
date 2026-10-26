@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityMark, getAssignmentActivityKind } from '@/components/activity-mark';
-import { isAdminRole } from '@/lib/roles';
+import { formatRole, isAdminRole } from '@/lib/roles';
 import { Button } from '@/components/button';
 import { FormField, TextAreaField } from '@/components/form-field';
 import { PanelState } from '@/components/panel-state';
@@ -40,6 +40,12 @@ function getLocalDateTime(offsetDays = 1) {
   return value.toISOString().slice(0, 16);
 }
 
+const attendanceStatusLabels: Record<AttendanceStatus, string> = {
+  present: 'Presente',
+  late: 'Tardanza',
+  absent: 'Ausente',
+};
+
 export default function TeachersPage() {
   const router = useRouter();
   const [session, setSession] = useState<AdminSession | null>(null);
@@ -51,7 +57,7 @@ export default function TeachersPage() {
   const [attendanceDate, setAttendanceDate] = useState(getTodayDate);
   const [attendanceStatus, setAttendanceStatus] = useState<Record<string, AttendanceStatus>>({});
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, AttendanceRecord>>({});
-  const [gradeSubject, setGradeSubject] = useState('Mathematics');
+  const [gradeSubject, setGradeSubject] = useState('Matemáticas');
   const [gradeScores, setGradeScores] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [savingAttendance, setSavingAttendance] = useState(false);
@@ -149,7 +155,7 @@ export default function TeachersPage() {
       setClassrooms(result.data);
       setSelectedClassroomId((current) => current || result.data[0]?.id || '');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load classrooms');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar las aulas');
     } finally {
       setLoading(false);
     }
@@ -174,7 +180,7 @@ export default function TeachersPage() {
       setEnrollments(result.data);
       setGradeScores({});
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load roster');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar la lista de estudiantes');
     } finally {
       setLoading(false);
     }
@@ -216,7 +222,7 @@ export default function TeachersPage() {
       setAttendanceRecords(nextRecords);
       setAttendanceStatus(nextStatuses);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load attendance');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar la asistencia');
     }
   }
 
@@ -256,9 +262,9 @@ export default function TeachersPage() {
         })
       );
       await loadAttendanceForDate(enrollments, attendanceDate);
-      setNotice('Attendance saved for the selected date.');
+      setNotice('Asistencia guardada para la fecha seleccionada.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to save attendance');
+      setError(err instanceof Error ? err.message : 'No se pudo guardar la asistencia');
     } finally {
       setSavingAttendance(false);
     }
@@ -277,7 +283,7 @@ export default function TeachersPage() {
       .filter((item) => item.score !== undefined && item.score !== '');
 
     if (scores.length === 0) {
-      setError('Enter at least one score before submitting grades.');
+      setError('Ingrese al menos una calificación antes de enviar.');
       return;
     }
 
@@ -299,9 +305,9 @@ export default function TeachersPage() {
         )
       );
       setGradeScores({});
-      setNotice(`Submitted ${scores.length} grade${scores.length === 1 ? '' : 's'}.`);
+      setNotice(`Calificaciones enviadas: ${scores.length}.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to submit grades');
+      setError(err instanceof Error ? err.message : 'No se pudieron enviar las calificaciones');
     } finally {
       setSavingGrades(false);
     }
@@ -311,7 +317,7 @@ export default function TeachersPage() {
     return (
       <main className="teacher-app">
         <div className="teacher-content">
-          <section className="empty-state body-copy">Opening teacher workspace…</section>
+          <section className="empty-state body-copy">Abriendo el espacio de trabajo del docente…</section>
         </div>
       </main>
     );
@@ -337,10 +343,10 @@ export default function TeachersPage() {
           dueDate: workflowDueDate ? new Date(workflowDueDate).toISOString() : undefined,
         },
       });
-      setNotice('Classroom work published.');
+      setNotice('Trabajo del aula publicado.');
       await loadDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to publish classroom work');
+      setError(err instanceof Error ? err.message : 'No se pudo publicar el trabajo del aula');
     } finally {
       setSavingWorkflow('');
     }
@@ -365,10 +371,10 @@ export default function TeachersPage() {
           startsAt: new Date(eventStartsAt).toISOString(),
         },
       });
-      setNotice('Classroom event scheduled.');
+      setNotice('Evento del aula programado.');
       await loadDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to schedule event');
+      setError(err instanceof Error ? err.message : 'No se pudo programar el evento');
     } finally {
       setSavingWorkflow('');
     }
@@ -393,10 +399,10 @@ export default function TeachersPage() {
         },
       });
       setMessageBody('');
-      setNotice('Message sent.');
+      setNotice('Mensaje enviado.');
       await loadDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send message');
+      setError(err instanceof Error ? err.message : 'No se pudo enviar el mensaje');
     } finally {
       setSavingWorkflow('');
     }
@@ -416,7 +422,7 @@ export default function TeachersPage() {
       });
       await loadDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to mark notification read');
+      setError(err instanceof Error ? err.message : 'No se pudo marcar la notificación como leída');
     } finally {
       setSavingWorkflow('');
     }
@@ -436,7 +442,7 @@ export default function TeachersPage() {
       });
       await loadDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to mark message read');
+      setError(err instanceof Error ? err.message : 'No se pudo marcar el mensaje como leído');
     } finally {
       setSavingWorkflow('');
     }
@@ -453,7 +459,7 @@ export default function TeachersPage() {
       );
       setDashboard(result.data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unable to load teacher dashboard';
+      const message = err instanceof Error ? err.message : 'No se pudo cargar el panel del docente';
       setDashboard(null);
       setDashboardError(message);
       setError(message);
@@ -461,11 +467,11 @@ export default function TeachersPage() {
   }
 
   const sectionLabel: Record<string, string> = {
-    overview: 'Overview',
-    roster: 'Roster',
-    messages: 'Messages',
-    events: 'Events',
-    publish: 'Publish work',
+    overview: 'Resumen',
+    roster: 'Lista de estudiantes',
+    messages: 'Mensajes',
+    events: 'Eventos',
+    publish: 'Publicar trabajo',
   };
 
   return (
@@ -476,12 +482,12 @@ export default function TeachersPage() {
             <span className="teacher-brand-mark">E</span>
             <span>
               <strong className="teacher-brand-title">Edunic</strong>
-              <span className="teacher-brand-subtitle">Teachers</span>
+              <span className="teacher-brand-subtitle">Docentes</span>
             </span>
           </div>
-          <nav aria-label="Teacher navigation" className="teacher-nav">
+          <nav aria-label="Navegación del docente" className="teacher-nav">
             <div className="teacher-nav-group">
-              <p>Workspace</p>
+              <p>Espacio de trabajo</p>
               <button
                 className="teacher-nav-link"
                 data-active={activeSection === 'overview'}
@@ -491,7 +497,7 @@ export default function TeachersPage() {
                 <span className="teacher-nav-icon" aria-hidden="true">
                   <LayoutDashboard size={16} strokeWidth={2} />
                 </span>
-                Overview
+                Resumen
               </button>
               <button
                 className="teacher-nav-link"
@@ -502,7 +508,7 @@ export default function TeachersPage() {
                 <span className="teacher-nav-icon" aria-hidden="true">
                   <ClipboardCheck size={16} strokeWidth={2} />
                 </span>
-                Roster
+                Lista de estudiantes
               </button>
               <button
                 className="teacher-nav-link"
@@ -513,11 +519,11 @@ export default function TeachersPage() {
                 <span className="teacher-nav-icon" aria-hidden="true">
                   <Mail size={16} strokeWidth={2} />
                 </span>
-                Messages
+                Mensajes
               </button>
             </div>
             <div className="teacher-nav-group">
-              <p>Publish</p>
+              <p>Publicar</p>
               <button
                 className="teacher-nav-link"
                 data-active={activeSection === 'events'}
@@ -527,7 +533,7 @@ export default function TeachersPage() {
                 <span className="teacher-nav-icon" aria-hidden="true">
                   <CalendarDays size={16} strokeWidth={2} />
                 </span>
-                Events
+                Eventos
               </button>
               <button
                 className="teacher-nav-link"
@@ -538,20 +544,20 @@ export default function TeachersPage() {
                 <span className="teacher-nav-icon" aria-hidden="true">
                   <Workflow size={16} strokeWidth={2} />
                 </span>
-                Publish work
+                Publicar trabajo
               </button>
             </div>
           </nav>
           <div className="teacher-sidebar-footer">
             <span className="teacher-sidebar-user">
               <strong>{session.user.email}</strong>
-              <span>{session.user.role.replace(/_/g, ' ')}</span>
+              <span>{formatRole(session.user.role)}</span>
             </span>
             <Button
-              aria-label="Sign out"
+              aria-label="Cerrar sesión"
               className="button-small"
               onClick={handleSignOut}
-              title="Sign out"
+              title="Cerrar sesión"
               variant="ghost"
             >
               <LogOut aria-hidden="true" size={16} strokeWidth={2} />
@@ -566,7 +572,7 @@ export default function TeachersPage() {
             </header>
             {!canUseTeacherTools ? (
               <div className="alert alert-error">
-                This account cannot use teacher tools. Sign in as a teacher or admin.
+                Esta cuenta no puede usar las herramientas del docente. Inicie sesión como docente o administrador.
               </div>
             ) : null}
             {error ? <div className="alert alert-error">{error}</div> : null}
@@ -574,14 +580,14 @@ export default function TeachersPage() {
 
             {activeSection === 'overview' ? (
               <section className="teacher-section">
-                <nav className="teacher-kpis" aria-label="Teacher dashboard overview">
+                <nav className="teacher-kpis" aria-label="Resumen del panel del docente">
                   <button
                     className="teacher-kpi"
                     onClick={() => setActiveSection('roster')}
                     type="button"
                   >
                     <strong>{dashboard ? dashboard.pendingAttendance : '\u2014'}</strong>
-                    <span>Attendance pending</span>
+                    <span>Asistencia pendiente</span>
                   </button>
                   <button
                     className={
@@ -593,7 +599,7 @@ export default function TeachersPage() {
                     type="button"
                   >
                     <strong>{dashboard ? dashboard.studentsAtRisk.length : '\u2014'}</strong>
-                    <span>Students at risk</span>
+                    <span>Estudiantes en riesgo</span>
                   </button>
                   <button
                     className="teacher-kpi"
@@ -601,7 +607,7 @@ export default function TeachersPage() {
                     type="button"
                   >
                     <strong>{dashboard ? dashboard.unreadMessages : '\u2014'}</strong>
-                    <span>Unread messages</span>
+                    <span>Mensajes sin leer</span>
                   </button>
                   <button
                     className="teacher-kpi"
@@ -613,38 +619,38 @@ export default function TeachersPage() {
                         ? dashboard.upcomingAssignments.length + dashboard.upcomingEvents.length
                         : '\u2014'}
                     </strong>
-                    <span>Upcoming items</span>
+                    <span>Próximos elementos</span>
                   </button>
                 </nav>
 
                 <div className="teacher-summary" style={{ width: '100%' }}>
                   <div>
-                    <span>Present</span>
+                    <span>Presente</span>
                     <strong>{dashboard?.attendanceToday.present ?? attendanceSummary.present}</strong>
                   </div>
                   <div>
-                    <span>Late</span>
+                    <span>Tardanza</span>
                     <strong>{dashboard?.attendanceToday.late ?? attendanceSummary.late}</strong>
                   </div>
                   <div>
-                    <span>Absent</span>
+                    <span>Ausente</span>
                     <strong>{dashboard?.attendanceToday.absent ?? attendanceSummary.absent}</strong>
                   </div>
                 </div>
 
                 <div className="teacher-section-heading">
-                  <p className="eyebrow">Today</p>
-                  <h2 className="section-title">At a glance</h2>
+                  <p className="eyebrow">Hoy</p>
+                  <h2 className="section-title">Vista general</h2>
                 </div>
                 <div className="teacher-home-grid">
                   <article className="card teacher-home-panel">
                     <div className="panel-header">
                       <div>
-                        <p className="eyebrow">Today</p>
-                        <h2 className="section-title">Classroom readiness</h2>
+                        <p className="eyebrow">Hoy</p>
+                        <h2 className="section-title">Estado de las aulas</h2>
                       </div>
                       <span className="badge badge-blue">
-                        {dashboard?.pendingAttendance ?? 0} pending
+                        {dashboard?.pendingAttendance ?? 0} pendientes
                       </span>
                     </div>
                     <div className="classroom-snapshot-list">
@@ -652,21 +658,21 @@ export default function TeachersPage() {
                         <div className="classroom-snapshot-row" key={classroom.id}>
                           <span>
                             <strong>{classroom.name}</strong>
-                            <p className="field-help">{classroom.rosterCount} active students</p>
+                            <p className="field-help">{classroom.rosterCount} estudiantes activos</p>
                           </span>
                           <span className="badge">
-                            {classroom.attendanceMarkedToday}/{classroom.rosterCount} marked
+                            {classroom.attendanceMarkedToday}/{classroom.rosterCount} registrados
                           </span>
                         </div>
                       ))}
                       {dashboard ? null : (
                         <PanelState
-                          message={dashboardError ? 'Dashboard data could not load.' : 'Loading classroom readiness...'}
+                          message={dashboardError ? 'No se pudieron cargar los datos del panel.' : 'Cargando estado de las aulas…'}
                           tone={dashboardError ? 'error' : 'loading'}
                         />
                       )}
                       {dashboard && dashboard.classrooms.length === 0 ? (
-                        <PanelState message="No assigned classrooms are ready yet." />
+                        <PanelState message="Todavía no hay aulas asignadas disponibles." />
                       ) : null}
                     </div>
                   </article>
@@ -674,8 +680,8 @@ export default function TeachersPage() {
                   <article className="card teacher-home-panel">
                     <div className="panel-header">
                       <div>
-                        <p className="eyebrow">Academic risk</p>
-                        <h2 className="section-title">Needs attention</h2>
+                        <p className="eyebrow">Riesgo académico</p>
+                        <h2 className="section-title">Requiere atención</h2>
                       </div>
                     </div>
                     <div className="activity-list">
@@ -685,20 +691,20 @@ export default function TeachersPage() {
                           <span>
                             <strong>{student.studentName}</strong>
                             <p className="field-help">
-                              {student.classroomName ?? 'No classroom'} - avg{' '}
-                              {student.average ?? 'n/a'} - {student.absences} absences
+                              {student.classroomName ?? 'Sin aula'} - promedio{' '}
+                              {student.average ?? 'n/d'} - {student.absences} ausencias
                             </p>
                           </span>
                         </article>
                       ))}
                       {dashboard ? null : (
                         <PanelState
-                          message={dashboardError ? 'Academic risk data could not load.' : 'Loading students at risk…'}
+                          message={dashboardError ? 'No se pudieron cargar los datos de riesgo académico.' : 'Cargando estudiantes en riesgo…'}
                           tone={dashboardError ? 'error' : 'loading'}
                         />
                       )}
                       {dashboard && dashboard.studentsAtRisk.length === 0 ? (
-                        <PanelState message="No risk alerts for the current roster." />
+                        <PanelState message="No hay alertas de riesgo para la lista actual." />
                       ) : null}
                     </div>
                   </article>
@@ -708,8 +714,8 @@ export default function TeachersPage() {
                   <article className="card teacher-home-panel">
                     <div className="panel-header">
                       <div>
-                        <p className="eyebrow">Upcoming work</p>
-                        <h2 className="section-title">Assignments and exams</h2>
+                        <p className="eyebrow">Próximas tareas</p>
+                        <h2 className="section-title">Tareas y exámenes</h2>
                       </div>
                     </div>
                     <div className="activity-list">
@@ -719,20 +725,20 @@ export default function TeachersPage() {
                           <span>
                             <strong>{assignment.title}</strong>
                             <p className="field-help">
-                              {assignment.classroomName ?? 'Classroom'} -{' '}
-                              {assignment.dueDate ? assignment.dueDate.slice(0, 10) : 'No due date'}
+                              {assignment.classroomName ?? 'Aula'} -{' '}
+                              {assignment.dueDate ? assignment.dueDate.slice(0, 10) : 'Sin fecha de entrega'}
                             </p>
                           </span>
                         </article>
                       ))}
                       {dashboard ? null : (
                         <PanelState
-                          message={dashboardError ? 'Assignments could not load.' : 'Loading assignments...'}
+                          message={dashboardError ? 'No se pudieron cargar las tareas.' : 'Cargando tareas…'}
                           tone={dashboardError ? 'error' : 'loading'}
                         />
                       )}
                       {dashboard && dashboard.upcomingAssignments.length === 0 ? (
-                        <PanelState message="No upcoming assignments or exams." />
+                        <PanelState message="No hay tareas ni exámenes próximos." />
                       ) : null}
                     </div>
                   </article>
@@ -740,8 +746,8 @@ export default function TeachersPage() {
                   <article className="card teacher-home-panel">
                     <div className="panel-header">
                       <div>
-                        <p className="eyebrow">Calendar</p>
-                        <h2 className="section-title">Upcoming events</h2>
+                        <p className="eyebrow">Calendario</p>
+                        <h2 className="section-title">Próximos eventos</h2>
                       </div>
                     </div>
                     <div className="activity-list">
@@ -751,19 +757,19 @@ export default function TeachersPage() {
                           <span>
                             <strong>{event.title}</strong>
                             <p className="field-help">
-                              {event.classroomName ?? 'School-wide'} - {event.startsAt.slice(0, 10)}
+                              {event.classroomName ?? 'Todo el colegio'} - {event.startsAt.slice(0, 10)}
                             </p>
                           </span>
                         </article>
                       ))}
                       {dashboard ? null : (
                         <PanelState
-                          message={dashboardError ? 'Upcoming events could not load.' : 'Loading upcoming events...'}
+                          message={dashboardError ? 'No se pudieron cargar los próximos eventos.' : 'Cargando próximos eventos…'}
                           tone={dashboardError ? 'error' : 'loading'}
                         />
                       )}
                       {dashboard && dashboard.upcomingEvents.length === 0 ? (
-                        <PanelState message="No upcoming events." />
+                        <PanelState message="No hay eventos próximos." />
                       ) : null}
                     </div>
                   </article>
@@ -774,13 +780,13 @@ export default function TeachersPage() {
             {activeSection === 'roster' ? (
               <section className="teacher-section">
                 <div className="teacher-section-heading">
-                  <p className="eyebrow">Workspace</p>
-                  <h2 className="section-title">Daily roster</h2>
+                  <p className="eyebrow">Espacio de trabajo</p>
+                  <h2 className="section-title">Lista diaria</h2>
                 </div>
                 <div className="teacher-layout">
                   <aside className="card teacher-controls">
                     <div className="form-field">
-                      <label htmlFor="classroom">Classroom</label>
+                      <label htmlFor="classroom">Aula</label>
                       <select
                         disabled={loading || classrooms.length === 0}
                         id="classroom"
@@ -795,14 +801,14 @@ export default function TeachersPage() {
                       </select>
                     </div>
                     <FormField
-                      label="Attendance date"
+                      label="Fecha de asistencia"
                       name="attendanceDate"
                       onChange={(event) => setAttendanceDate(event.target.value)}
                       type="date"
                       value={attendanceDate}
                     />
                     <FormField
-                      label="Grade subject"
+                      label="Materia de la calificación"
                       name="gradeSubject"
                       onChange={(event) => setGradeSubject(event.target.value)}
                       required
@@ -810,11 +816,11 @@ export default function TeachersPage() {
                       value={gradeSubject}
                     />
                     <div className="classroom-context">
-                      <span className="badge badge-blue">{selectedClassroom?.name ?? 'No classroom'}</span>
+                      <span className="badge badge-blue">{selectedClassroom?.name ?? 'Sin aula'}</span>
                       <p className="body-copy">
                         {loading
-                          ? 'Loading classroom data...'
-                          : `${enrollments.length} active enrollment${enrollments.length === 1 ? '' : 's'}`}
+                          ? 'Cargando datos del aula…'
+                          : `${enrollments.length} matrícula${enrollments.length === 1 ? '' : 's'} activa${enrollments.length === 1 ? '' : 's'}`}
                       </p>
                     </div>
                   </aside>
@@ -822,28 +828,28 @@ export default function TeachersPage() {
                   <section className="card teacher-roster">
                     <div className="page-header">
                       <div>
-                        <p className="eyebrow">Daily roster</p>
-                        <h2 className="section-title">Mark attendance and enter scores</h2>
+                        <p className="eyebrow">Lista diaria</p>
+                        <h2 className="section-title">Registrar asistencia e ingresar calificaciones</h2>
                       </div>
                       <div className="button-row">
                         <Button
                           disabled={savingAttendance || enrollments.length === 0}
                           onClick={saveAttendance}
                         >
-                          {savingAttendance ? 'Saving...' : 'Save attendance'}
+                          {savingAttendance ? 'Guardando…' : 'Guardar asistencia'}
                         </Button>
                         <Button
                           disabled={savingGrades || enrollments.length === 0 || !gradeSubject.trim()}
                           onClick={submitGrades}
                           variant="secondary"
                         >
-                          {savingGrades ? 'Submitting...' : 'Submit grades'}
+                          {savingGrades ? 'Enviando…' : 'Enviar calificaciones'}
                         </Button>
                       </div>
                     </div>
 
                     {enrollments.length === 0 && !loading ? (
-                      <PanelState message="No active enrollments were found for this classroom." />
+                      <PanelState message="No se encontraron matrículas activas en este aula." />
                     ) : null}
 
                     <div className="teacher-student-list">
@@ -851,9 +857,9 @@ export default function TeachersPage() {
                         <article className="teacher-student-row" key={enrollment.id}>
                           <div>
                             <strong>{enrollment.student.fullName}</strong>
-                            <p className="field-help">Enrollment {enrollment.id}</p>
+                            <p className="field-help">Matrícula {enrollment.id}</p>
                           </div>
-                          <div className="attendance-toggle" aria-label={`${enrollment.student.fullName} attendance`}>
+                          <div className="attendance-toggle" aria-label={`${enrollment.student.fullName}: asistencia`}>
                             {(['present', 'late', 'absent'] as AttendanceStatus[]).map((status) => (
                               <button
                                 data-active={(attendanceStatus[enrollment.id] ?? 'present') === status}
@@ -866,12 +872,12 @@ export default function TeachersPage() {
                                 }
                                 type="button"
                               >
-                                {status}
+                                {attendanceStatusLabels[status]}
                               </button>
                             ))}
                           </div>
                           <label className="score-cell">
-                            <span>Score</span>
+                            <span>Calificación</span>
                             <input
                               max={100}
                               min={0}
@@ -897,16 +903,16 @@ export default function TeachersPage() {
             {activeSection === 'messages' ? (
               <section className="teacher-section">
                 <div className="teacher-section-heading">
-                  <p className="eyebrow">Messages</p>
-                  <h2 className="section-title">Inbox</h2>
+                  <p className="eyebrow">Mensajes</p>
+                  <h2 className="section-title">Bandeja de entrada</h2>
                 </div>
 
                 <div className="teacher-home-grid" style={{ gridTemplateColumns: '1fr' }}>
                   <article className="card teacher-home-panel">
                     <div className="panel-header">
                       <div>
-                        <p className="eyebrow">Recent grades</p>
-                        <h2 className="section-title">Latest submissions</h2>
+                        <p className="eyebrow">Calificaciones recientes</p>
+                        <h2 className="section-title">Últimos envíos</h2>
                       </div>
                     </div>
                     <div className="activity-list">
@@ -921,12 +927,12 @@ export default function TeachersPage() {
                       ))}
                       {dashboard ? null : (
                         <PanelState
-                          message={dashboardError ? 'Recent grades could not load.' : 'Loading recent grades...'}
+                          message={dashboardError ? 'No se pudieron cargar las calificaciones recientes.' : 'Cargando calificaciones recientes…'}
                           tone={dashboardError ? 'error' : 'loading'}
                         />
                       )}
                       {dashboard && dashboard.recentGrades.length === 0 ? (
-                        <PanelState message="No recent grade submissions yet." />
+                        <PanelState message="Todavía no hay calificaciones enviadas." />
                       ) : null}
                     </div>
                   </article>
@@ -934,8 +940,8 @@ export default function TeachersPage() {
                   <article className="card teacher-home-panel">
                     <div className="panel-header">
                       <div>
-                        <p className="eyebrow">Notifications</p>
-                        <h2 className="section-title">Notifications</h2>
+                        <p className="eyebrow">Notificaciones</p>
+                        <h2 className="section-title">Notificaciones</h2>
                       </div>
                     </div>
                     <div className="activity-list">
@@ -945,7 +951,7 @@ export default function TeachersPage() {
                           <span>
                             <strong>{notification.title}</strong>
                             <p className="field-help">
-                              {notification.message} - {notification.readAt ? 'read' : 'unread'}
+                              {notification.message} - {notification.readAt ? 'leída' : 'sin leer'}
                             </p>
                           </span>
                           <Button
@@ -953,18 +959,18 @@ export default function TeachersPage() {
                             onClick={() => void markNotificationRead(notification.id)}
                             variant="secondary"
                           >
-                            {notification.readAt ? 'Read' : 'Mark read'}
+                            {notification.readAt ? 'Leída' : 'Marcar como leída'}
                           </Button>
                         </article>
                       ))}
                       {dashboard ? null : (
                         <PanelState
-                          message={dashboardError ? 'Notifications could not load.' : 'Loading notifications...'}
+                          message={dashboardError ? 'No se pudieron cargar las notificaciones.' : 'Cargando notificaciones…'}
                           tone={dashboardError ? 'error' : 'loading'}
                         />
                       )}
                       {dashboard && dashboard.recentNotifications.length === 0 ? (
-                        <PanelState message="No notifications." />
+                        <PanelState message="No hay notificaciones." />
                       ) : null}
                     </div>
                   </article>
@@ -974,8 +980,8 @@ export default function TeachersPage() {
                   <article className="card teacher-home-panel teacher-home-panel-wide">
                     <div className="panel-header">
                       <div>
-                        <p className="eyebrow">Inbox</p>
-                        <h2 className="section-title">{dashboard?.unreadMessages ?? 0} unread messages</h2>
+                        <p className="eyebrow">Bandeja de entrada</p>
+                        <h2 className="section-title">{dashboard?.unreadMessages ?? 0} mensajes sin leer</h2>
                       </div>
                     </div>
                     <div className="activity-list">
@@ -991,18 +997,18 @@ export default function TeachersPage() {
                             onClick={() => void markMessageRead(message.id)}
                             variant="secondary"
                           >
-                            {message.readAt ? 'Read' : 'Mark read'}
+                            {message.readAt ? 'Leído' : 'Marcar como leído'}
                           </Button>
                         </article>
                       ))}
                       {dashboard ? null : (
                         <PanelState
-                          message={dashboardError ? 'Inbox could not load.' : 'Loading inbox...'}
+                          message={dashboardError ? 'No se pudo cargar la bandeja de entrada.' : 'Cargando bandeja de entrada…'}
                           tone={dashboardError ? 'error' : 'loading'}
                         />
                       )}
                       {dashboard && dashboard.recentMessages.length === 0 ? (
-                        <PanelState message="No messages yet." />
+                        <PanelState message="Todavía no hay mensajes." />
                       ) : null}
                     </div>
                   </article>
@@ -1013,15 +1019,15 @@ export default function TeachersPage() {
             {activeSection === 'events' ? (
               <section className="teacher-section">
                 <div className="teacher-section-heading">
-                  <p className="eyebrow">Calendar</p>
-                  <h2 className="section-title">Upcoming events</h2>
+                  <p className="eyebrow">Calendario</p>
+                  <h2 className="section-title">Próximos eventos</h2>
                 </div>
                 <div className="teacher-home-grid" style={{ gridTemplateColumns: '1fr' }}>
                   <article className="card teacher-home-panel">
                     <div className="panel-header">
                       <div>
-                        <p className="eyebrow">Calendar</p>
-                        <h2 className="section-title">Upcoming events</h2>
+                        <p className="eyebrow">Calendario</p>
+                        <h2 className="section-title">Próximos eventos</h2>
                       </div>
                     </div>
                     <div className="activity-list">
@@ -1031,19 +1037,19 @@ export default function TeachersPage() {
                           <span>
                             <strong>{event.title}</strong>
                             <p className="field-help">
-                              {event.classroomName ?? 'School-wide'} - {event.startsAt.slice(0, 10)}
+                              {event.classroomName ?? 'Todo el colegio'} - {event.startsAt.slice(0, 10)}
                             </p>
                           </span>
                         </article>
                       ))}
                       {dashboard ? null : (
                         <PanelState
-                          message={dashboardError ? 'Upcoming events could not load.' : 'Loading upcoming events...'}
+                          message={dashboardError ? 'No se pudieron cargar los próximos eventos.' : 'Cargando próximos eventos…'}
                           tone={dashboardError ? 'error' : 'loading'}
                         />
                       )}
                       {dashboard && dashboard.upcomingEvents.length === 0 ? (
-                        <PanelState message="No upcoming events." />
+                        <PanelState message="No hay eventos próximos." />
                       ) : null}
                     </div>
                   </article>
@@ -1054,30 +1060,30 @@ export default function TeachersPage() {
             {activeSection === 'publish' ? (
               <section className="teacher-section">
                 <div className="teacher-section-heading">
-                  <p className="eyebrow">Publish</p>
-                  <h2 className="section-title">Create work, events and messages</h2>
+                  <p className="eyebrow">Publicar</p>
+                  <h2 className="section-title">Crear tareas, eventos y mensajes</h2>
                 </div>
                 <div className="workflow-console-grid">
                   <article className="card">
                     <div className="panel-header">
                       <div>
-                        <p className="eyebrow">Publish</p>
-                        <h2 className="section-title">Classroom work</h2>
+                        <p className="eyebrow">Publicar</p>
+                        <h2 className="section-title">Trabajo del aula</h2>
                       </div>
                     </div>
                     <div className="form">
-                      <FormField label="Title" name="workflowTitle" onChange={(event) => setWorkflowTitle(event.target.value)} value={workflowTitle} />
+                      <FormField label="Título" name="workflowTitle" onChange={(event) => setWorkflowTitle(event.target.value)} value={workflowTitle} />
                       <label className="form-field" htmlFor="workflowType">
-                        <span>Type</span>
+                        <span>Tipo</span>
                         <select id="workflowType" onChange={(event) => setWorkflowType(event.target.value as 'homework' | 'exam' | 'assignment')} value={workflowType}>
-                          <option value="homework">homework</option>
-                          <option value="exam">exam</option>
-                          <option value="assignment">assignment</option>
+                          <option value="homework">tarea</option>
+                          <option value="exam">examen</option>
+                          <option value="assignment">trabajo</option>
                         </select>
                       </label>
-                      <FormField label="Due date" name="workflowDueDate" onChange={(event) => setWorkflowDueDate(event.target.value)} type="datetime-local" value={workflowDueDate} />
+                      <FormField label="Fecha de entrega" name="workflowDueDate" onChange={(event) => setWorkflowDueDate(event.target.value)} type="datetime-local" value={workflowDueDate} />
                       <Button disabled={savingWorkflow === 'assignment' || !selectedClassroomId || !workflowTitle.trim()} onClick={() => void createAssignment()}>
-                        {savingWorkflow === 'assignment' ? 'Publishing...' : 'Publish work'}
+                        {savingWorkflow === 'assignment' ? 'Publicando…' : 'Publicar trabajo'}
                       </Button>
                     </div>
                   </article>
@@ -1085,15 +1091,15 @@ export default function TeachersPage() {
                   <article className="card">
                     <div className="panel-header">
                       <div>
-                        <p className="eyebrow">Calendar</p>
-                        <h2 className="section-title">Classroom event</h2>
+                        <p className="eyebrow">Calendario</p>
+                        <h2 className="section-title">Evento del aula</h2>
                       </div>
                     </div>
                     <div className="form">
-                      <FormField label="Title" name="teacherEventTitle" onChange={(event) => setEventTitle(event.target.value)} value={eventTitle} />
-                      <FormField label="Starts at" name="teacherEventStartsAt" onChange={(event) => setEventStartsAt(event.target.value)} type="datetime-local" value={eventStartsAt} />
+                      <FormField label="Título" name="teacherEventTitle" onChange={(event) => setEventTitle(event.target.value)} value={eventTitle} />
+                      <FormField label="Inicia" name="teacherEventStartsAt" onChange={(event) => setEventStartsAt(event.target.value)} type="datetime-local" value={eventStartsAt} />
                       <Button disabled={savingWorkflow === 'event' || !selectedClassroomId || !eventTitle.trim()} onClick={() => void createClassroomEvent()}>
-                        {savingWorkflow === 'event' ? 'Scheduling...' : 'Schedule event'}
+                        {savingWorkflow === 'event' ? 'Programando…' : 'Programar evento'}
                       </Button>
                     </div>
                   </article>
@@ -1101,16 +1107,16 @@ export default function TeachersPage() {
                   <article className="card">
                     <div className="panel-header">
                       <div>
-                        <p className="eyebrow">Message</p>
-                        <h2 className="section-title">Family/admin thread</h2>
+                        <p className="eyebrow">Mensaje</p>
+                        <h2 className="section-title">Conversación con familias y administración</h2>
                       </div>
                     </div>
                     <div className="form">
-                      <FormField label="Recipient user ID" name="teacherRecipientUserId" onChange={(event) => setRecipientUserId(event.target.value)} value={recipientUserId} />
-                      <FormField label="Subject" name="teacherMessageSubject" onChange={(event) => setMessageSubject(event.target.value)} value={messageSubject} />
-                      <TextAreaField label="Message" name="teacherMessageBody" onChange={(event) => setMessageBody(event.target.value)} rows={4} value={messageBody} />
+                      <FormField label="ID de usuario destinatario" name="teacherRecipientUserId" onChange={(event) => setRecipientUserId(event.target.value)} value={recipientUserId} />
+                      <FormField label="Asunto" name="teacherMessageSubject" onChange={(event) => setMessageSubject(event.target.value)} value={messageSubject} />
+                      <TextAreaField label="Mensaje" name="teacherMessageBody" onChange={(event) => setMessageBody(event.target.value)} rows={4} value={messageBody} />
                       <Button disabled={savingWorkflow === 'message' || !recipientUserId.trim() || !messageSubject.trim() || !messageBody.trim()} onClick={() => void sendMessage()}>
-                        {savingWorkflow === 'message' ? 'Sending...' : 'Send message'}
+                        {savingWorkflow === 'message' ? 'Enviando…' : 'Enviar mensaje'}
                       </Button>
                     </div>
                   </article>

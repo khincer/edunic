@@ -6,14 +6,14 @@ export default function StudentsPage() {
   return (
     <main className="portal-page">
       <section className="portal-hero">
-        <h1 className="page-title">Student accounts are not available</h1>
+        <h1 className="page-title">Las cuentas de estudiante no están disponibles</h1>
         <p className="body-copy">
-          Parents and guardians can follow grades, attendance and school notices
-          in the family portal.
+          Las familias y tutores pueden seguir las calificaciones, la asistencia y
+          los avisos del colegio en el portal de familias.
         </p>
         <div className="button-row section-stack">
           <Link className="button button-primary" href="/parents/login">
-            Go to the family portal
+            Ir al portal de familias
           </Link>
         </div>
       </section>

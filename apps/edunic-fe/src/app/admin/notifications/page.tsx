@@ -33,6 +33,14 @@ const STATUS_BADGE: Record<EmailDeliveryStatus, string> = {
   failed: 'badge badge-red',
 };
 
+const STATUS_LABELS: Record<EmailDeliveryStatus, string> = {
+  queued: 'En cola',
+  sending: 'Enviando',
+  retried: 'Reintentado',
+  sent: 'Enviado',
+  failed: 'Fallido',
+};
+
 // PN-R1/PN-R2/PN-R3: the delivery panel is a read-only ledger. There is no
 // retry control and no endpoint behind one, and the panel stays visible while
 // the `email_notifications` flag is off.
@@ -69,7 +77,7 @@ export default function EmailNotificationsPanelPage() {
         setTotal(deliveriesResult.meta.total);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : 'Unable to load email deliveries'
+          err instanceof Error ? err.message : 'No se pudieron cargar los envíos de correo'
         );
       } finally {
         setLoading(false);
@@ -83,7 +91,7 @@ export default function EmailNotificationsPanelPage() {
     () => [
       {
         key: 'recipient',
-        header: 'Recipient',
+        header: 'Destinatario',
         render: (delivery) => (
           <>
             <strong>{delivery.recipientAddress}</strong>
@@ -91,23 +99,23 @@ export default function EmailNotificationsPanelPage() {
           </>
         ),
       },
-      { key: 'event', header: 'Event', render: (delivery) => delivery.eventName },
+      { key: 'event', header: 'Evento', render: (delivery) => delivery.eventName },
       {
         key: 'status',
-        header: 'Status',
+        header: 'Estado',
         render: (delivery) => (
-          <span className={STATUS_BADGE[delivery.status]}>{delivery.status}</span>
+          <span className={STATUS_BADGE[delivery.status]}>{STATUS_LABELS[delivery.status]}</span>
         ),
       },
       {
         key: 'attempts',
-        header: 'Attempts',
+        header: 'Intentos',
         align: 'right',
         render: (delivery) => delivery.attemptCount,
       },
       {
         key: 'provider',
-        header: 'Provider',
+        header: 'Proveedor',
         render: (delivery) =>
           delivery.providerMessageId ? (
             <span className="break-value">{delivery.providerMessageId}</span>
@@ -117,12 +125,12 @@ export default function EmailNotificationsPanelPage() {
       },
       {
         key: 'created',
-        header: 'Created',
+        header: 'Creado',
         render: (delivery) => formatDate(delivery.createdAt),
       },
       {
         key: 'sent',
-        header: 'Sent',
+        header: 'Enviado',
         render: (delivery) =>
           delivery.sentAt ? formatDate(delivery.sentAt) : '—',
       },
@@ -137,32 +145,32 @@ export default function EmailNotificationsPanelPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Email deliveries</p>
-          <h1 className="page-title">Notification delivery panel</h1>
+          <p className="eyebrow">Envíos de correo</p>
+          <h1 className="page-title">Panel de envío de notificaciones</h1>
           <p className="body-copy">
-            Every send attempt for this school, with its status and retry count.
-            Delivery is automatic; this panel is read-only.
+            Cada intento de envío de este colegio, con su estado y su número de reintentos.
+            El envío es automático; este panel es de solo lectura.
           </p>
         </div>
       </header>
 
       {state && !state.emailNotificationsEnabled ? (
         <div className="alert alert-info">
-          Email notifications are disabled for this school. The panel stays
-          visible, but no email is enqueued or sent.
+          Las notificaciones por correo están deshabilitadas para este colegio. El panel
+          sigue visible, pero no se encola ni se envía ningún correo.
         </div>
       ) : null}
       {state && !state.senderIdentityConfigured ? (
         <div className="alert alert-info">
-          No sender identity is configured. Set a sender name on the institution
-          edit page or nothing is sent.
+          No hay una identidad de remitente configurada. Defina un nombre de remitente
+          en la página de edición de la institución o no se enviará nada.
         </div>
       ) : null}
 
       <section className="card filter-panel">
         <form className="grid grid-2" onSubmit={(event) => event.preventDefault()}>
           <div className="form-field">
-            <label htmlFor="status">Status</label>
+            <label htmlFor="status">Estado</label>
             <select
               id="status"
               name="status"
@@ -174,7 +182,7 @@ export default function EmailNotificationsPanelPage() {
             >
               {STATUS_OPTIONS.map((option) => (
                 <option key={option || 'all'} value={option}>
-                  {option || 'All statuses'}
+                  {option ? STATUS_LABELS[option] : 'Todos los estados'}
                 </option>
               ))}
             </select>
@@ -184,12 +192,12 @@ export default function EmailNotificationsPanelPage() {
 
       {error ? <div className="alert alert-error">{error}</div> : null}
       {loading ? (
-        <div className="empty-state body-copy">Loading deliveries...</div>
+        <div className="empty-state body-copy">Cargando envíos…</div>
       ) : null}
       {!loading ? (
         <DataTable
           columns={columns}
-          emptyMessage="No email deliveries have been recorded for this school yet."
+          emptyMessage="Todavía no se registraron envíos de correo para este colegio."
           getRowKey={(delivery) => delivery.id}
           rows={deliveries}
         />
@@ -197,7 +205,7 @@ export default function EmailNotificationsPanelPage() {
 
       <div className="page-header pager-row">
         <p className="field-help">
-          Showing {deliveries.length} of {total} deliveries
+          Mostrando {deliveries.length} de {total} envíos
         </p>
         <div className="button-row">
           <Button
@@ -205,14 +213,14 @@ export default function EmailNotificationsPanelPage() {
             onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
             variant="secondary"
           >
-            Previous
+            Anterior
           </Button>
           <Button
             disabled={!canGoForward}
             onClick={() => setOffset(offset + PAGE_SIZE)}
             variant="secondary"
           >
-            Next
+            Siguiente
           </Button>
         </div>
       </div>

@@ -31,7 +31,7 @@ export default function InstitutionExtensionsPage() {
       setInstitution(institutionResult.data);
       setExtensions(extensionsResult.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load extensions');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar las extensiones');
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ export default function InstitutionExtensionsPage() {
 
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to update extension');
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar la extensión');
     } finally {
       setBusyKey('');
     }
@@ -80,35 +80,35 @@ export default function InstitutionExtensionsPage() {
     () => [
       {
         key: 'extension',
-        header: 'Extension',
+        header: 'Extensión',
         render: (extension) => (
           <>
-            <strong>{extension.name ?? extension.key}</strong>
+            <strong>{extensionLabel(extension)}</strong>
             <p className="field-help">{extension.key}</p>
           </>
         ),
       },
       {
         key: 'global',
-        header: 'Registry',
+        header: 'Registro',
         render: (extension) => (
           <span className={`badge ${extension.enabled ? 'badge-green' : 'badge-red'}`}>
-            {extension.enabled ? 'available' : 'disabled'}
+            {extension.enabled ? 'disponible' : 'deshabilitada'}
           </span>
         ),
       },
       {
         key: 'institution',
-        header: 'Institution',
+        header: 'Colegio',
         render: (extension) => (
           <span className={`badge ${enabledKeys.has(extension.key) ? 'badge-blue' : ''}`}>
-            {enabledKeys.has(extension.key) ? 'enabled' : 'off'}
+            {enabledKeys.has(extension.key) ? 'habilitada' : 'inactiva'}
           </span>
         ),
       },
       {
         key: 'actions',
-        header: 'Actions',
+        header: 'Acciones',
         align: 'right',
         render: (extension) => {
           const enabled = enabledKeys.has(extension.key);
@@ -120,7 +120,7 @@ export default function InstitutionExtensionsPage() {
                 onClick={() => toggleExtension(extension.key, enabled)}
                 variant={enabled ? 'secondary' : 'primary'}
               >
-                {busyKey === extension.key ? 'Saving...' : enabled ? 'Disable' : 'Enable'}
+                {busyKey === extension.key ? 'Guardando…' : enabled ? 'Deshabilitar' : 'Habilitar'}
               </Button>
             </div>
           );
@@ -134,27 +134,36 @@ export default function InstitutionExtensionsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Institution extensions</p>
-          <h1 className="page-title">{institution?.name ?? 'Extensions'}</h1>
+          <p className="eyebrow">Extensiones del colegio</p>
+          <h1 className="page-title">{institution?.name ?? 'Extensiones'}</h1>
           <p className="body-copy">
-            Enable registered modules for this school without changing global registry state.
+            Permite habilitar los módulos registrados para este colegio sin cambiar el estado
+            global del registro.
           </p>
         </div>
         <ButtonLink href={`/admin/settings`} variant="secondary">
-          Back to institution
+          Volver al colegio
         </ButtonLink>
       </header>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
-      {loading ? <div className="empty-state body-copy">Loading extensions...</div> : null}
+      {loading ? <div className="empty-state body-copy">Cargando extensiones…</div> : null}
       {!loading ? (
         <DataTable
           columns={columns}
-          emptyMessage="No extensions are registered yet."
+          emptyMessage="Todavía no hay extensiones registradas."
           getRowKey={(extension) => extension.key}
           rows={extensions}
         />
       ) : null}
     </AdminShell>
   );
+}
+
+const extensionLabels: Record<string, string> = {
+  notifications: 'Notificaciones',
+};
+
+function extensionLabel(extension: Extension) {
+  return extensionLabels[extension.key] ?? extension.name ?? extension.key;
 }

@@ -25,7 +25,7 @@ export function useSchool() {
         }
       } catch (err) {
         if (active) {
-          setError(err instanceof Error ? err.message : 'Unable to load the school');
+          setError(err instanceof Error ? err.message : 'No se pudo cargar el colegio');
         }
       } finally {
         if (active) {

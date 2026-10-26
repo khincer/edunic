@@ -5,15 +5,15 @@ export default async function ParentLoginPage() {
     <AuthLoginPage
       accent="parent"
       allowedRoles={['parent']}
-      brandSubtitle="Parent portal"
+      brandSubtitle="Portal de familias"
       brandTitle="Edunic"
       emailPlaceholder="parent@email.com"
-      heroText="Grades, attendance, upcoming work and school notices for your children."
-      intro="Use the parent or guardian account the school gave you."
+      heroText="Calificaciones, asistencia, próximas tareas y avisos del colegio para sus hijos."
+      intro="Use la cuenta de familia o tutor que le entregó el colegio."
       redirectTo="/parents"
-      requiredRoleLabel="parent role"
-      sectionLabel="Parent"
-      title="Sign in"
+      requiredRoleLabel="el rol de familia"
+      sectionLabel="Familia"
+      title="Iniciar sesión"
     />
   );
 }

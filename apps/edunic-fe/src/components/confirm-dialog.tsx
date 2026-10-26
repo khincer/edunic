@@ -33,17 +33,17 @@ export function ConfirmDialog({
         role="dialog"
         aria-labelledby="confirm-dialog-title"
       >
-        <p className="eyebrow">Confirm action</p>
+        <p className="eyebrow">Confirmar acción</p>
         <h2 className="section-title" id="confirm-dialog-title">
           {title}
         </h2>
         <p className="body-copy">{body}</p>
         <div className="button-row">
           <Button disabled={busy} onClick={onCancel} variant="secondary">
-            Cancel
+            Cancelar
           </Button>
           <Button disabled={busy} onClick={onConfirm} variant="danger">
-            {busy ? 'Working...' : confirmLabel}
+            {busy ? 'Procesando…' : confirmLabel}
           </Button>
         </div>
       </section>

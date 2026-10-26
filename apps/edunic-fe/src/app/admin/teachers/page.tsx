@@ -58,7 +58,7 @@ export default function AdminTeachersPage() {
       setTeachers(rows);
       setClassrooms(classroomResult.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load teachers');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar la lista de docentes');
     } finally {
       setLoading(false);
     }
@@ -96,8 +96,8 @@ export default function AdminTeachersPage() {
         setPassword('');
         setNewClassroomIds([]);
       },
-      'Teacher account created.',
-      'Unable to create the teacher'
+      'Cuenta de docente creada.',
+      'No se pudo crear el docente'
     );
   }
 
@@ -116,8 +116,8 @@ export default function AdminTeachersPage() {
         });
         setAssignTo((current) => ({ ...current, [teacherId]: '' }));
       },
-      'Classroom assigned.',
-      'Unable to assign the classroom'
+      'Aula asignada.',
+      'No se pudo asignar el aula'
     );
   }
 
@@ -128,8 +128,8 @@ export default function AdminTeachersPage() {
           method: 'DELETE',
         });
       },
-      'Classroom removed.',
-      'Unable to remove the classroom'
+      'Aula quitada.',
+      'No se pudo quitar el aula'
     );
   }
 
@@ -147,10 +147,10 @@ export default function AdminTeachersPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Teachers</p>
-          <h1 className="page-title">Teacher roster</h1>
+          <p className="eyebrow">Docentes</p>
+          <h1 className="page-title">Plantilla docente</h1>
           <p className="body-copy">
-            Create teacher accounts and assign each teacher the classrooms they teach.
+            Cree cuentas de docentes y asigne a cada docente las aulas que imparte.
           </p>
         </div>
       </header>
@@ -162,14 +162,14 @@ export default function AdminTeachersPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Create</p>
-              <h2 className="section-title">New teacher</h2>
+              <p className="eyebrow">Crear</p>
+              <h2 className="section-title">Nuevo docente</h2>
             </div>
           </div>
           <div className="form">
             <FormField
               autoComplete="off"
-              label="Email"
+              label="Correo electrónico"
               name="teacherEmail"
               onChange={(event) => setEmail(event.target.value)}
               type="email"
@@ -177,17 +177,17 @@ export default function AdminTeachersPage() {
             />
             <FormField
               autoComplete="new-password"
-              help="At least 8 characters. Share it with the teacher securely."
-              label="Temporary password"
+              help="Al menos 8 caracteres. Compártala con el docente de forma segura."
+              label="Contraseña temporal"
               name="teacherPassword"
               onChange={(event) => setPassword(event.target.value)}
               type="password"
               value={password}
             />
             <fieldset className="form-field">
-              <legend>Classrooms</legend>
+              <legend>Aulas</legend>
               {classrooms.length === 0 ? (
-                <p className="field-help">No classrooms yet.</p>
+                <p className="field-help">Todavía no hay aulas.</p>
               ) : (
                 classrooms.map((classroom) => (
                   <label className="checkbox-row" key={classroom.id}>
@@ -202,7 +202,7 @@ export default function AdminTeachersPage() {
               )}
             </fieldset>
             <Button disabled={!canCreate} onClick={createTeacher}>
-              {saving ? 'Saving...' : 'Create teacher'}
+              {saving ? 'Guardando…' : 'Crear docente'}
             </Button>
           </div>
         </Card>
@@ -210,15 +210,15 @@ export default function AdminTeachersPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Summary</p>
+              <p className="eyebrow">Resumen</p>
               <h2 className="section-title">
-                {teachers.length} {teachers.length === 1 ? 'teacher' : 'teachers'}
+                {teachers.length} {teachers.length === 1 ? 'docente' : 'docentes'}
               </h2>
             </div>
           </div>
           <p className="body-copy">
-            {teachers.filter((teacher) => teacher.classrooms.length === 0).length} without a
-            classroom, {classrooms.length} classrooms in the school.
+            {teachers.filter((teacher) => teacher.classrooms.length === 0).length} sin
+            aula, {classrooms.length} aulas en el colegio.
           </p>
         </Card>
       </section>
@@ -226,33 +226,33 @@ export default function AdminTeachersPage() {
       <section className="card section-stack">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Roster</p>
-            <h2 className="section-title">Teachers and their classrooms</h2>
+            <p className="eyebrow">Listado</p>
+            <h2 className="section-title">Docentes y sus aulas</h2>
           </div>
         </div>
         {loading ? (
-          <PanelState message="Loading teachers..." tone="loading" />
+          <PanelState message="Cargando docentes…" tone="loading" />
         ) : (
           <DataTable
             columns={[
               {
                 key: 'email',
-                header: 'Teacher',
+                header: 'Docente',
                 render: (teacher) => <strong>{teacher.email}</strong>,
               },
               {
                 key: 'classrooms',
-                header: 'Classrooms',
+                header: 'Aulas',
                 render: (teacher) =>
                   teacher.classrooms.length === 0 ? (
-                    <span className="field-help">None</span>
+                    <span className="field-help">Ninguna</span>
                   ) : (
                     <span className="button-row">
                       {teacher.classrooms.map((classroom) => (
                         <span className="badge badge-blue" key={classroom.id}>
                           {formatClassroom(classroom)}{' '}
                           <button
-                            aria-label={`Remove ${formatClassroom(classroom)} from ${teacher.email}`}
+                            aria-label={`Quitar ${formatClassroom(classroom)} de ${teacher.email}`}
                             className="badge-remove"
                             disabled={saving}
                             onClick={() => unassignClassroom(teacher.id, classroom.id)}
@@ -267,7 +267,7 @@ export default function AdminTeachersPage() {
               },
               {
                 key: 'assign',
-                header: 'Assign',
+                header: 'Asignar',
                 render: (teacher) => {
                   const available = classrooms.filter(
                     (classroom) =>
@@ -277,7 +277,7 @@ export default function AdminTeachersPage() {
                   return (
                     <span className="button-row">
                       <select
-                        aria-label={`Classroom for ${teacher.email}`}
+                        aria-label={`Aula para ${teacher.email}`}
                         onChange={(event) =>
                           setAssignTo((current) => ({
                             ...current,
@@ -286,7 +286,7 @@ export default function AdminTeachersPage() {
                         }
                         value={assignTo[teacher.id] ?? ''}
                       >
-                        <option value="">Choose a classroom</option>
+                        <option value="">Elija un aula</option>
                         {available.map((classroom) => (
                           <option key={classroom.id} value={classroom.id}>
                             {formatClassroom(classroom)}
@@ -298,7 +298,7 @@ export default function AdminTeachersPage() {
                         onClick={() => assignClassroom(teacher.id)}
                         variant="secondary"
                       >
-                        Assign
+                        Asignar
                       </Button>
                     </span>
                   );
@@ -306,12 +306,12 @@ export default function AdminTeachersPage() {
               },
               {
                 key: 'createdAt',
-                header: 'Since',
+                header: 'Desde',
                 render: (teacher) =>
-                  teacher.createdAt ? formatDate(teacher.createdAt) : 'n/a',
+                  teacher.createdAt ? formatDate(teacher.createdAt) : 'no disponible',
               },
             ]}
-            emptyMessage="No teachers yet. Create the first account above."
+            emptyMessage="Todavía no hay docentes. Cree la primera cuenta arriba."
             getRowKey={(teacher) => teacher.id}
             rows={teachers}
           />

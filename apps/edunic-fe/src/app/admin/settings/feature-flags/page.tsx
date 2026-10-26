@@ -30,7 +30,7 @@ export default function InstitutionFeatureFlagsPage() {
       setInstitution(institutionResult.data);
       setFlags(flagsResult.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load feature flags');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar las funcionalidades');
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ export default function InstitutionFeatureFlagsPage() {
         );
         await loadData();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unable to update feature flag');
+        setError(err instanceof Error ? err.message : 'No se pudo actualizar la funcionalidad');
       } finally {
         setBusyKey('');
       }
@@ -64,7 +64,7 @@ export default function InstitutionFeatureFlagsPage() {
     () => [
       {
         key: 'feature',
-        header: 'Feature',
+        header: 'Funcionalidad',
         render: (flag) => (
           <>
             <strong>{formatFeatureName(flag.key)}</strong>
@@ -74,16 +74,16 @@ export default function InstitutionFeatureFlagsPage() {
       },
       {
         key: 'status',
-        header: 'Status',
+        header: 'Estado',
         render: (flag) => (
           <span className={`badge ${flag.enabled ? 'badge-blue' : 'badge-red'}`}>
-            {flag.enabled ? 'enabled' : 'disabled'}
+            {flag.enabled ? 'habilitada' : 'deshabilitada'}
           </span>
         ),
       },
       {
         key: 'actions',
-        header: 'Actions',
+        header: 'Acciones',
         align: 'right',
         render: (flag) => (
           <div className="table-actions">
@@ -92,7 +92,7 @@ export default function InstitutionFeatureFlagsPage() {
               onClick={() => setFlag(flag.key, !flag.enabled)}
               variant={flag.enabled ? 'secondary' : 'primary'}
             >
-              {busyKey === flag.key ? 'Saving...' : flag.enabled ? 'Disable' : 'Enable'}
+              {busyKey === flag.key ? 'Guardando…' : flag.enabled ? 'Deshabilitar' : 'Habilitar'}
             </Button>
           </div>
         ),
@@ -105,23 +105,23 @@ export default function InstitutionFeatureFlagsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Feature flags</p>
-          <h1 className="page-title">{institution?.name ?? 'Feature flags'}</h1>
+          <p className="eyebrow">Funcionalidades</p>
+          <h1 className="page-title">{institution?.name ?? 'Funcionalidades'}</h1>
           <p className="body-copy">
-            Turn staged product capabilities on or off for this school.
+            Permite activar o desactivar funcionalidades del producto en preparación para este colegio.
           </p>
         </div>
         <ButtonLink href={`/admin/settings`} variant="secondary">
-          Back to institution
+          Volver al colegio
         </ButtonLink>
       </header>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
-      {loading ? <div className="empty-state body-copy">Loading feature flags...</div> : null}
+      {loading ? <div className="empty-state body-copy">Cargando funcionalidades…</div> : null}
       {!loading ? (
         <DataTable
           columns={columns}
-          emptyMessage="No feature flags are registered yet."
+          emptyMessage="Todavía no hay funcionalidades registradas."
           getRowKey={(flag) => flag.key}
           rows={flags}
         />
@@ -130,7 +130,25 @@ export default function InstitutionFeatureFlagsPage() {
   );
 }
 
+const featureNameLabels: Record<string, string> = {
+  billing_module: 'Facturación',
+  assignments_module: 'Tareas',
+  calendar_module: 'Calendario',
+  custom_fields: 'Campos personalizados',
+  messaging_module: 'Mensajería',
+  parent_portal: 'Portal de familias',
+  reports_pdf: 'Informes PDF',
+  teacher_gradebook: 'Libreta del docente',
+  email_notifications: 'Notificaciones por correo',
+};
+
 function formatFeatureName(key: string) {
+  const label = featureNameLabels[key];
+
+  if (label) {
+    return label;
+  }
+
   return key
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))

@@ -3,18 +3,18 @@ import Link from 'next/link';
 const sections = [
   {
     href: '/admin/login',
-    title: 'Administration',
-    text: 'Students, staff, subjects, reports and payments.',
+    title: 'Administración',
+    text: 'Estudiantes, personal, materias, informes y pagos.',
   },
   {
     href: '/teachers/login',
-    title: 'Teachers',
-    text: 'Attendance, grades and classroom updates.',
+    title: 'Docentes',
+    text: 'Asistencia, calificaciones y novedades del aula.',
   },
   {
     href: '/parents/login',
-    title: 'Families',
-    text: 'Grades, attendance and notices for your children.',
+    title: 'Familias',
+    text: 'Calificaciones, asistencia y avisos de tus hijos.',
   },
 ];
 
@@ -22,8 +22,8 @@ export default function Home() {
   return (
     <main className="portal-page">
       <section className="portal-hero">
-        <h1 className="page-title">Sign in to Edunic</h1>
-        <p className="body-copy">Choose the portal for your account.</p>
+        <h1 className="page-title">Iniciar sesión</h1>
+        <p className="body-copy">Elige el portal de tu cuenta.</p>
       </section>
 
       <div className="portal-grid">

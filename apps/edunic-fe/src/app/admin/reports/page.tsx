@@ -23,9 +23,9 @@ import {
 const HISTORY_PAGE_SIZE = 20;
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
-  academic_summary: 'Academic summary',
-  academic_summary_pdf: 'Academic summary (PDF)',
-  grades_csv: 'Grades (CSV)',
+  academic_summary: 'Resumen académico',
+  academic_summary_pdf: 'Resumen académico (PDF)',
+  grades_csv: 'Calificaciones (CSV)',
 };
 
 // REP-01 / REP-02 / REP-03: the director downloads a student's academic
@@ -68,7 +68,7 @@ export default function AdminReportsPage() {
       setStudents(studentResult.data);
       setClassrooms(classroomResult.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load reports');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar los informes');
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export default function AdminReportsPage() {
       setHistoryHasMore(result.hasMore);
       setHistoryTotal(result.meta?.total ?? result.data.length);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load the report history');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar el historial de informes');
     }
   }
 
@@ -100,7 +100,7 @@ export default function AdminReportsPage() {
         setHistoryOffset(0);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to download the report');
+      setError(err instanceof Error ? err.message : 'No se pudo descargar el informe');
     } finally {
       setBusy('');
     }
@@ -130,10 +130,10 @@ export default function AdminReportsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Reports</p>
-          <h1 className="page-title">Reports and exports</h1>
+          <p className="eyebrow">Informes</p>
+          <h1 className="page-title">Informes y exportaciones</h1>
           <p className="body-copy">
-            Download academic summaries, export grades as CSV and review every export.
+            Descargue resúmenes académicos, exporte calificaciones en CSV y revise cada exportación.
           </p>
         </div>
       </header>
@@ -144,13 +144,13 @@ export default function AdminReportsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Export</p>
-              <h2 className="section-title">Grades as CSV</h2>
+              <p className="eyebrow">Exportar</p>
+              <h2 className="section-title">Calificaciones en CSV</h2>
             </div>
           </div>
           <div className="form">
             <FormField
-              label="School year"
+              label="Año escolar"
               max="2100"
               min="2000"
               name="reportYear"
@@ -159,9 +159,9 @@ export default function AdminReportsPage() {
               value={year}
             />
             <div className="form-field">
-              <label htmlFor="exportClassroom">Classroom</label>
+              <label htmlFor="exportClassroom">Aula</label>
               <select id="exportClassroom" onChange={(event) => setExportClassroomId(event.target.value)} value={exportClassroomId}>
-                <option value="">Whole school</option>
+                <option value="">Todo el colegio</option>
                 {classrooms.map((classroom) => (
                   <option key={classroom.id} value={classroom.id}>
                     {formatClassroom(classroom)}
@@ -170,9 +170,9 @@ export default function AdminReportsPage() {
               </select>
             </div>
             <div className="form-field">
-              <label htmlFor="exportStudent">Student</label>
+              <label htmlFor="exportStudent">Estudiante</label>
               <select id="exportStudent" onChange={(event) => setExportStudentId(event.target.value)} value={exportStudentId}>
-                <option value="">Every student</option>
+                <option value="">Todos los estudiantes</option>
                 {students.map((student) => (
                   <option key={student.id} value={student.id}>
                     {student.fullName}
@@ -181,7 +181,7 @@ export default function AdminReportsPage() {
               </select>
             </div>
             <Button disabled={!validYear || busy !== ''} onClick={exportCsv}>
-              {busy === 'csv' ? 'Exporting...' : 'Export CSV'}
+              {busy === 'csv' ? 'Exportando…' : 'Exportar CSV'}
             </Button>
           </div>
         </Card>
@@ -189,14 +189,14 @@ export default function AdminReportsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Academic summaries</p>
+              <p className="eyebrow">Resúmenes académicos</p>
               <h2 className="section-title">
-                {loading ? 'Loading' : `${students.length} students`} - {validYear ? yearNumber : 'pick a year'}
+                {loading ? 'Cargando' : `${students.length} estudiantes`} - {validYear ? yearNumber : 'elija un año'}
               </h2>
             </div>
           </div>
           {loading ? (
-            <PanelState message="Loading students..." tone="loading" />
+            <PanelState message="Cargando estudiantes…" tone="loading" />
           ) : (
             <div className="activity-list">
               {students.map((student) => (
@@ -204,19 +204,19 @@ export default function AdminReportsPage() {
                   <span className="activity-mark">{student.firstName.slice(0, 1)}</span>
                   <span>
                     <strong>{student.fullName}</strong>
-                    <p className="field-help">{student.dateOfBirth ?? 'No birth date'}</p>
+                    <p className="field-help">{student.dateOfBirth ?? 'Sin fecha de nacimiento'}</p>
                   </span>
                   <Button
                     disabled={!validYear || busy !== ''}
                     onClick={() => downloadPdf(student)}
                     variant="secondary"
                   >
-                    {busy === `pdf-${student.id}` ? 'Preparing...' : 'PDF'}
+                    {busy === `pdf-${student.id}` ? 'Preparando…' : 'PDF'}
                   </Button>
                 </article>
               ))}
               {students.length === 0 ? (
-                <div className="empty-state body-copy">No students yet.</div>
+                <div className="empty-state body-copy">Todavía no hay estudiantes.</div>
               ) : null}
             </div>
           )}
@@ -226,9 +226,9 @@ export default function AdminReportsPage() {
       <section className="card section-stack">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">History</p>
+            <p className="eyebrow">Historial</p>
             <h2 className="section-title">
-              {historyTotal} {historyTotal === 1 ? 'export' : 'exports'}
+              {historyTotal} {historyTotal === 1 ? 'exportación' : 'exportaciones'}
             </h2>
           </div>
         </div>
@@ -236,18 +236,18 @@ export default function AdminReportsPage() {
           columns={[
             {
               key: 'when',
-              header: 'When',
+              header: 'Cuándo',
               render: (entry) => (entry.createdAt ? formatDate(entry.createdAt) : '-'),
             },
-            { key: 'student', header: 'Student', render: (entry) => <strong>{entry.studentName}</strong> },
+            { key: 'student', header: 'Estudiante', render: (entry) => <strong>{entry.studentName}</strong> },
             {
               key: 'type',
-              header: 'Report',
+              header: 'Informe',
               render: (entry) => REPORT_TYPE_LABELS[entry.reportType] ?? entry.reportType,
             },
-            { key: 'year', header: 'Year', align: 'right', render: (entry) => entry.year },
+            { key: 'year', header: 'Año', align: 'right', render: (entry) => entry.year },
           ]}
-          emptyMessage="No exports yet."
+          emptyMessage="Todavía no hay exportaciones."
           getRowKey={(entry) => entry.id}
           rows={history}
         />
@@ -257,14 +257,14 @@ export default function AdminReportsPage() {
             onClick={() => setHistoryOffset(Math.max(0, historyOffset - HISTORY_PAGE_SIZE))}
             variant="secondary"
           >
-            Newer
+            Más recientes
           </Button>
           <Button
             disabled={!historyHasMore}
             onClick={() => setHistoryOffset(historyOffset + HISTORY_PAGE_SIZE)}
             variant="secondary"
           >
-            Older
+            Más antiguas
           </Button>
         </div>
       </section>
