@@ -36,75 +36,59 @@ describe('student academic summary ownership', () => {
   // Two classrooms, one student in each. The parent is linked to the first
   // student and the teacher teaches the first classroom only.
   async function createSchool() {
-    const institution = await createInstitutionFixture();
-    const myClassroom = await createClassroomFixture({
-      institutionId: institution.id,
-    });
+    await createInstitutionFixture();
+    const myClassroom = await createClassroomFixture({});
     const otherClassroom = await createClassroomFixture({
-      institutionId: institution.id,
       section: 'B',
     });
-    const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
-    });
+    const period = await createAcademicPeriodFixture({});
 
     const myStudent = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'Jane',
       lastName: 'Doe',
     });
     const otherStudent = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'John',
       lastName: 'Roe',
     });
     await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: myStudent.id,
       academicPeriodId: period.id,
       classroomId: myClassroom.id,
     });
     await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: otherStudent.id,
       academicPeriodId: period.id,
       classroomId: otherClassroom.id,
     });
 
-    const guardian = await createGuardianFixture({
-      institutionId: institution.id,
-    });
+    const guardian = await createGuardianFixture({});
     await db.insert(studentGuardians).values({
       studentId: myStudent.id,
       guardianId: guardian.id,
     });
     const parent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: institution.id,
       guardianId: guardian.id,
       userId: parent.id,
     });
 
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     await createTeacherClassroomAssignmentFixture({
-      institutionId: institution.id,
       teacherUserId: teacher.id,
       classroomId: myClassroom.id,
     });
 
     const director = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
     const headersFor = (userId: string) =>
-      createAuthHeaders({ userId, institutionId: institution.id });
+      createAuthHeaders({ userId });
 
     return {
       myStudent,

@@ -23,7 +23,7 @@ import {
 // Assignments, school events and messages (ASG-01, EVT-02, ROLE-04, PAR-04):
 // a teacher writes and reads only their own classrooms, a parent reads only
 // their own children's classrooms, and messages are private to the sender and
-// the recipient. The responses carry no institutionId (AUTH-05).
+// the recipient. The responses name no school (AUTH-05).
 describe('workflows scoping', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let client: ReturnType<typeof createHttpClient>;
@@ -44,69 +44,53 @@ describe('workflows scoping', () => {
   // One school, two classrooms: the teacher teaches "mine" and the parent has a
   // child enrolled there. A second teacher and a stray parent own nothing.
   async function createSchool() {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const mine = await createClassroomFixture({
-      institutionId: institution.id,
       gradeLevel: 5,
       section: 'A',
     });
     const other = await createClassroomFixture({
-      institutionId: institution.id,
       gradeLevel: 6,
       section: 'B',
     });
-    const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
-    });
-    const student = await createStudentFixture({
-      institutionId: institution.id,
-    });
+    const period = await createAcademicPeriodFixture({});
+    const student = await createStudentFixture({});
     await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
       classroomId: mine.id,
     });
-    const guardian = await createGuardianFixture({
-      institutionId: institution.id,
-    });
+    const guardian = await createGuardianFixture({});
     await db
       .insert(studentGuardians)
       .values({ studentId: student.id, guardianId: guardian.id });
 
     const parent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: institution.id,
       guardianId: guardian.id,
       userId: parent.id,
     });
     const strayParent = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     await createTeacherClassroomAssignmentFixture({
-      institutionId: institution.id,
       teacherUserId: teacher.id,
       classroomId: mine.id,
     });
     const otherTeacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     const admin = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
     const headersFor = (userId: string) =>
-      createAuthHeaders({ userId, institutionId: institution.id });
+      createAuthHeaders({ userId });
 
     return {
       mine,
@@ -145,7 +129,7 @@ describe('workflows scoping', () => {
     const titles = (body: { data: { title: string }[] }) =>
       body.data.map((row) => row.title).sort();
 
-    it('creates an assignment without exposing institutionId and notifies', async () => {
+    it('creates an assignment without exposing a school field and notifies', async () => {
       const school = await createSchool();
 
       const response = await client
@@ -231,7 +215,7 @@ describe('workflows scoping', () => {
       expect(allowed.body.data).not.toHaveProperty('institutionId');
     });
 
-    it('scopes the list by caller and omits institutionId', async () => {
+    it('scopes the list by caller and omits the school field', async () => {
       const school = await seedAssignments();
 
       const admin = await client.get('/assignments').set(school.adminHeaders);
@@ -271,7 +255,7 @@ describe('workflows scoping', () => {
     const titles = (body: { data: { title: string }[] }) =>
       body.data.map((row) => row.title).sort();
 
-    it('creates an event without exposing institutionId and notifies', async () => {
+    it('creates an event without exposing a school field and notifies', async () => {
       const school = await createSchool();
 
       const response = await client
@@ -321,7 +305,7 @@ describe('workflows scoping', () => {
       expect(admin.status).toBe(201);
     });
 
-    it('scopes the list by caller and omits institutionId', async () => {
+    it('scopes the list by caller and omits the school field', async () => {
       const school = await seedEvents();
 
       const admin = await client.get('/school-events').set(school.adminHeaders);

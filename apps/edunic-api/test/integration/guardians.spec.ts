@@ -28,15 +28,13 @@ describe('guardians routes', () => {
   });
 
   it('supports guardian CRUD and student linking for admin users', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
+    const student = await createStudentFixture({});
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     const createResponse = await client.post('/guardians').set(headers).send({
@@ -95,9 +93,8 @@ describe('guardians routes', () => {
   });
 
   it('prevents parent users from mutating guardians', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const parentUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
 
@@ -106,7 +103,6 @@ describe('guardians routes', () => {
       .set(
         await createAuthHeaders({
           userId: parentUser.id,
-          institutionId: institution.id,
         })
       )
       .send({
@@ -117,14 +113,12 @@ describe('guardians routes', () => {
   });
 
   it('persists a guardian email and reads it back', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     const createResponse = await client.post('/guardians').set(headers).send({
@@ -153,18 +147,14 @@ describe('guardians routes', () => {
   });
 
   it('rejects malformed guardian emails on create and update', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
-    const guardian = await createGuardianFixture({
-      institutionId: institution.id,
-    });
+    const guardian = await createGuardianFixture({});
 
     const createResponse = await client.post('/guardians').set(headers).send({
       name: 'Maria Lopez',
@@ -188,14 +178,12 @@ describe('guardians routes', () => {
   });
 
   it('normalises blank guardian emails to null', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
 
     const blankCreateResponse = await client
@@ -231,26 +219,23 @@ describe('guardians routes', () => {
   // Reading a guardian is scoped to the family of the parent (PAR-04): the
   // guardian must be linked to one of the parent's own children.
   it('allows parent users to read the guardians of their own children', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const parentUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'parent',
     });
-    const student = await createStudentFixture({ institutionId: institution.id });
-    const guardian = await createGuardianFixture({ institutionId: institution.id });
-    const unrelated = await createGuardianFixture({ institutionId: institution.id });
+    const student = await createStudentFixture({});
+    const guardian = await createGuardianFixture({});
+    const unrelated = await createGuardianFixture({});
     await db.insert(studentGuardians).values({
       studentId: student.id,
       guardianId: guardian.id,
     });
     await db.insert(guardianUserLinks).values({
-      institutionId: institution.id,
       guardianId: guardian.id,
       userId: parentUser.id,
     });
     const headers = await createAuthHeaders({
       userId: parentUser.id,
-      institutionId: institution.id,
     });
 
     const own = await client.get(`/guardians/${guardian.id}`).set(headers);

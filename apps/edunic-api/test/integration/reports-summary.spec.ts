@@ -30,45 +30,37 @@ describe('student academic summary content', () => {
   });
 
   async function createGradedStudent() {
-    const institution = await createInstitutionFixture();
-    const period = await createAcademicPeriodFixture({
-      institutionId: institution.id,
-    });
+    await createInstitutionFixture();
+    const period = await createAcademicPeriodFixture({});
     const student = await createStudentFixture({
-      institutionId: institution.id,
       firstName: 'Jane',
       lastName: 'Doe',
     });
     const enrollment = await createEnrollmentFixture({
-      institutionId: institution.id,
       studentId: student.id,
       academicPeriodId: period.id,
     });
     await createGradeFixture({
-      institutionId: institution.id,
       enrollmentId: enrollment.id,
       subject: 'Science',
       score: 80,
     });
     await createGradeFixture({
-      institutionId: institution.id,
       enrollmentId: enrollment.id,
       subject: 'Science',
       score: 100,
     });
     const director = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
     const headers = await createAuthHeaders({
       userId: director.id,
-      institutionId: institution.id,
     });
 
     return { student, headers };
   }
 
-  it('returns the summary without institutionId and keeps the materia name', async () => {
+  it('returns the summary without a school field and keeps the materia name', async () => {
     const { student, headers } = await createGradedStudent();
 
     const response = await client

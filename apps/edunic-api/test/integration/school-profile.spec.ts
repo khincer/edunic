@@ -24,17 +24,14 @@ describe('school profile routes', () => {
   });
 
   async function createAdmin() {
-    const institution = await createInstitutionFixture('Colegio Central');
+    await createInstitutionFixture('Colegio Central');
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
     return {
-      institution,
       headers: await createAuthHeaders({
         userId: adminUser.id,
-        institutionId: institution.id,
       }),
     };
   }
@@ -51,14 +48,12 @@ describe('school profile routes', () => {
   });
 
   it('keeps the profile away from a teacher', async () => {
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const teacher = await createUserFixture({
-      institutionId: institution.id,
       role: 'teacher',
     });
     const headers = await createAuthHeaders({
       userId: teacher.id,
-      institutionId: institution.id,
     });
 
     const response = await client.get('/school-profile').set(headers);

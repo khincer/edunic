@@ -20,7 +20,6 @@ import {
 describe('list pagination conventions', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let client: ReturnType<typeof createHttpClient>;
-  let institutionId: string;
   let headers: Record<string, string>;
 
   beforeAll(async () => {
@@ -31,16 +30,13 @@ describe('list pagination conventions', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
-    institutionId = institution.id;
     headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
   });
 
@@ -58,7 +54,7 @@ describe('list pagination conventions', () => {
     ];
 
     for (const name of names) {
-      await createStudentFixture({ institutionId, ...name });
+      await createStudentFixture({ ...name });
     }
 
     const collectedNames: string[] = [];
@@ -106,7 +102,7 @@ describe('list pagination conventions', () => {
     ];
 
     for (const name of names) {
-      await createStudentFixture({ institutionId, ...name });
+      await createStudentFixture({ ...name });
     }
 
     const legacy = await client
@@ -137,10 +133,9 @@ describe('list pagination conventions', () => {
   });
 
   it('applies the attendance stable order (date desc, id desc) across cursor pages', async () => {
-    const student = await createStudentFixture({ institutionId });
-    const period = await createAcademicPeriodFixture({ institutionId });
+    const student = await createStudentFixture({});
+    const period = await createAcademicPeriodFixture({});
     const enrollment = await createEnrollmentFixture({
-      institutionId,
       studentId: student.id,
       academicPeriodId: period.id,
     });
@@ -148,7 +143,6 @@ describe('list pagination conventions', () => {
     const dates = ['2026-03-01', '2026-03-02', '2026-03-03'];
     for (const date of dates) {
       await createAttendanceFixture({
-        institutionId,
         enrollmentId: enrollment.id,
         date: new Date(`${date}T00:00:00.000Z`),
       });
@@ -185,7 +179,7 @@ describe('list pagination conventions', () => {
     ];
 
     for (const name of names) {
-      await createStudentFixture({ institutionId, ...name });
+      await createStudentFixture({ ...name });
     }
 
     const filtered = await client
@@ -209,7 +203,7 @@ describe('list pagination conventions', () => {
 
   it('rejects filter fields outside the whitelist with a validation envelope', async () => {
     const response = await client
-      .get('/students?filter=institution_id:eq:whatever')
+      .get('/students?filter=password:eq:whatever')
       .set(headers);
 
     expect(response.status).toBe(400);
@@ -229,7 +223,6 @@ describe('list pagination conventions', () => {
 describe('cursor pagination for the remaining list modules', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let client: ReturnType<typeof createHttpClient>;
-  let institutionId: string;
   let adminUserId: string;
   let headers: Record<string, string>;
 
@@ -241,17 +234,14 @@ describe('cursor pagination for the remaining list modules', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
-    institutionId = institution.id;
     adminUserId = adminUser.id;
     headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
   });
 
@@ -312,7 +302,7 @@ describe('cursor pagination for the remaining list modules', () => {
 
         for (const year of [2021, 2022, 2023, 2024, 2025]) {
           created.push(
-            await createAcademicPeriodFixture({ institutionId, year, term: 1 })
+            await createAcademicPeriodFixture({ year, term: 1 })
           );
         }
 
@@ -331,7 +321,6 @@ describe('cursor pagination for the remaining list modules', () => {
         for (const second of [1, 2, 3, 4, 5]) {
           created.push(
             await createAuditLogFixture({
-              institutionId,
               entity: second % 2 === 1 ? 'students' : 'grades',
               // Distinct createdAt values: the cursor only carries millisecond
               // precision, so same-millisecond rows would fall out of the keyset.
@@ -353,7 +342,7 @@ describe('cursor pagination for the remaining list modules', () => {
 
         for (const gradeLevel of [1, 2, 3, 4, 5]) {
           created.push(
-            await createClassroomFixture({ institutionId, gradeLevel })
+            await createClassroomFixture({ gradeLevel })
           );
         }
 
@@ -414,7 +403,7 @@ describe('cursor pagination for the remaining list modules', () => {
 
         // Seeded in name order: the stable order is name asc, id asc.
         for (const name of ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Echo']) {
-          created.push(await createGuardianFixture({ institutionId, name }));
+          created.push(await createGuardianFixture({ name }));
         }
 
         return { count: 5, stableOrderIds: created.map((row) => row.id) };
@@ -433,7 +422,6 @@ describe('cursor pagination for the remaining list modules', () => {
         for (const second of [1, 2, 3, 4, 5]) {
           created.push(
             await createNotificationFixture({
-              institutionId,
               eventName:
                 second % 2 === 1 ? 'enrollment.created' : 'grade.submitted',
               createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
@@ -457,7 +445,6 @@ describe('cursor pagination for the remaining list modules', () => {
         for (const second of [1, 2, 3, 4, 5]) {
           created.push(
             await createAssignmentFixture({
-              institutionId,
               title: `Assignment ${second}`,
               createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
             })
@@ -477,7 +464,6 @@ describe('cursor pagination for the remaining list modules', () => {
         for (const second of [1, 2, 3, 4, 5]) {
           created.push(
             await createSchoolEventFixture({
-              institutionId,
               title: `Event ${second}`,
               createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
             })
@@ -499,7 +485,6 @@ describe('cursor pagination for the remaining list modules', () => {
         for (const second of [1, 2, 3, 4, 5]) {
           created.push(
             await createMessageFixture({
-              institutionId,
               senderUserId: adminUserId,
               subject: `Thread ${second}`,
               createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, second)),
@@ -580,7 +565,7 @@ describe('cursor pagination for the remaining list modules', () => {
 
       // Fields outside the whitelist never reach SQL construction.
       const unsupported = await client
-        .get(`${listCase.path}?filter=institution_id:eq:whatever`)
+        .get(`${listCase.path}?filter=password:eq:whatever`)
         .set(headers);
 
       expect(unsupported.status).toBe(400);

@@ -23,7 +23,6 @@ async function countRows(tableName: 'students' | 'enrollments') {
 describe('pre-service validation contract (P2-R2)', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
   let client: ReturnType<typeof createHttpClient>;
-  let institutionId: string;
   let headers: Record<string, string>;
 
   beforeAll(async () => {
@@ -34,16 +33,13 @@ describe('pre-service validation contract (P2-R2)', () => {
   beforeEach(async () => {
     await resetTestDatabase();
 
-    const institution = await createInstitutionFixture();
+    await createInstitutionFixture();
     const adminUser = await createUserFixture({
-      institutionId: institution.id,
       role: 'director',
     });
 
-    institutionId = institution.id;
     headers = await createAuthHeaders({
       userId: adminUser.id,
-      institutionId: institution.id,
     });
   });
 
@@ -96,7 +92,7 @@ describe('pre-service validation contract (P2-R2)', () => {
         ])
       );
 
-      const student = await createStudentFixture({ institutionId });
+      const student = await createStudentFixture({});
       const invalidBody = await client
         .patch(`/students/${student.id}`)
         .set(headers)
@@ -128,9 +124,9 @@ describe('pre-service validation contract (P2-R2)', () => {
   });
 
   it('rejects an invalid enrollment body with details and persists nothing', async () => {
-    const student = await createStudentFixture({ institutionId });
-    const period = await createAcademicPeriodFixture({ institutionId });
-    const classroom = await createClassroomFixture({ institutionId });
+    const student = await createStudentFixture({});
+    const period = await createAcademicPeriodFixture({});
+    const classroom = await createClassroomFixture({});
 
     const response = await client
       .post('/enrollments')
