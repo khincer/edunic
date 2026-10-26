@@ -236,3 +236,21 @@ describe('OpenAPI document (classroom activity)', () => {
     ]);
   });
 });
+
+describe('OpenAPI document (extension refusals)', () => {
+  // Every extension route is administration-only and validates its input.
+  it.each([
+    ['/extensions', 'get'],
+    ['/extensions', 'post'],
+    ['/extensions/{extensionKey}', 'patch'],
+    ['/extensions/{extensionKey}/config', 'put'],
+    ['/extensions/{extensionKey}/config', 'delete'],
+  ])('%s %s documents 400 and 403', (path, method) => {
+    expect(operation(path, method).responses['400']).toEqual({
+      $ref: '#/components/responses/BadRequest',
+    });
+    expect(operation(path, method).responses['403']).toEqual({
+      $ref: '#/components/responses/Forbidden',
+    });
+  });
+});

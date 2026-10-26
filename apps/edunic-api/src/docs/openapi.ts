@@ -1,3 +1,9 @@
+import {
+  administrationPaths,
+  administrationTags,
+  operationsPaths,
+} from './openapi-administration.js';
+
 const studentSchema = {
   type: 'object',
   required: ['id', 'firstName', 'lastName', 'fullName'],
@@ -845,6 +851,7 @@ export function buildOpenApiDocument() {
       { name: 'Health', description: 'Service health endpoints' },
       { name: 'School', description: 'The school profile' },
       { name: 'Students', description: 'Student CRUD endpoints' },
+      ...administrationTags,
     ],
     paths: {
       '/dashboard/admin': {
@@ -1262,6 +1269,7 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            400: { $ref: '#/components/responses/BadRequest' },
             401: { $ref: '#/components/responses/Unauthorized' },
             403: { $ref: '#/components/responses/Forbidden' },
           },
@@ -1298,6 +1306,8 @@ export function buildOpenApiDocument() {
               },
             },
             400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
             409: { $ref: '#/components/responses/Conflict' },
           },
         },
@@ -1340,6 +1350,9 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/NotFound' },
           },
         },
@@ -1381,6 +1394,9 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/NotFound' },
           },
         },
@@ -1407,6 +1423,9 @@ export function buildOpenApiDocument() {
                 },
               },
             },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
             404: { $ref: '#/components/responses/NotFound' },
           },
         },
@@ -3986,6 +4005,8 @@ export function buildOpenApiDocument() {
           },
         },
       },
+      ...administrationPaths,
+      ...operationsPaths,
     },
     components: {
       securitySchemes: {
