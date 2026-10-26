@@ -9,15 +9,12 @@ import { FormField, TextAreaField } from '@/components/form-field';
 import { PanelState } from '@/components/panel-state';
 import {
   apiRequest,
+  formatCents,
   type ApiSingleResponse,
   type ParentDashboard,
 } from '@/lib/api';
 import { API_BASE_URL } from '@/lib/config';
 import { clearSession, getSession, type AdminSession } from '@/lib/auth';
-
-function formatCents(cents: number) {
-  return `Q${(cents / 100).toFixed(2)}`;
-}
 
 export default function ParentsPage() {
   const router = useRouter();

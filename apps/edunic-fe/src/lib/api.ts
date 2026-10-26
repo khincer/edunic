@@ -541,9 +541,9 @@ export type Payment = {
   createdAt: string | null;
 };
 
-// Amounts are stored in cents; the school bills in quetzales.
+// Amounts are stored in cents; the school bills in Nicaraguan córdobas.
 export function formatCents(cents: number) {
-  return `Q${(cents / 100).toFixed(2)}`;
+  return `C$${(cents / 100).toFixed(2)}`;
 }
 
 // Downloads an authenticated file (PDF, CSV) the API answers with.

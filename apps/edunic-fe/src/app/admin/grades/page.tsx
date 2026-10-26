@@ -152,7 +152,7 @@ export default function AdminGradesPage() {
                 ))}
               </select>
             </label>
-            <FormField label="Nota" max={100} min={0} name="score" onChange={(event) => setScore(event.target.value)} type="number" value={score} />
+            <FormField label="Calificación" max={100} min={0} name="score" onChange={(event) => setScore(event.target.value)} type="number" value={score} />
             <Button disabled={saving || !enrollmentId.trim() || !newSubjectId} onClick={() => void createGrade()}>
               {saving ? 'Enviando…' : 'Enviar calificación'}
             </Button>

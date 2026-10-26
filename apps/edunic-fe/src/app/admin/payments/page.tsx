@@ -206,7 +206,7 @@ export default function AdminPaymentsPage() {
             <FormField label="Concepto" name="paymentConcept" onChange={(event) => setConcept(event.target.value)} value={concept} />
             <FormField
               inputMode="decimal"
-              label="Monto (Q)"
+              label="Monto (C$)"
               min="0.01"
               name="paymentAmount"
               onChange={(event) => setAmount(event.target.value)}
