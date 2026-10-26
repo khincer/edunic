@@ -32,8 +32,6 @@ export type UserRole =
 
 // Fixtures never write the school into a row: the single_school_id() default of
 // migration 0014 fills it in, so a school must exist (createInstitutionFixture).
-// The optional school parameter on every fixture is deprecated and ignored; it
-// stays only until S1.8a part 2 migrates the remaining specs, then it is removed.
 let idCounter = 1;
 
 function nextId(prefix: string) {
@@ -54,7 +52,6 @@ export async function createInstitutionFixture(name = 'Test Institution') {
 }
 
 export async function createStudentFixture(input: {
-  institutionId?: string;
   firstName?: string;
   lastName?: string;
   dateOfBirth?: string | null;
@@ -73,7 +70,6 @@ export async function createStudentFixture(input: {
 }
 
 export async function createGuardianFixture(input: {
-  institutionId?: string;
   name?: string;
   phone?: string | null;
   email?: string | null;
@@ -92,7 +88,6 @@ export async function createGuardianFixture(input: {
 }
 
 export async function createUserFixture(input: {
-  institutionId?: string;
   role: UserRole;
   email?: string;
   password?: string;
@@ -124,7 +119,6 @@ export async function createUserFixture(input: {
 }
 
 export async function createAcademicPeriodFixture(input: {
-  institutionId?: string;
   year?: number;
   term?: number;
   startDate?: Date | null;
@@ -145,7 +139,6 @@ export async function createAcademicPeriodFixture(input: {
 }
 
 export async function createClassroomFixture(input: {
-  institutionId?: string;
   gradeLevel?: number;
   section?: string | null;
 }) {
@@ -162,7 +155,6 @@ export async function createClassroomFixture(input: {
 }
 
 export async function createTeacherClassroomAssignmentFixture(input: {
-  institutionId?: string;
   teacherUserId: string;
   classroomId: string;
 }) {
@@ -179,7 +171,6 @@ export async function createTeacherClassroomAssignmentFixture(input: {
 }
 
 export async function createEnrollmentFixture(input: {
-  institutionId?: string;
   studentId: string;
   academicPeriodId: string;
   classroomId?: string | null;
@@ -236,7 +227,6 @@ export async function createClassroomSubjectFixture(
 }
 
 export async function createGradeFixture(input: {
-  institutionId?: string;
   enrollmentId: string;
   subject?: string;
   score?: number;
@@ -257,7 +247,6 @@ export async function createGradeFixture(input: {
 }
 
 export async function createAttendanceFixture(input: {
-  institutionId?: string;
   enrollmentId: string;
   date?: Date;
   status?: 'present' | 'absent' | 'late';
@@ -276,7 +265,6 @@ export async function createAttendanceFixture(input: {
 }
 
 export async function createAuditLogFixture(input: {
-  institutionId?: string;
   entity?: string;
   action?: string;
   createdAt?: Date;
@@ -295,7 +283,6 @@ export async function createAuditLogFixture(input: {
 }
 
 export async function createAssignmentFixture(input: {
-  institutionId?: string;
   title?: string;
   dueDate?: Date | null;
   createdAt?: Date;
@@ -316,7 +303,6 @@ export async function createAssignmentFixture(input: {
 }
 
 export async function createSchoolEventFixture(input: {
-  institutionId?: string;
   title?: string;
   startsAt?: Date;
   createdAt?: Date;
@@ -336,7 +322,6 @@ export async function createSchoolEventFixture(input: {
 }
 
 export async function createMessageFixture(input: {
-  institutionId?: string;
   senderUserId: string;
   subject?: string;
   body?: string;
@@ -366,7 +351,6 @@ export async function createMessageFixture(input: {
 }
 
 export async function createNotificationFixture(input: {
-  institutionId?: string;
   eventName?: string;
   title?: string;
   createdAt?: Date;
