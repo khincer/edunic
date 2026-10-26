@@ -10,6 +10,8 @@ import {
   FileText,
   GraduationCap,
   LayoutDashboard,
+  Library,
+  Wallet,
   UsersRound,
   Workflow,
   type LucideIcon,
@@ -39,6 +41,8 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/admin/dashboard', group: 'Workspace', icon: LayoutDashboard },
   { label: 'School', href: '/admin/settings', group: 'Workspace', icon: Building2 },
   { label: 'Teachers', href: '/admin/teachers', group: 'Workspace', icon: GraduationCap },
+  { label: 'Subjects', href: '/admin/subjects', group: 'Workspace', icon: Library },
+  { label: 'Payments', href: '/admin/payments', group: 'Workspace', icon: Wallet },
   { label: 'Notifications', href: '/admin/notifications', group: 'Workspace', icon: Bell },
   { label: 'Students', href: '/admin/students', group: 'Roadmap', icon: UsersRound },
   { label: 'Enrollments', href: '/admin/enrollments', group: 'Roadmap', icon: ClipboardList },
@@ -204,6 +208,14 @@ function getPageLabel(pathname: string) {
 
   if (pathname.startsWith('/admin/teachers')) {
     return 'Teachers';
+  }
+
+  if (pathname.startsWith('/admin/subjects')) {
+    return 'Subjects';
+  }
+
+  if (pathname.startsWith('/admin/payments')) {
+    return 'Payments';
   }
 
   if (pathname.startsWith('/admin/notifications')) {

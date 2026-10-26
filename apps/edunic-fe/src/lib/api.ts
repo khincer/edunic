@@ -505,3 +505,53 @@ export function formatClassroom(classroom: { gradeLevel: number; section: string
     ? `Grade ${classroom.gradeLevel} ${classroom.section}`
     : `Grade ${classroom.gradeLevel}`;
 }
+
+export type Topic = {
+  id: string;
+  subjectId: string;
+  name: string;
+  createdAt: string | null;
+};
+
+export type PaymentStatus = 'pending' | 'paid' | 'cancelled';
+
+export type Payment = {
+  id: string;
+  studentId: string;
+  concept: string;
+  amountCents: number;
+  dueDate: string | null;
+  paidAt: string | null;
+  method: string;
+  status: PaymentStatus;
+  receiptNumber: string;
+  recordedByUserId: string;
+  note: string | null;
+  createdAt: string | null;
+};
+
+// Amounts are stored in cents; the school bills in quetzales.
+export function formatCents(cents: number) {
+  return `Q${(cents / 100).toFixed(2)}`;
+}
+
+// Downloads an authenticated file (PDF, CSV) the API answers with.
+export async function downloadFile(path: string, filename: string) {
+  const session = getSession();
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: session?.token ? { Authorization: `Bearer ${session.token}` } : {},
+  });
+
+  if (!response.ok) {
+    const payload = await readPayload(response);
+    throw new ApiError(getErrorMessage(payload), response.status, payload);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.URL.revokeObjectURL(url);
+}
