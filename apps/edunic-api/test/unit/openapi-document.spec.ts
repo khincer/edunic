@@ -154,3 +154,32 @@ describe('OpenAPI document (attendance conflicts)', () => {
     });
   });
 });
+
+describe('OpenAPI document (report history)', () => {
+  it('documents GET /reports/history with its filters, page and refusals', () => {
+    const history = operation('/reports/history', 'get') as Operation & {
+      parameters: { name: string }[];
+    };
+
+    expect(history.parameters.map((p) => p.name)).toEqual(
+      expect.arrayContaining(['studentId', 'year', 'cursor', 'limit', 'offset'])
+    );
+    const item =
+      history.responses['200'].content['application/json'].schema.properties.data
+        .items;
+    expect(Object.keys(item.properties).sort()).toEqual(
+      [
+        'createdAt',
+        'createdByUserId',
+        'id',
+        'reportType',
+        'studentId',
+        'studentName',
+        'year',
+      ].sort()
+    );
+    for (const status of ['400', '401', '403']) {
+      expect(history.responses[status]).toBeDefined();
+    }
+  });
+});
