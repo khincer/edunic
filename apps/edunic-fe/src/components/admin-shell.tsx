@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Activity,
   Bell,
   BookOpenCheck,
   Building2,
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { label: 'Teachers', href: '/admin/teachers', group: 'Workspace', icon: GraduationCap },
   { label: 'Subjects', href: '/admin/subjects', group: 'Workspace', icon: Library },
   { label: 'Payments', href: '/admin/payments', group: 'Workspace', icon: Wallet },
+  { label: 'Classroom activity', href: '/admin/activity', group: 'Workspace', icon: Activity },
   { label: 'Notifications', href: '/admin/notifications', group: 'Workspace', icon: Bell },
   { label: 'Students', href: '/admin/students', group: 'Roadmap', icon: UsersRound },
   { label: 'Enrollments', href: '/admin/enrollments', group: 'Roadmap', icon: ClipboardList },
@@ -216,6 +218,10 @@ function getPageLabel(pathname: string) {
 
   if (pathname.startsWith('/admin/payments')) {
     return 'Payments';
+  }
+
+  if (pathname.startsWith('/admin/activity')) {
+    return 'Classroom activity';
   }
 
   if (pathname.startsWith('/admin/notifications')) {

@@ -555,3 +555,61 @@ export async function downloadFile(path: string, filename: string) {
   link.click();
   window.URL.revokeObjectURL(url);
 }
+
+export type ReportHistoryEntry = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  year: number;
+  reportType: string;
+  createdByUserId: string | null;
+  createdAt: string | null;
+};
+
+export type ReportHistoryPage = {
+  data: ReportHistoryEntry[];
+  hasMore: boolean;
+  meta?: { total?: number; limit: number; offset?: number };
+};
+
+export type ClassroomActivityItem = {
+  type: 'grade' | 'attendance' | 'assignment' | 'event';
+  id: string;
+  occurredAt: string;
+  studentId: string | null;
+  studentName: string | null;
+  summary: string;
+};
+
+export type ClassroomActivity = {
+  classroom: { id: string; gradeLevel: number; section: string | null };
+  since: string;
+  totals: {
+    activeStudents: number;
+    gradesRecorded: number;
+    gradeAverage: number | null;
+    attendanceMarked: number;
+    absences: number;
+    lates: number;
+    assignmentsCreated: number;
+    eventsScheduled: number;
+  };
+  recent: ClassroomActivityItem[];
+};
+
+export type ClassroomActivitySummary = {
+  since: string;
+  classrooms: Array<{
+    classroomId: string;
+    gradeLevel: number;
+    section: string | null;
+    teacherCount: number;
+    activeStudents: number;
+    gradesRecorded: number;
+    attendanceMarked: number;
+    absences: number;
+    assignmentsCreated: number;
+    eventsScheduled: number;
+    lastActivityAt: string | null;
+  }>;
+};
