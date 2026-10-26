@@ -49,11 +49,8 @@ export default function SchoolSettingsPage() {
         <div>
           <p className="eyebrow">School settings</p>
           <h1 className="page-title">
-            {institution?.name ?? (loading ? 'Loading school' : 'School')}
+            {institution?.name ?? (loading ? 'Loading school…' : 'School')}
           </h1>
-          <p className="body-copy">
-            Inspect the school record and open scoped operations.
-          </p>
         </div>
         <div className="button-row">
           <ButtonLink href="/admin/settings/edit" variant="secondary">
@@ -63,52 +60,48 @@ export default function SchoolSettingsPage() {
       </header>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
-      {loading ? <div className="empty-state body-copy">Loading school...</div> : null}
 
       {institution ? (
-        <>
-          <section className="grid grid-3">
-            <Card>
-              <p className="eyebrow">Record</p>
-              <p className="metric">Active</p>
-              <p className="body-copy">available for scoped operations</p>
-            </Card>
-            <Card>
-              <p className="eyebrow">Created</p>
-              <p className="metric metric-compact">
-                {formatDate(institution.createdAt)}
-              </p>
-              <p className="body-copy">school onboarding timestamp</p>
-            </Card>
-            <Card tone="soft">
-              <p className="eyebrow">Identifier</p>
-              <p className="body-copy break-value">
-                {institution.id}
-              </p>
-            </Card>
-          </section>
-
-          <section className="grid grid-2 section-stack">
-            <Card>
-              <p className="eyebrow">Operations</p>
-              <h2 className="section-title">Manage this school</h2>
-              <p className="body-copy">
-                Extension toggles, feature flags and audit trails for this school.
-              </p>
-              <div className="button-row">
-                <ButtonLink href="/admin/settings/extensions">
-                  Extensions
-                </ButtonLink>
-                <ButtonLink href="/admin/settings/feature-flags" variant="secondary">
-                  Feature flags
-                </ButtonLink>
-                <ButtonLink href="/admin/settings/audit-logs" variant="secondary">
-                  Audit logs
-                </ButtonLink>
+        <section className="grid grid-2">
+          <Card>
+            <h2 className="section-title">Details</h2>
+            <div className="timeline-list section-stack">
+              <div className="timeline-row">
+                <span>Name</span>
+                <strong>{institution.name}</strong>
               </div>
-            </Card>
-          </section>
-        </>
+              <div className="timeline-row">
+                <span>Sender name</span>
+                <strong>{institution.senderName || 'Not set'}</strong>
+              </div>
+              <div className="timeline-row">
+                <span>Reply-to email</span>
+                <strong className="break-value">{institution.replyToEmail || 'Not set'}</strong>
+              </div>
+              <div className="timeline-row">
+                <span>Created</span>
+                <strong>{formatDate(institution.createdAt)}</strong>
+              </div>
+            </div>
+          </Card>
+          <Card>
+            <h2 className="section-title">Configuration</h2>
+            <p className="body-copy">
+              Extensions, feature flags and the audit log for this school.
+            </p>
+            <div className="button-row">
+              <ButtonLink href="/admin/settings/extensions" variant="secondary">
+                Extensions
+              </ButtonLink>
+              <ButtonLink href="/admin/settings/feature-flags" variant="secondary">
+                Feature flags
+              </ButtonLink>
+              <ButtonLink href="/admin/settings/audit-logs" variant="secondary">
+                Audit log
+              </ButtonLink>
+            </div>
+          </Card>
+        </section>
       ) : null}
 
     </AdminShell>

@@ -4,6 +4,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   LayoutDashboard,
+  LogOut,
   Mail,
   Workflow,
 } from 'lucide-react';
@@ -58,14 +59,14 @@ export default function TeachersPage() {
   const [error, setError] = useState('');
   const [dashboardError, setDashboardError] = useState('');
   const [notice, setNotice] = useState('');
-  const [workflowTitle, setWorkflowTitle] = useState('Classroom practice set');
+  const [workflowTitle, setWorkflowTitle] = useState('');
   const [workflowType, setWorkflowType] = useState<'homework' | 'exam' | 'assignment'>('homework');
   const [workflowDueDate, setWorkflowDueDate] = useState(getLocalDateTime(2));
-  const [eventTitle, setEventTitle] = useState('Classroom review session');
+  const [eventTitle, setEventTitle] = useState('');
   const [eventStartsAt, setEventStartsAt] = useState(getLocalDateTime(3));
   const [recipientUserId, setRecipientUserId] = useState('');
-  const [messageSubject, setMessageSubject] = useState('Classroom update');
-  const [messageBody, setMessageBody] = useState('A quick note from the teacher workspace.');
+  const [messageSubject, setMessageSubject] = useState('');
+  const [messageBody, setMessageBody] = useState('');
   const [savingWorkflow, setSavingWorkflow] = useState('');
   const [activeSection, setActiveSection] = useState<'overview' | 'roster' | 'messages' | 'events' | 'publish'>('overview');
 
@@ -310,7 +311,7 @@ export default function TeachersPage() {
     return (
       <main className="teacher-app">
         <div className="teacher-content">
-          <section className="empty-state body-copy">Opening teacher workspace...</section>
+          <section className="empty-state body-copy">Opening teacher workspace…</section>
         </div>
       </main>
     );
@@ -474,8 +475,8 @@ export default function TeachersPage() {
           <div className="teacher-brand">
             <span className="teacher-brand-mark">E</span>
             <span>
-              <strong className="teacher-brand-title">Edunic Teacher</strong>
-              <span className="teacher-brand-subtitle">Teaching console</span>
+              <strong className="teacher-brand-title">Edunic</strong>
+              <span className="teacher-brand-subtitle">Teachers</span>
             </span>
           </div>
           <nav aria-label="Teacher navigation" className="teacher-nav">
@@ -488,7 +489,7 @@ export default function TeachersPage() {
                 type="button"
               >
                 <span className="teacher-nav-icon" aria-hidden="true">
-                  <LayoutDashboard size={16} strokeWidth={2.3} />
+                  <LayoutDashboard size={16} strokeWidth={2} />
                 </span>
                 Overview
               </button>
@@ -499,7 +500,7 @@ export default function TeachersPage() {
                 type="button"
               >
                 <span className="teacher-nav-icon" aria-hidden="true">
-                  <ClipboardCheck size={16} strokeWidth={2.3} />
+                  <ClipboardCheck size={16} strokeWidth={2} />
                 </span>
                 Roster
               </button>
@@ -510,7 +511,7 @@ export default function TeachersPage() {
                 type="button"
               >
                 <span className="teacher-nav-icon" aria-hidden="true">
-                  <Mail size={16} strokeWidth={2.3} />
+                  <Mail size={16} strokeWidth={2} />
                 </span>
                 Messages
               </button>
@@ -524,7 +525,7 @@ export default function TeachersPage() {
                 type="button"
               >
                 <span className="teacher-nav-icon" aria-hidden="true">
-                  <CalendarDays size={16} strokeWidth={2.3} />
+                  <CalendarDays size={16} strokeWidth={2} />
                 </span>
                 Events
               </button>
@@ -535,38 +536,34 @@ export default function TeachersPage() {
                 type="button"
               >
                 <span className="teacher-nav-icon" aria-hidden="true">
-                  <Workflow size={16} strokeWidth={2.3} />
+                  <Workflow size={16} strokeWidth={2} />
                 </span>
                 Publish work
               </button>
             </div>
           </nav>
           <div className="teacher-sidebar-footer">
-            <span className="body-copy">{session.user.email}</span>
-            <Button onClick={handleSignOut} variant="secondary">
-              Sign out
+            <span className="teacher-sidebar-user">
+              <strong>{session.user.email}</strong>
+              <span>{session.user.role.replace(/_/g, ' ')}</span>
+            </span>
+            <Button
+              aria-label="Sign out"
+              className="button-small"
+              onClick={handleSignOut}
+              title="Sign out"
+              variant="ghost"
+            >
+              <LogOut aria-hidden="true" size={16} strokeWidth={2} />
             </Button>
           </div>
         </aside>
 
         <section className="teacher-main">
-          <header className="teacher-topbar">
-            <div className="teacher-page-trail" aria-label="Current section">
-              <span>Teacher</span>
-              <strong>{sectionLabel[activeSection]}</strong>
-            </div>
-            <div className="teacher-user">
-              <span>
-                <strong>{session.user.email}</strong>
-                {session.user.role}
-              </span>
-              <Button onClick={handleSignOut} variant="secondary">
-                Sign out
-              </Button>
-            </div>
-          </header>
-
           <div className="teacher-content">
+            <header className="page-header">
+              <h1 className="page-title">{sectionLabel[activeSection]}</h1>
+            </header>
             {!canUseTeacherTools ? (
               <div className="alert alert-error">
                 This account cannot use teacher tools. Sign in as a teacher or admin.
@@ -696,7 +693,7 @@ export default function TeachersPage() {
                       ))}
                       {dashboard ? null : (
                         <PanelState
-                          message={dashboardError ? 'Academic risk data could not load.' : 'Loading risk signals...'}
+                          message={dashboardError ? 'Academic risk data could not load.' : 'Loading students at risk…'}
                           tone={dashboardError ? 'error' : 'loading'}
                         />
                       )}
@@ -938,7 +935,7 @@ export default function TeachersPage() {
                     <div className="panel-header">
                       <div>
                         <p className="eyebrow">Notifications</p>
-                        <h2 className="section-title">School signals</h2>
+                        <h2 className="section-title">Notifications</h2>
                       </div>
                     </div>
                     <div className="activity-list">
@@ -967,7 +964,7 @@ export default function TeachersPage() {
                         />
                       )}
                       {dashboard && dashboard.recentNotifications.length === 0 ? (
-                        <PanelState message="No school signals yet." />
+                        <PanelState message="No notifications." />
                       ) : null}
                     </div>
                   </article>

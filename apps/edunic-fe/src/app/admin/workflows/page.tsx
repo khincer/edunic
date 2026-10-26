@@ -32,17 +32,17 @@ export default function AdminWorkflowsPage() {
   const [assignments, setAssignments] = useState<WorkflowAssignment[]>([]);
   const [events, setEvents] = useState<WorkflowEvent[]>([]);
   const [messages, setMessages] = useState<WorkflowMessage[]>([]);
-  const [assignmentTitle, setAssignmentTitle] = useState('Demo homework packet');
+  const [assignmentTitle, setAssignmentTitle] = useState('');
   const [assignmentType, setAssignmentType] = useState<'assignment' | 'homework' | 'exam'>('homework');
   const [assignmentClassroomId, setAssignmentClassroomId] = useState('');
   const [assignmentDueDate, setAssignmentDueDate] = useState(getLocalDateTime(2));
-  const [eventTitle, setEventTitle] = useState('Family conference block');
+  const [eventTitle, setEventTitle] = useState('');
   const [eventType, setEventType] = useState('school');
   const [eventClassroomId, setEventClassroomId] = useState('');
   const [eventStartsAt, setEventStartsAt] = useState(getLocalDateTime(3));
   const [recipientUserId, setRecipientUserId] = useState('');
-  const [messageSubject, setMessageSubject] = useState('Workflow demo note');
-  const [messageBody, setMessageBody] = useState('This message was sent from the workflow console.');
+  const [messageSubject, setMessageSubject] = useState('');
+  const [messageBody, setMessageBody] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState('');
   const [error, setError] = useState('');
@@ -225,7 +225,7 @@ export default function AdminWorkflowsPage() {
         <div>
           <p className="eyebrow">Workflows</p>
           <h1 className="page-title">Assignments, calendar, and messaging</h1>
-          <p className="body-copy">Operate the non-billing demo workflows from one tenant-scoped console.</p>
+          <p className="body-copy">Publish assignments, schedule events and message families.</p>
         </div>
         <Button onClick={() => void loadWorkflowData()} variant="secondary">
           Refresh

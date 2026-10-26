@@ -86,7 +86,7 @@ export default function AdminAttendancePage() {
         <div>
           <p className="eyebrow">Attendance</p>
           <h1 className="page-title">Daily attendance marks</h1>
-          <p className="body-copy">Filter attendance and create demo marks through the existing API.</p>
+          <p className="body-copy">Filter attendance records and add marks.</p>
         </div>
       </header>
 

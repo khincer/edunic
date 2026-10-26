@@ -51,7 +51,7 @@ export function ActivityMark({ kind, label, tone = 'default' }: ActivityMarkProp
       data-tone={tone}
       role={label ? 'img' : undefined}
     >
-      <Icon size={18} strokeWidth={2.3} />
+      <Icon size={16} strokeWidth={2} />
     </span>
   );
 }

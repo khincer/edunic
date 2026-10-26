@@ -171,14 +171,7 @@ export default function ParentsPage() {
   if (!ready || !session) {
     return (
       <main className="portal-page">
-        <nav className="portal-topnav" aria-label="Parent section navigation">
-          <Link href="/">Edunic</Link>
-          <div>
-            <Link href="/admin/login">Admin</Link>
-            <Link href="/teachers/login">Teachers</Link>
-          </div>
-        </nav>
-        <section className="empty-state body-copy">Opening parent portal...</section>
+        <section className="empty-state body-copy">Opening the family portal…</section>
       </main>
     );
   }
@@ -199,20 +192,15 @@ export default function ParentsPage() {
       <nav className="portal-topnav" aria-label="Parent section navigation">
         <Link href="/">Edunic</Link>
         <div>
-          <Link href="/admin/login">Admin</Link>
-          <Link href="/teachers/login">Teachers</Link>
           <button className="link-button" onClick={handleSignOut} type="button">
             Sign out
           </button>
         </div>
       </nav>
 
-      <section className="portal-hero parent-hero">
-        <p className="eyebrow">Parent portal</p>
-        <h1 className="page-title">Family academic snapshot.</h1>
-        <p className="body-copy">
-          {session.user.email} is signed in.
-        </p>
+      <section className="portal-hero">
+        <h1 className="page-title">Your children</h1>
+        <p className="body-copy">Signed in as {session.user.email}</p>
       </section>
 
       {!canUseParentPortal ? (
@@ -230,22 +218,22 @@ export default function ParentsPage() {
             <article className="card metric-card">
               <p className="eyebrow">Linked children</p>
               <p className="metric">{students.length}</p>
-              <p className="body-copy">students connected through guardian records</p>
+              <p className="body-copy">linked to your account</p>
             </article>
             <article className="card metric-card">
               <p className="eyebrow">Grades</p>
               <p className="metric">{gradeCount}</p>
-              <p className="body-copy">recent scores available for review</p>
+              <p className="body-copy">recent scores</p>
             </article>
-            <article className="card card-dark metric-card">
+            <article className="card metric-card">
               <p className="eyebrow">Attendance</p>
               <p className="metric">{attendanceMarked}</p>
-              <p className="body-copy muted-on-dark">attendance marks recorded in the portal</p>
+              <p className="body-copy">attendance marks</p>
             </article>
             <article className="card metric-card">
               <p className="eyebrow">Messages</p>
               <p className="metric">{dashboard?.unreadMessages ?? 0}</p>
-              <p className="body-copy">unread family messages</p>
+              <p className="body-copy">unread</p>
             </article>
           </section>
 

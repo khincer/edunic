@@ -7,15 +7,14 @@ export default async function TeacherLoginPage() {
       accent="teacher"
       allowedRoles={['teacher', ...ADMIN_ROLES]}
       brandSubtitle="Teacher workspace"
-      brandTitle="Edunic Teachers"
+      brandTitle="Edunic"
       emailPlaceholder="teacher@school.edu"
-      eyebrow="Classroom access"
-      heroText="Focused tools for every lesson, roster, and roll call."
-      intro="Sign in with a teacher account, or a school administration account helping with classroom operations."
+      heroText="Attendance, grades and classroom updates for your groups."
+      intro="Use your teacher account. School administration accounts also work here."
       redirectTo="/teachers"
       requiredRoleLabel="teacher role"
       sectionLabel="Teacher"
-      title="Open teacher tools"
+      title="Sign in"
     />
   );
 }

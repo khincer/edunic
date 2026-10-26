@@ -12,6 +12,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   Library,
+  LogOut,
   Wallet,
   UsersRound,
   Workflow,
@@ -35,24 +36,41 @@ type AdminShellProps = {
 interface NavItem {
   label: string;
   href: string;
-  group: 'Workspace' | 'Roadmap';
   icon: LucideIcon;
 }
-const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/admin/dashboard', group: 'Workspace', icon: LayoutDashboard },
-  { label: 'School', href: '/admin/settings', group: 'Workspace', icon: Building2 },
-  { label: 'Teachers', href: '/admin/teachers', group: 'Workspace', icon: GraduationCap },
-  { label: 'Subjects', href: '/admin/subjects', group: 'Workspace', icon: Library },
-  { label: 'Payments', href: '/admin/payments', group: 'Workspace', icon: Wallet },
-  { label: 'Classroom activity', href: '/admin/activity', group: 'Workspace', icon: Activity },
-  { label: 'Notifications', href: '/admin/notifications', group: 'Workspace', icon: Bell },
-  { label: 'Students', href: '/admin/students', group: 'Roadmap', icon: UsersRound },
-  { label: 'Enrollments', href: '/admin/enrollments', group: 'Roadmap', icon: ClipboardList },
-  { label: 'Academic periods', href: '/admin/academic-periods', group: 'Roadmap', icon: CalendarDays },
-  { label: 'Grades', href: '/admin/grades', group: 'Roadmap', icon: BookOpenCheck },
-  { label: 'Attendance', href: '/admin/attendance', group: 'Roadmap', icon: ClipboardCheck },
-  { label: 'Workflows', href: '/admin/workflows', group: 'Roadmap', icon: Workflow },
-  { label: 'Reports', href: '/admin/reports', group: 'Roadmap', icon: FileText },
+const navGroups: Array<{ label: string; items: NavItem[] }> = [
+  {
+    label: 'Overview',
+    items: [{ label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard }],
+  },
+  {
+    label: 'People',
+    items: [
+      { label: 'Students', href: '/admin/students', icon: UsersRound },
+      { label: 'Teachers', href: '/admin/teachers', icon: GraduationCap },
+      { label: 'Enrollments', href: '/admin/enrollments', icon: ClipboardList },
+    ],
+  },
+  {
+    label: 'Academics',
+    items: [
+      { label: 'Subjects', href: '/admin/subjects', icon: Library },
+      { label: 'Academic periods', href: '/admin/academic-periods', icon: CalendarDays },
+      { label: 'Grades', href: '/admin/grades', icon: BookOpenCheck },
+      { label: 'Attendance', href: '/admin/attendance', icon: ClipboardCheck },
+      { label: 'Reports', href: '/admin/reports', icon: FileText },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { label: 'Classroom activity', href: '/admin/activity', icon: Activity },
+      { label: 'Workflows', href: '/admin/workflows', icon: Workflow },
+      { label: 'Payments', href: '/admin/payments', icon: Wallet },
+      { label: 'Notifications', href: '/admin/notifications', icon: Bell },
+      { label: 'School settings', href: '/admin/settings', icon: Building2 },
+    ],
+  },
 ];
 
 export function AdminShell({ children }: AdminShellProps) {
@@ -76,7 +94,7 @@ export function AdminShell({ children }: AdminShellProps) {
     return (
       <main className="admin-app">
         <div className="admin-content">
-          <section className="empty-state body-copy">Checking admin session...</section>
+          <section className="empty-state body-copy">Checking your session…</section>
         </div>
       </main>
     );
@@ -92,7 +110,6 @@ export function AdminShell({ children }: AdminShellProps) {
       <main className="admin-app">
         <div className="admin-content">
           <section className="card section-stack" role="alert">
-            <p className="eyebrow">Admin console</p>
             <h1 className="page-title">This console is for the school administration</h1>
             <p className="body-copy">
               You are signed in as {session.user.email} ({session.user.role}).
@@ -111,15 +128,6 @@ export function AdminShell({ children }: AdminShellProps) {
     );
   }
 
-  const pageLabel = getPageLabel(pathname);
-  const groupedNavItems = navItems.reduce<Record<NavItem['group'], NavItem[]>>(
-    (groups, item) => {
-      groups[item.group].push(item);
-      return groups;
-    },
-    { Workspace: [], Roadmap: [] }
-  );
-
   return (
     <main className="admin-app">
       <div className="admin-shell">
@@ -127,26 +135,28 @@ export function AdminShell({ children }: AdminShellProps) {
           <Link className="admin-brand" href="/admin/dashboard">
             <span className="admin-brand-mark">E</span>
             <span>
-              <strong className="admin-brand-title">Edunic Admin</strong>
-              <span className="admin-brand-subtitle">School console</span>
+              <strong className="admin-brand-title">Edunic</strong>
+              <span className="admin-brand-subtitle">Administration</span>
             </span>
           </Link>
           <nav aria-label="Admin navigation" className="admin-nav">
-            {Object.entries(groupedNavItems).map(([group, items]) => (
-              <div className="admin-nav-group" key={group}>
-                <p>{group}</p>
-                {items.map((item) => {
+            {navGroups.map((group) => (
+              <div className="admin-nav-group" key={group.label}>
+                <p>{group.label}</p>
+                {group.items.map((item) => {
                   const Icon = item.icon;
+                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
                   return (
                     <Link
+                      aria-current={active ? 'page' : undefined}
                       className="admin-nav-link"
-                      data-active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                      data-active={active}
                       href={item.href}
-                      key={item.label}
+                      key={item.href}
                     >
                       <span className="admin-nav-icon" aria-hidden="true">
-                        <Icon size={16} strokeWidth={2.3} />
+                        <Icon size={16} strokeWidth={2} />
                       </span>
                       {item.label}
                     </Link>
@@ -155,23 +165,23 @@ export function AdminShell({ children }: AdminShellProps) {
               </div>
             ))}
           </nav>
+          <div className="admin-sidebar-footer">
+            <span className="admin-sidebar-user">
+              <strong>{session.user.email}</strong>
+              <span>{formatRole(session.user.role)}</span>
+            </span>
+            <Button
+              aria-label="Sign out"
+              className="button-small"
+              onClick={handleLogout}
+              title="Sign out"
+              variant="ghost"
+            >
+              <LogOut aria-hidden="true" size={16} strokeWidth={2} />
+            </Button>
+          </div>
         </aside>
         <section className="admin-main">
-          <header className="admin-topbar">
-            <div className="admin-page-trail" aria-label="Current section">
-              <span>Admin</span>
-              <strong>{pageLabel}</strong>
-            </div>
-            <div className="admin-user">
-              <span>
-                <strong>{session.user.email}</strong>
-                {session.user.role} - local API
-              </span>
-              <Button onClick={handleLogout} variant="secondary">
-                Sign out
-              </Button>
-            </div>
-          </header>
           <div className="admin-content">{children}</div>
         </section>
       </div>
@@ -203,62 +213,6 @@ function getServerHydrated() {
   return false;
 }
 
-function getPageLabel(pathname: string) {
-  if (pathname.startsWith('/admin/settings')) {
-    return 'School';
-  }
-
-  if (pathname.startsWith('/admin/teachers')) {
-    return 'Teachers';
-  }
-
-  if (pathname.startsWith('/admin/subjects')) {
-    return 'Subjects';
-  }
-
-  if (pathname.startsWith('/admin/payments')) {
-    return 'Payments';
-  }
-
-  if (pathname.startsWith('/admin/activity')) {
-    return 'Classroom activity';
-  }
-
-  if (pathname.startsWith('/admin/notifications')) {
-    return 'Notifications';
-  }
-
-  if (pathname.startsWith('/admin/students')) {
-    return 'Students';
-  }
-
-  if (pathname.startsWith('/admin/enrollments')) {
-    return 'Enrollments';
-  }
-
-  if (pathname.startsWith('/admin/academic-periods')) {
-    return 'Academic periods';
-  }
-
-  if (pathname.startsWith('/admin/grades')) {
-    return 'Grades';
-  }
-
-  if (pathname.startsWith('/admin/attendance')) {
-    return 'Attendance';
-  }
-
-  if (pathname.startsWith('/admin/workflows')) {
-    return 'Workflows';
-  }
-
-  if (pathname.startsWith('/admin/academic-records')) {
-    return 'Grades & attendance';
-  }
-
-  if (pathname.startsWith('/admin/reports')) {
-    return 'Reports';
-  }
-
-  return 'Dashboard';
+function formatRole(role: string) {
+  return role.replace(/_/g, ' ');
 }

@@ -6,15 +6,14 @@ export default async function ParentLoginPage() {
       accent="parent"
       allowedRoles={['parent']}
       brandSubtitle="Parent portal"
-      brandTitle="Edunic Families"
+      brandTitle="Edunic"
       emailPlaceholder="parent@email.com"
-      eyebrow="Family access"
-      heroText="A clear window into progress, attendance, and care."
-      intro="Sign in with the parent or guardian account assigned by the school."
+      heroText="Grades, attendance, upcoming work and school notices for your children."
+      intro="Use the parent or guardian account the school gave you."
       redirectTo="/parents"
       requiredRoleLabel="parent role"
       sectionLabel="Parent"
-      title="Enter family portal"
+      title="Sign in"
     />
   );
 }
