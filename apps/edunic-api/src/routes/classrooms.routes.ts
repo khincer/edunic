@@ -4,15 +4,23 @@ import {
   parseFilterSort,
 } from '@edunic/source/domain/shared';
 import {
+  ClassroomActivityRepository,
   ClassroomsService,
   ClassroomsServiceError,
   ClassroomsRepository,
+  classroomActivityQuerySchema,
   classroomParamsSchema,
   createClassroomBodySchema,
   listClassroomsQuerySchema,
   updateClassroomBodySchema,
 } from '@edunic/source/domain/classrooms';
-import { ADMIN_ROLES, adminAnd } from '@edunic/source/domain/authorization';
+import {
+  ADMIN_ROLES,
+  AccessRepository,
+  AccessService,
+  adminAnd,
+} from '@edunic/source/domain/authorization';
+import { actorOf } from './actor.js';
 
 const CLASSROOM_FILTER_SORT_OPTIONS = {
   filterFields: ['gradeLevel', 'section'],
@@ -21,7 +29,11 @@ const CLASSROOM_FILTER_SORT_OPTIONS = {
 
 export async function classroomRoutes(app: FastifyInstance) {
   const classroomsService = new ClassroomsService(
-    new ClassroomsRepository(app.db)
+    new ClassroomsRepository(app.db),
+    {
+      repository: new ClassroomActivityRepository(app.db),
+      access: new AccessService(new AccessRepository(app.db)),
+    }
   );
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
@@ -29,6 +41,29 @@ export async function classroomRoutes(app: FastifyInstance) {
   const adminOnly = {
     preHandler: [app.authenticate, app.authorizeRoles([...ADMIN_ROLES])],
   };
+  const staffAccess = {
+    preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher'))],
+  };
+
+  app.get('/activity', adminOnly, async (request) => {
+    const query = parseWithSchema(classroomActivityQuerySchema, request.query);
+
+    return classroomsService.listClassroomActivity({
+      since: query.since,
+      actor: actorOf(request),
+    });
+  });
+
+  app.get('/:classroomId/activity', staffAccess, async (request) => {
+    const params = parseWithSchema(classroomParamsSchema, request.params);
+    const query = parseWithSchema(classroomActivityQuerySchema, request.query);
+
+    return classroomsService.getClassroomActivity({
+      classroomId: params.classroomId,
+      ...query,
+      actor: actorOf(request),
+    });
+  });
 
   app.get('/', readAccess, async (request, reply) => {
     const query = parseWithSchema(listClassroomsQuerySchema, request.query);

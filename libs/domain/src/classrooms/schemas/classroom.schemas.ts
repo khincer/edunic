@@ -10,6 +10,18 @@ export const classroomParamsSchema = z.object({
   classroomId: uuidSchema,
 });
 
+export const classroomActivityQuerySchema = z.object({
+  since: z
+    .string()
+    .trim()
+    .regex(
+      /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z)?$/,
+      'Expected format YYYY-MM-DD or ISO datetime'
+    )
+    .optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 export const listClassroomsQuerySchema = z.object({
   gradeLevel: z.coerce.number().int().min(1).max(20).optional(),
   section: z.string().trim().max(20).optional(),
@@ -40,3 +52,4 @@ export const updateClassroomBodySchema = z
 export type ListClassroomsQuery = z.infer<typeof listClassroomsQuerySchema>;
 export type CreateClassroomBody = z.infer<typeof createClassroomBodySchema>;
 export type UpdateClassroomBody = z.infer<typeof updateClassroomBodySchema>;
+export type ClassroomActivityQuery = z.infer<typeof classroomActivityQuerySchema>;

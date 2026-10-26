@@ -404,7 +404,97 @@ const reportHistoryEntrySchema = {
     year: { type: 'integer', example: 2026 },
     reportType: { type: 'string', example: 'academic_summary_pdf' },
     createdByUserId: { type: 'string', format: 'uuid', nullable: true },
-    createdAt: { type: 'string', format: 'date-time' },
+    createdAt: {
+      type: 'string',
+      description: 'Database timestamp text (YYYY-MM-DD HH:MM:SS, UTC).',
+      example: '2026-02-03 10:00:00',
+    },
+  },
+};
+
+const timestampText = {
+  type: 'string',
+  description: 'Database timestamp text (YYYY-MM-DD HH:MM:SS, UTC).',
+  example: '2026-02-03 10:00:00',
+};
+
+const activitySinceParameter = {
+  name: 'since',
+  in: 'query',
+  required: false,
+  description:
+    'Start of the window (YYYY-MM-DD or ISO datetime). Defaults to 30 days ago.',
+  schema: { type: 'string', example: '2026-01-10' },
+};
+
+const classroomActivitySchema = {
+  type: 'object',
+  properties: {
+    classroom: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        gradeLevel: { type: 'integer' },
+        section: { type: 'string', nullable: true },
+      },
+    },
+    since: { type: 'string', format: 'date-time' },
+    totals: {
+      type: 'object',
+      properties: {
+        activeStudents: { type: 'integer' },
+        gradesRecorded: { type: 'integer' },
+        gradeAverage: { type: 'integer', nullable: true },
+        attendanceMarked: { type: 'integer' },
+        absences: { type: 'integer' },
+        lates: { type: 'integer' },
+        assignmentsCreated: { type: 'integer' },
+        eventsScheduled: { type: 'integer' },
+      },
+    },
+    recent: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          type: {
+            type: 'string',
+            enum: ['grade', 'attendance', 'assignment', 'event'],
+          },
+          id: { type: 'string', format: 'uuid' },
+          occurredAt: timestampText,
+          studentId: { type: 'string', format: 'uuid', nullable: true },
+          studentName: { type: 'string', nullable: true },
+          summary: { type: 'string', example: 'Mathematics: 90' },
+        },
+      },
+    },
+  },
+};
+
+const classroomActivitySummarySchema = {
+  type: 'object',
+  properties: {
+    since: { type: 'string', format: 'date-time' },
+    classrooms: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          classroomId: { type: 'string', format: 'uuid' },
+          gradeLevel: { type: 'integer' },
+          section: { type: 'string', nullable: true },
+          teacherCount: { type: 'integer' },
+          activeStudents: { type: 'integer' },
+          gradesRecorded: { type: 'integer' },
+          attendanceMarked: { type: 'integer' },
+          absences: { type: 'integer' },
+          assignmentsCreated: { type: 'integer' },
+          eventsScheduled: { type: 'integer' },
+          lastActivityAt: { ...timestampText, nullable: true },
+        },
+      },
+    },
   },
 };
 
@@ -2288,6 +2378,72 @@ export function buildOpenApiDocument() {
             },
             400: { $ref: '#/components/responses/BadRequest' },
             409: { $ref: '#/components/responses/ClassroomConflict' },
+          },
+        },
+      },
+      '/classrooms/activity': {
+        get: {
+          tags: ['Classrooms'],
+          summary: 'Activity summary of every classroom',
+          description:
+            'One row per classroom: what was recorded since the date (grades, attendance marks, assignments, classroom events) and the time of its latest activity. Administration only.',
+          parameters: [activitySinceParameter],
+          responses: {
+            200: {
+              description: 'Classroom activity summary',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: classroomActivitySummarySchema },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/classrooms/{classroomId}/activity': {
+        get: {
+          tags: ['Classrooms'],
+          summary: 'Activity of one classroom',
+          description:
+            'Totals since the date and the latest grades, attendance marks, assignments and events, newest first. The administration reads any classroom, a teacher only their own (another classroom, existing or not, is a 403).',
+          parameters: [
+            {
+              name: 'classroomId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+            activitySinceParameter,
+            {
+              name: 'limit',
+              in: 'query',
+              required: false,
+              description: 'Maximum entries in `recent`.',
+              schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Classroom activity',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: classroomActivitySchema },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/ClassroomNotFound' },
           },
         },
       },
