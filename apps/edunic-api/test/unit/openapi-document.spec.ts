@@ -203,3 +203,36 @@ describe('OpenAPI document (grades CSV export)', () => {
     }
   });
 });
+
+describe('OpenAPI document (classroom activity)', () => {
+  it.each([
+    ['/classrooms/{classroomId}/activity', ['400', '401', '403', '404']],
+    ['/classrooms/activity', ['400', '401', '403']],
+  ])('documents GET %s with its refusals', (path, statuses) => {
+    const activity = operation(path, 'get') as Operation & {
+      parameters: { name: string }[];
+    };
+
+    expect(activity.parameters.map((p) => p.name)).toContain('since');
+    expect(activity.responses['200']).toBeDefined();
+    for (const status of statuses) {
+      expect(activity.responses[status]).toBeDefined();
+    }
+  });
+
+  it('describes the per-classroom totals and the recent feed', () => {
+    const schema =
+      operation('/classrooms/{classroomId}/activity', 'get').responses['200']
+        .content['application/json'].schema.properties.data;
+
+    expect(Object.keys(schema.properties).sort()).toEqual(
+      ['classroom', 'recent', 'since', 'totals'].sort()
+    );
+    expect(schema.properties.recent.items.properties.type.enum).toEqual([
+      'grade',
+      'attendance',
+      'assignment',
+      'event',
+    ]);
+  });
+});
