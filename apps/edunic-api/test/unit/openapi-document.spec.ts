@@ -183,3 +183,23 @@ describe('OpenAPI document (report history)', () => {
     }
   });
 });
+
+describe('OpenAPI document (grades CSV export)', () => {
+  it('documents GET /reports/export.csv as a text/csv download', () => {
+    const exportCsv = operation('/reports/export.csv', 'get') as Operation & {
+      parameters: { name: string; required?: boolean }[];
+    };
+
+    expect(
+      exportCsv.parameters.map((p) => [p.name, p.required ?? false])
+    ).toEqual([
+      ['year', true],
+      ['studentId', false],
+      ['classroomId', false],
+    ]);
+    expect(exportCsv.responses['200'].content).toHaveProperty('text/csv');
+    for (const status of ['400', '401', '403']) {
+      expect(exportCsv.responses[status]).toBeDefined();
+    }
+  });
+});
