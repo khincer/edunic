@@ -6,6 +6,7 @@ import { resetTestDatabase } from '../helpers/db.js';
 import {
   createInstitutionFixture,
   createUserFixture,
+  type UserRole,
 } from '../helpers/fixtures.js';
 
 describe('extensions routes (global, single school)', () => {
@@ -25,7 +26,7 @@ describe('extensions routes (global, single school)', () => {
     await app.close();
   });
 
-  async function headersFor(role: string) {
+  async function headersFor(role: UserRole) {
     const institution = await createInstitutionFixture();
     const user = await createUserFixture({
       role,
@@ -130,7 +131,7 @@ describe('extensions routes (global, single school)', () => {
     const { headers: adminHeaders } = await headersFor('director');
     await createNotifications(adminHeaders);
 
-    for (const role of ['teacher', 'parent']) {
+    for (const role of ['teacher', 'parent'] as const) {
       const { headers } = await headersFor(role);
 
       for (const response of [

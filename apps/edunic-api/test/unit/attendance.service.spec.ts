@@ -56,9 +56,11 @@ describe('AttendanceService', () => {
     const tx = { execute: jest.fn() };
     const repository = createRepositoryMock(tx);
     const publish = jest.fn().mockResolvedValue(undefined);
-    const service = new AttendanceService(repository as never, {
-      publish,
-    } as never);
+    const service = new AttendanceService(
+      repository as never,
+      { publish } as never,
+      access
+    );
 
     const result = await service.createAttendance({
       role: 'director',
@@ -107,9 +109,11 @@ describe('AttendanceService', () => {
     const publish = jest
       .fn()
       .mockRejectedValue(new Error('event bus down (injected)'));
-    const service = new AttendanceService(repository as never, {
-      publish,
-    } as never);
+    const service = new AttendanceService(
+      repository as never,
+      { publish } as never,
+      access
+    );
 
     await expect(
       service.createAttendance({

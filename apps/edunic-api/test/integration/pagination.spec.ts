@@ -64,7 +64,8 @@ describe('list pagination conventions', () => {
 
     do {
       const url = `/students?limit=2&cursor=${encodeURIComponent(cursor)}`;
-      const response = await client.get(url).set(headers);
+      const response: { status: number; headers: Record<string, string>; body: any } =
+        await client.get(url).set(headers);
 
       expect(response.status).toBe(200);
       // Cursor mode: keyset contract, no legacy metadata or deprecation.

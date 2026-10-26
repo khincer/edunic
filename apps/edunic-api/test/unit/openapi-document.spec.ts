@@ -111,11 +111,11 @@ describe('OpenAPI document (single school)', () => {
 
   it('documents the login body exactly as the route validates it', () => {
     const login = operation('/auth/login', 'post');
-    const schema = login.requestBody?.content['application/json'].schema;
+    const schema = login.requestBody?.content['application/json'].schema ?? {};
     const routeKeys = Object.keys(loginBodySchema.shape).sort();
 
-    expect(Object.keys(schema?.properties).sort()).toEqual(routeKeys);
-    expect([...schema?.required].sort()).toEqual(routeKeys);
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(routeKeys);
+    expect([...(schema.required ?? [])].sort()).toEqual(routeKeys);
     expect(JSON.stringify(login)).not.toMatch(/user_institution_roles/);
     expect(login.responses['200'].content['application/json'].schema).not
       .toHaveProperty('properties.data.properties.user.properties.institutionId');

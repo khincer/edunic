@@ -1,5 +1,8 @@
 import pg from 'pg';
-import { runMigrations } from '@edunic/source/db';
+import { createDb, runMigrations } from '@edunic/source/db';
+// tools/ is not an Nx project, so the seed script is imported by path.
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import { seedDatabase } from '../../../../tools/seed';
 
 // TEN-08 / TEN-01 / SUB-04 / SUB-05 on a from-scratch database (Engram #998).
 // Migration 0010's backfills run on an EMPTY database when the order is
@@ -28,7 +31,8 @@ describe('seed on a freshly migrated database', () => {
   const admin = new pg.Client({ connectionString: adminUrl() });
   const scratch = new pg.Client({ connectionString: scratchUrl() });
   const previousUrl = process.env.DATABASE_URL;
-  let closeSeedPool: (() => Promise<void>) | undefined;
+  // The seed writes through its own pool on the scratch database.
+  const seedTarget = createDb({ databaseUrl: scratchUrl() });
 
   async function count(query: string): Promise<number> {
     const result = await scratch.query(query);
@@ -44,17 +48,7 @@ describe('seed on a freshly migrated database', () => {
     process.env.DATABASE_URL = scratchUrl();
     await runMigrations();
 
-    // The seed binds to DATABASE_URL when its module loads, so load a private
-    // copy of it (and of libs/db) while the variable points at the scratch DB.
-    let seedDatabase: () => Promise<void> = async () => undefined;
-    jest.isolateModules(() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      seedDatabase = require('../../../../tools/seed').seedDatabase;
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const dbModule = require('../../../../libs/db/src/index');
-      closeSeedPool = () => dbModule.pool.end();
-    });
-    await seedDatabase();
+    await seedDatabase(seedTarget.db);
   }, 120_000);
 
   afterAll(async () => {
@@ -63,9 +57,7 @@ describe('seed on a freshly migrated database', () => {
     } else {
       process.env.DATABASE_URL = previousUrl;
     }
-    if (closeSeedPool) {
-      await closeSeedPool();
-    }
+    await seedTarget.pool.end();
     await scratch.end();
     await admin.query(`DROP DATABASE IF EXISTS ${SCRATCH_DB} WITH (FORCE)`);
     await admin.end();
@@ -166,17 +158,7 @@ describe('seed on a freshly migrated database', () => {
 
   it('can be run twice without duplicating anything', async () => {
     const before = await count('SELECT COUNT(*)::int AS count FROM grades');
-    let seedDatabase: () => Promise<void> = async () => undefined;
-    let closePool: () => Promise<void> = async () => undefined;
-    jest.isolateModules(() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      seedDatabase = require('../../../../tools/seed').seedDatabase;
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const dbModule = require('../../../../libs/db/src/index');
-      closePool = () => dbModule.pool.end();
-    });
-    await seedDatabase();
-    await closePool();
+    await seedDatabase(seedTarget.db);
 
     expect(await count('SELECT COUNT(*)::int AS count FROM grades')).toBe(before);
     expect(await count('SELECT COUNT(*)::int AS count FROM institutions')).toBe(1);

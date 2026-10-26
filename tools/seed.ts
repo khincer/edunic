@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
-import { db } from '../libs/db/src/index.js';
+import { db as defaultDb } from '../libs/db/src/index.js';
 import { sql } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { hashPassword } from '../libs/domain/src/auth/application/password.js';
 import { getCliErrorMessage, parseFlags, renderHelp, requireEnv } from './cli-utils.js';
 import {
@@ -127,7 +128,9 @@ const ids = {
   },
 };
 
-export async function seedDatabase() {
+// Seeds `db` (the DATABASE_URL database by default); the seed spec passes its
+// scratch database.
+export async function seedDatabase(db: NodePgDatabase = defaultDb) {
   console.log('Seeding database...');
   const hashedAdminPassword = hashPassword('ULJaEJT9j8y8DeAQ');
   const hashedTeacherPassword = hashPassword('37WTW9BZm2gnQkYn');

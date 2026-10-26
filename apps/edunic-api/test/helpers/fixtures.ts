@@ -162,7 +162,6 @@ export async function createTeacherClassroomAssignmentFixture(input: {
   const result = await db
     .insert(teacherClassroomAssignments)
     .values({
-      id: nextId('45000000'),
       teacherUserId: input.teacherUserId,
       classroomId: input.classroomId,
     })
