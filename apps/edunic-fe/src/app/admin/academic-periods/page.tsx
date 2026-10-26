@@ -77,7 +77,7 @@ export default function AdminAcademicPeriodsPage() {
         <div>
           <p className="eyebrow">Academic periods</p>
           <h1 className="page-title">School calendar terms</h1>
-          <p className="body-copy">Create and review tenant-scoped academic years and terms.</p>
+          <p className="body-copy">Academic years and terms for the school.</p>
         </div>
       </header>
 

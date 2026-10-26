@@ -92,7 +92,7 @@ export default function AdminGradesPage() {
         <div>
           <p className="eyebrow">Grades</p>
           <h1 className="page-title">Grade submissions</h1>
-          <p className="body-copy">Review recent grades and submit demo grade records.</p>
+          <p className="body-copy">Review recent grades and record new ones.</p>
         </div>
       </header>
 

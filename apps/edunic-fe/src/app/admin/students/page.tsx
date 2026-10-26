@@ -86,7 +86,7 @@ export default function AdminStudentsPage() {
         <div>
           <p className="eyebrow">Students</p>
           <h1 className="page-title">Student directory</h1>
-          <p className="body-copy">Create students and review institution-scoped records.</p>
+          <p className="body-copy">Search and add students.</p>
         </div>
       </header>
 

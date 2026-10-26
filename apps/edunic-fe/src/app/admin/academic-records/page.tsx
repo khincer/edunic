@@ -83,10 +83,10 @@ export default function AdminAcademicRecordsPage() {
           <p className="metric">{loading ? '...' : grades.length}</p>
           <p className="body-copy">recent grade records</p>
         </Card>
-        <Card tone="dark">
+        <Card>
           <p className="eyebrow">Attendance</p>
           <p className="metric">{loading ? '...' : attendance.length}</p>
-          <p className="body-copy muted-on-dark">recent attendance records</p>
+          <p className="body-copy">recent attendance records</p>
         </Card>
       </section>
 

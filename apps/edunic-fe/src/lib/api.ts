@@ -441,6 +441,17 @@ export function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+// For calendar dates (YYYY-MM-DD) that carry no time of day. Parsed as a local
+// date so a period starting Sep 1 does not render as Aug 31 west of UTC.
+export function formatDay(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const date = match
+    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    : new Date(value);
+
+  return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(date);
+}
+
 export function buildQuery(params: Record<string, string | number | undefined>) {
   const query = new URLSearchParams();
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { Lock, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
@@ -12,7 +13,6 @@ export type AuthLoginPageProps = {
   brandSubtitle: string;
   brandTitle: string;
   emailPlaceholder: string;
-  eyebrow: string;
   heroText: string;
   intro: string;
   redirectTo: string;
@@ -27,7 +27,6 @@ export function AuthLoginPage({
   brandSubtitle,
   brandTitle,
   emailPlaceholder,
-  eyebrow,
   heroText,
   intro,
   redirectTo,
@@ -89,7 +88,6 @@ export function AuthLoginPage({
         </div>
 
         <section className="login-card">
-          <p className="eyebrow">{eyebrow}</p>
           <h1 className="section-title">{title}</h1>
           <p className="body-copy">{intro}</p>
 
@@ -97,9 +95,11 @@ export function AuthLoginPage({
 
           <form className="auth-form" onSubmit={handleSubmit}>
             <label className="auth-field" htmlFor="email">
-              <span>Email address</span>
+              <span>Email</span>
               <span className="auth-input-wrap">
-                <span aria-hidden="true" className="auth-input-icon">@</span>
+                <span aria-hidden="true" className="auth-input-icon">
+                  <Mail size={16} strokeWidth={2} />
+                </span>
                 <input
                   autoComplete="email"
                   id="email"
@@ -115,13 +115,14 @@ export function AuthLoginPage({
             <label className="auth-field" htmlFor="password">
               <span>Password</span>
               <span className="auth-input-wrap">
-                <span aria-hidden="true" className="auth-input-icon">**</span>
+                <span aria-hidden="true" className="auth-input-icon">
+                  <Lock size={16} strokeWidth={2} />
+                </span>
                 <input
                   autoComplete="current-password"
                   id="password"
                   name="password"
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="At least 8 characters"
                   required
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -138,18 +139,15 @@ export function AuthLoginPage({
             </label>
 
             <Button className="auth-submit" disabled={busy || !canSubmit} type="submit">
-              {busy ? 'Signing in...' : 'Sign in'}
-              <span aria-hidden="true">-&gt;</span>
+              {busy ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
         </section>
       </section>
 
       <section aria-label={`${sectionLabel} context`} className="login-hero">
-        <div className="auth-image-layer" aria-hidden="true" />
         <div className="school-identity">
-          <span className="school-badge">ED</span>
-          <h2>Your school, in one place</h2>
+          <h2>{brandTitle}</h2>
           <p>{heroText}</p>
         </div>
       </section>

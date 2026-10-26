@@ -1,7 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
 type CardProps = HTMLAttributes<HTMLElement> & {
-  tone?: 'default' | 'soft' | 'dark';
+  tone?: 'default' | 'soft';
   children: ReactNode;
 };
 

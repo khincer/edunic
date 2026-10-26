@@ -6,16 +6,15 @@ export default async function AdminLoginPage() {
     <AuthLoginPage
       accent="admin"
       allowedRoles={ADMIN_ROLES}
-      brandSubtitle="School console"
-      brandTitle="Edunic Admin"
+      brandSubtitle="Administration"
+      brandTitle="Edunic"
       emailPlaceholder="admin@school.edu"
-      eyebrow="Secure admin access"
-      heroText="Every school deserves a calm command center."
-      intro="Sign in with the admin account for your school."
+      heroText="Students, staff, grades, attendance and payments for your school."
+      intro="Use your school administration account."
       redirectTo="/admin/dashboard"
       requiredRoleLabel="director, vice director or subdirector role"
       sectionLabel="Admin"
-      title="Welcome back"
+      title="Sign in"
     />
   );
 }

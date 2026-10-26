@@ -90,14 +90,14 @@ export default function InstitutionAuditLogsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Audit logs</p>
-          <h1 className="page-title">{institution?.name ?? 'Institution trail'}</h1>
+          <p className="eyebrow">School settings</p>
+          <h1 className="page-title">Audit log</h1>
           <p className="body-copy">
-            Tenant-scoped create, update, and delete activity from the API audit log.
+            Every create, update and delete recorded for {institution?.name ?? 'the school'}.
           </p>
         </div>
         <ButtonLink href={`/admin/settings`} variant="secondary">
-          Back to institution
+          Back to settings
         </ButtonLink>
       </header>
 
