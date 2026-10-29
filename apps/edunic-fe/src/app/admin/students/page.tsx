@@ -45,7 +45,7 @@ export default function AdminStudentsPage() {
       });
       setStudents(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load students');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar la lista de estudiantes');
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ export default function AdminStudentsPage() {
       setDateOfBirth('');
       await loadStudents();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create student');
+      setError(err instanceof Error ? err.message : 'No se pudo crear el estudiante');
     } finally {
       setSaving(false);
     }
@@ -84,9 +84,9 @@ export default function AdminStudentsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Students</p>
-          <h1 className="page-title">Student directory</h1>
-          <p className="body-copy">Search and add students.</p>
+          <p className="eyebrow">Estudiantes</p>
+          <h1 className="page-title">Directorio de estudiantes</h1>
+          <p className="body-copy">Busque y agregue estudiantes.</p>
         </div>
       </header>
 
@@ -96,34 +96,34 @@ export default function AdminStudentsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Search</p>
-              <h2 className="section-title">Find a student</h2>
+              <p className="eyebrow">Buscar</p>
+              <h2 className="section-title">Buscar un estudiante</h2>
             </div>
           </div>
           <div className="form">
             <FormField
-              label="Name"
+              label="Nombre"
               name="studentSearch"
               onChange={(event) => setSearch(event.target.value)}
               value={search}
             />
-            <Button onClick={() => void loadStudents(search)}>Search</Button>
+            <Button onClick={() => void loadStudents(search)}>Buscar</Button>
           </div>
         </Card>
 
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Create</p>
-              <h2 className="section-title">New student</h2>
+              <p className="eyebrow">Crear</p>
+              <h2 className="section-title">Nuevo estudiante</h2>
             </div>
           </div>
           <div className="form">
-            <FormField label="First name" name="firstName" onChange={(event) => setFirstName(event.target.value)} value={firstName} />
-            <FormField label="Last name" name="lastName" onChange={(event) => setLastName(event.target.value)} value={lastName} />
-            <FormField label="Date of birth" name="dateOfBirth" onChange={(event) => setDateOfBirth(event.target.value)} type="date" value={dateOfBirth} />
+            <FormField label="Nombre" name="firstName" onChange={(event) => setFirstName(event.target.value)} value={firstName} />
+            <FormField label="Apellido" name="lastName" onChange={(event) => setLastName(event.target.value)} value={lastName} />
+            <FormField label="Fecha de nacimiento" name="dateOfBirth" onChange={(event) => setDateOfBirth(event.target.value)} type="date" value={dateOfBirth} />
             <Button disabled={saving || !firstName.trim() || !lastName.trim()} onClick={() => void createStudent()}>
-              {saving ? 'Creating...' : 'Create student'}
+              {saving ? 'Creando…' : 'Crear estudiante'}
             </Button>
           </div>
         </Card>
@@ -132,13 +132,13 @@ export default function AdminStudentsPage() {
       <section className="card section-stack">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Records</p>
-            <h2 className="section-title">{students.length} students</h2>
+            <p className="eyebrow">Registros</p>
+            <h2 className="section-title">{students.length} estudiantes</h2>
           </div>
         </div>
-        {loading ? <p className="body-copy">Loading students...</p> : null}
+        {loading ? <p className="body-copy">Cargando estudiantes…</p> : null}
         {!loading && students.length === 0 ? (
-          <div className="empty-state body-copy">No students found.</div>
+          <div className="empty-state body-copy">No se encontraron estudiantes.</div>
         ) : null}
         <div className="activity-list">
           {students.map((student) => (
@@ -147,8 +147,8 @@ export default function AdminStudentsPage() {
               <span>
                 <strong>{student.fullName}</strong>
                 <p className="field-help">
-                  {student.dateOfBirth ?? 'No birth date'} - created{' '}
-                  {student.createdAt ? formatDate(student.createdAt) : 'n/a'}
+                  {student.dateOfBirth ?? 'Sin fecha de nacimiento'} - registrado el{' '}
+                  {student.createdAt ? formatDate(student.createdAt) : 'no disponible'}
                 </p>
               </span>
             </article>

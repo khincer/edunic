@@ -9,15 +9,12 @@ import { FormField, TextAreaField } from '@/components/form-field';
 import { PanelState } from '@/components/panel-state';
 import {
   apiRequest,
+  formatCents,
   type ApiSingleResponse,
   type ParentDashboard,
 } from '@/lib/api';
 import { API_BASE_URL } from '@/lib/config';
 import { clearSession, getSession, type AdminSession } from '@/lib/auth';
-
-function formatCents(cents: number) {
-  return `Q${(cents / 100).toFixed(2)}`;
-}
 
 export default function ParentsPage() {
   const router = useRouter();
@@ -28,8 +25,8 @@ export default function ParentsPage() {
   const [notice, setNotice] = useState('');
   const [downloadId, setDownloadId] = useState('');
   const [recipientUserId, setRecipientUserId] = useState('');
-  const [messageSubject, setMessageSubject] = useState('Family portal note');
-  const [messageBody, setMessageBody] = useState('A quick note from the parent portal.');
+  const [messageSubject, setMessageSubject] = useState('Nota del portal de familias');
+  const [messageBody, setMessageBody] = useState('Una nota breve del portal de familias.');
   const [savingWorkflow, setSavingWorkflow] = useState('');
 
   useEffect(() => {
@@ -57,7 +54,7 @@ export default function ParentsPage() {
       );
       setDashboard(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load parent dashboard');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar el panel de familias');
     }
   }
 
@@ -80,10 +77,10 @@ export default function ParentsPage() {
         },
       });
       setMessageBody('');
-      setNotice('Message sent.');
+      setNotice('Mensaje enviado.');
       await loadDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send message');
+      setError(err instanceof Error ? err.message : 'No se pudo enviar el mensaje');
     } finally {
       setSavingWorkflow('');
     }
@@ -103,7 +100,7 @@ export default function ParentsPage() {
       });
       await loadDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to mark message read');
+      setError(err instanceof Error ? err.message : 'No se pudo marcar el mensaje como leído');
     } finally {
       setSavingWorkflow('');
     }
@@ -123,7 +120,7 @@ export default function ParentsPage() {
       });
       await loadDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to mark notification read');
+      setError(err instanceof Error ? err.message : 'No se pudo marcar la notificación como leída');
     } finally {
       setSavingWorkflow('');
     }
@@ -151,7 +148,7 @@ export default function ParentsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Unable to download report');
+        throw new Error('No se pudo descargar el informe');
       }
 
       const blob = await response.blob();
@@ -162,7 +159,7 @@ export default function ParentsPage() {
       link.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to download report');
+      setError(err instanceof Error ? err.message : 'No se pudo descargar el informe');
     } finally {
       setDownloadId('');
     }
@@ -171,7 +168,7 @@ export default function ParentsPage() {
   if (!ready || !session) {
     return (
       <main className="portal-page">
-        <section className="empty-state body-copy">Opening the family portal…</section>
+        <section className="empty-state body-copy">Abriendo el portal de familias…</section>
       </main>
     );
   }
@@ -189,23 +186,23 @@ export default function ParentsPage() {
 
   return (
     <main className="portal-page">
-      <nav className="portal-topnav" aria-label="Parent section navigation">
+      <nav className="portal-topnav" aria-label="Navegación de la sección de familias">
         <Link href="/">Edunic</Link>
         <div>
           <button className="link-button" onClick={handleSignOut} type="button">
-            Sign out
+            Cerrar sesión
           </button>
         </div>
       </nav>
 
       <section className="portal-hero">
-        <h1 className="page-title">Your children</h1>
-        <p className="body-copy">Signed in as {session.user.email}</p>
+        <h1 className="page-title">Sus hijos</h1>
+        <p className="body-copy">Sesión iniciada como {session.user.email}</p>
       </section>
 
       {!canUseParentPortal ? (
         <div className="alert alert-error">
-          This portal requires a parent role. Sign in with a parent or guardian account.
+          Este portal requiere el rol de familia. Inicie sesión con una cuenta de familia o tutor.
         </div>
       ) : null}
 
@@ -216,24 +213,24 @@ export default function ParentsPage() {
         <>
           <section className="portal-grid">
             <article className="card metric-card">
-              <p className="eyebrow">Linked children</p>
+              <p className="eyebrow">Hijos vinculados</p>
               <p className="metric">{students.length}</p>
-              <p className="body-copy">linked to your account</p>
+              <p className="body-copy">vinculados a su cuenta</p>
             </article>
             <article className="card metric-card">
-              <p className="eyebrow">Grades</p>
+              <p className="eyebrow">Calificaciones</p>
               <p className="metric">{gradeCount}</p>
-              <p className="body-copy">recent scores</p>
+              <p className="body-copy">calificaciones recientes</p>
             </article>
             <article className="card metric-card">
-              <p className="eyebrow">Attendance</p>
+              <p className="eyebrow">Asistencia</p>
               <p className="metric">{attendanceMarked}</p>
-              <p className="body-copy">attendance marks</p>
+              <p className="body-copy">registros de asistencia</p>
             </article>
             <article className="card metric-card">
-              <p className="eyebrow">Messages</p>
+              <p className="eyebrow">Mensajes</p>
               <p className="metric">{dashboard?.unreadMessages ?? 0}</p>
-              <p className="body-copy">unread</p>
+              <p className="body-copy">sin leer</p>
             </article>
           </section>
 
@@ -245,9 +242,9 @@ export default function ParentsPage() {
                     <p className="eyebrow">{student.guardianName}</p>
                     <h2 className="section-title">{student.fullName}</h2>
                     <p className="body-copy">
-                      {student.classroomName ?? 'No classroom'} -{' '}
-                      {student.enrollmentStatus ?? 'not enrolled'} - Term{' '}
-                      {student.academicTerm ?? 'n/a'}
+                      {student.classroomName ?? 'Sin aula'} -{' '}
+                      {student.enrollmentStatus ?? 'sin matrícula'} - Período{' '}
+                      {student.academicTerm ?? 'n/d'}
                     </p>
                   </div>
                   <Button
@@ -255,30 +252,30 @@ export default function ParentsPage() {
                     onClick={() => void downloadReport(student.studentId, student.reportUrl)}
                     variant="secondary"
                   >
-                    {downloadId === student.studentId ? 'Preparing...' : 'Report PDF'}
+                    {downloadId === student.studentId ? 'Preparando…' : 'Informe PDF'}
                   </Button>
                 </div>
 
                 <div className="student-snapshot-grid">
                   <div>
-                    <span>Average</span>
-                    <strong>{student.average.average ?? 'n/a'}</strong>
+                    <span>Promedio</span>
+                    <strong>{student.average.average ?? 'n/d'}</strong>
                   </div>
                   <div>
-                    <span>Present</span>
+                    <span>Presente</span>
                     <strong>{student.attendance.present}</strong>
                   </div>
                   <div>
-                    <span>Late</span>
+                    <span>Tardanza</span>
                     <strong>{student.attendance.late}</strong>
                   </div>
                   <div>
-                    <span>Absent</span>
+                    <span>Ausente</span>
                     <strong>{student.attendance.absent}</strong>
                   </div>
                 </div>
 
-                <div className="grade-chip-list" aria-label={`${student.fullName} recent grades`}>
+                <div className="grade-chip-list" aria-label={`${student.fullName}: calificaciones recientes`}>
                   {student.recentGrades.map((grade) => (
                     <span className="grade-chip" key={grade.id}>
                       <strong>{grade.score}</strong>
@@ -290,7 +287,7 @@ export default function ParentsPage() {
             ))}
             {students.length === 0 ? (
               <PanelState
-                message={dashboard ? 'No linked students were found for this institution.' : 'Loading linked students...'}
+                message={dashboard ? 'No se encontraron estudiantes vinculados en este colegio.' : 'Cargando estudiantes vinculados…'}
                 tone={dashboard ? 'empty' : 'loading'}
               />
             ) : null}
@@ -300,8 +297,8 @@ export default function ParentsPage() {
             <article className="card">
               <div className="panel-header">
                 <div>
-                  <p className="eyebrow">Upcoming work</p>
-                  <h2 className="section-title">Homework and exams</h2>
+                  <p className="eyebrow">Próximas tareas</p>
+                  <h2 className="section-title">Tareas y exámenes</h2>
                 </div>
               </div>
               <div className="activity-list">
@@ -311,17 +308,17 @@ export default function ParentsPage() {
                     <span>
                       <strong>{assignment.title}</strong>
                       <p className="field-help">
-                        {assignment.classroomName ?? 'Classroom'} -{' '}
-                        {assignment.dueDate ? assignment.dueDate.slice(0, 10) : 'No due date'}
+                        {assignment.classroomName ?? 'Aula'} -{' '}
+                        {assignment.dueDate ? assignment.dueDate.slice(0, 10) : 'Sin fecha de entrega'}
                       </p>
                     </span>
                   </article>
                 ))}
                 {dashboard ? null : (
-                  <PanelState message="Loading homework and exams..." tone="loading" />
+                  <PanelState message="Cargando tareas y exámenes…" tone="loading" />
                 )}
                 {dashboard && dashboard.upcomingAssignments.length === 0 ? (
-                  <PanelState message="No upcoming homework or exams." />
+                  <PanelState message="No hay tareas ni exámenes próximos." />
                 ) : null}
               </div>
             </article>
@@ -329,8 +326,8 @@ export default function ParentsPage() {
             <article className="card">
               <div className="panel-header">
                 <div>
-                  <p className="eyebrow">Payments</p>
-                  <h2 className="section-title">What is owed</h2>
+                  <p className="eyebrow">Pagos</p>
+                  <h2 className="section-title">Saldo pendiente</h2>
                 </div>
               </div>
               <div className="activity-list">
@@ -342,8 +339,8 @@ export default function ParentsPage() {
                       <span>
                         <strong>{balance.studentName}</strong>
                         <p className="field-help">
-                          Outstanding {formatCents(balance.outstandingCents)} -{' '}
-                          {balance.overdueCount} overdue
+                          Pendiente {formatCents(balance.outstandingCents)} -{' '}
+                          {balance.overdueCount} vencidos
                         </p>
                       </span>
                     </article>
@@ -358,14 +355,14 @@ export default function ParentsPage() {
                         <p className="field-help">
                           {formatCents(payment.amountCents)} -{' '}
                           {payment.dueDate
-                            ? `due ${payment.dueDate.slice(0, 10)}`
-                            : 'no due date'}
+                            ? `vence ${payment.dueDate.slice(0, 10)}`
+                            : 'sin fecha de vencimiento'}
                         </p>
                       </span>
                     </article>
                   ))}
                 {dashboard && dashboard.payments.length === 0 ? (
-                  <PanelState message="No payments pending." />
+                  <PanelState message="No hay pagos pendientes." />
                 ) : null}
               </div>
             </article>
@@ -373,8 +370,8 @@ export default function ParentsPage() {
             <article className="card">
               <div className="panel-header">
                 <div>
-                  <p className="eyebrow">Calendar and inbox</p>
-                  <h2 className="section-title">What is next</h2>
+                  <p className="eyebrow">Calendario y bandeja de entrada</p>
+                  <h2 className="section-title">Próximamente</h2>
                 </div>
               </div>
               <div className="activity-list">
@@ -384,7 +381,7 @@ export default function ParentsPage() {
                     <span>
                       <strong>{event.title}</strong>
                       <p className="field-help">
-                        {event.classroomName ?? 'School-wide'} - {event.startsAt.slice(0, 10)}
+                        {event.classroomName ?? 'Todo el colegio'} - {event.startsAt.slice(0, 10)}
                       </p>
                     </span>
                   </article>
@@ -401,17 +398,17 @@ export default function ParentsPage() {
                       onClick={() => void markMessageRead(message.id)}
                       variant="secondary"
                     >
-                      {message.readAt ? 'Read' : 'Mark read'}
+                      {message.readAt ? 'Leído' : 'Marcar como leído'}
                     </Button>
                   </article>
                 ))}
                 {dashboard ? null : (
-                  <PanelState message="Loading calendar and inbox..." tone="loading" />
+                  <PanelState message="Cargando calendario y bandeja de entrada…" tone="loading" />
                 )}
                 {dashboard &&
                 dashboard.upcomingEvents.length === 0 &&
                 dashboard.recentMessages.length === 0 ? (
-                  <PanelState message="No calendar items or messages yet." />
+                  <PanelState message="Todavía no hay eventos ni mensajes." />
                 ) : null}
               </div>
             </article>
@@ -420,24 +417,24 @@ export default function ParentsPage() {
           <section className="card section-stack">
             <div className="panel-header">
               <div>
-                <p className="eyebrow">Message</p>
-                <h2 className="section-title">Send a family note</h2>
+                <p className="eyebrow">Mensaje</p>
+                <h2 className="section-title">Enviar una nota a la familia</h2>
               </div>
             </div>
             <div className="workflow-inline-form">
-              <FormField label="Recipient user ID" name="parentRecipientUserId" onChange={(event) => setRecipientUserId(event.target.value)} value={recipientUserId} />
-              <FormField label="Subject" name="parentMessageSubject" onChange={(event) => setMessageSubject(event.target.value)} value={messageSubject} />
-              <TextAreaField label="Message" name="parentMessageBody" onChange={(event) => setMessageBody(event.target.value)} rows={3} value={messageBody} />
+              <FormField label="ID de usuario destinatario" name="parentRecipientUserId" onChange={(event) => setRecipientUserId(event.target.value)} value={recipientUserId} />
+              <FormField label="Asunto" name="parentMessageSubject" onChange={(event) => setMessageSubject(event.target.value)} value={messageSubject} />
+              <TextAreaField label="Mensaje" name="parentMessageBody" onChange={(event) => setMessageBody(event.target.value)} rows={3} value={messageBody} />
               <Button disabled={savingWorkflow === 'message' || !recipientUserId.trim() || !messageSubject.trim() || !messageBody.trim()} onClick={() => void sendMessage()}>
-                {savingWorkflow === 'message' ? 'Sending...' : 'Send message'}
+                {savingWorkflow === 'message' ? 'Enviando…' : 'Enviar mensaje'}
               </Button>
             </div>
           </section>
 
           <section className="card card-soft portal-band">
             <div>
-              <p className="eyebrow">Notifications</p>
-              <h2 className="section-title">School updates</h2>
+              <p className="eyebrow">Notificaciones</p>
+              <h2 className="section-title">Novedades del colegio</h2>
             </div>
             <div className="activity-list">
               {(dashboard?.recentNotifications ?? []).map((notification) => (
@@ -446,7 +443,7 @@ export default function ParentsPage() {
                   <span>
                     <strong>{notification.title}</strong>
                     <p className="field-help">
-                      {notification.message} - {notification.readAt ? 'read' : 'unread'}
+                      {notification.message} - {notification.readAt ? 'leída' : 'sin leer'}
                     </p>
                   </span>
                   <Button
@@ -454,15 +451,15 @@ export default function ParentsPage() {
                     onClick={() => void markNotificationRead(notification.id)}
                     variant="secondary"
                   >
-                    {notification.readAt ? 'Read' : 'Mark read'}
+                    {notification.readAt ? 'Leída' : 'Marcar como leída'}
                   </Button>
                 </article>
               ))}
               {dashboard ? null : (
-                <PanelState message="Loading school updates..." tone="loading" />
+                <PanelState message="Cargando novedades del colegio…" tone="loading" />
               )}
               {dashboard && dashboard.recentNotifications.length === 0 ? (
-                <PanelState message="No school updates yet." />
+                <PanelState message="Todavía no hay novedades del colegio." />
               ) : null}
             </div>
           </section>

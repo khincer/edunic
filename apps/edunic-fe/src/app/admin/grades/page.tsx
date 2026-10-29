@@ -36,7 +36,7 @@ export default function AdminGradesPage() {
       const result = await apiRequest<ApiListResponse<Subject>>('/subjects');
       setSubjects(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load subjects');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar las materias');
     }
   }
 
@@ -54,7 +54,7 @@ export default function AdminGradesPage() {
       const result = await apiRequest<ApiListResponse<Grade>>(`/grades${query}`);
       setGrades(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load grades');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar las calificaciones');
     } finally {
       setLoading(false);
     }
@@ -80,7 +80,7 @@ export default function AdminGradesPage() {
       setNewSubjectId('');
       await loadGrades();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create grade');
+      setError(err instanceof Error ? err.message : 'No se pudo crear la calificación');
     } finally {
       setSaving(false);
     }
@@ -90,9 +90,9 @@ export default function AdminGradesPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Grades</p>
-          <h1 className="page-title">Grade submissions</h1>
-          <p className="body-copy">Review recent grades and record new ones.</p>
+          <p className="eyebrow">Calificaciones</p>
+          <h1 className="page-title">Registro de calificaciones</h1>
+          <p className="body-copy">Revise las calificaciones recientes y registre nuevas.</p>
         </div>
       </header>
 
@@ -102,13 +102,13 @@ export default function AdminGradesPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Filter</p>
-              <h2 className="section-title">Subject lookup</h2>
+              <p className="eyebrow">Filtrar</p>
+              <h2 className="section-title">Búsqueda por materia</h2>
             </div>
           </div>
           <div className="form">
             <label className="field" htmlFor="grade-subject-filter">
-              <span className="field-label">Subject</span>
+              <span className="field-label">Materia</span>
               <select
                 id="grade-subject-filter"
                 onChange={(event) => {
@@ -117,7 +117,7 @@ export default function AdminGradesPage() {
                 }}
                 value={subjectId}
               >
-                <option value="">All subjects</option>
+                <option value="">Todas las materias</option>
                 {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.name}
@@ -131,20 +131,20 @@ export default function AdminGradesPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Create</p>
-              <h2 className="section-title">New grade</h2>
+              <p className="eyebrow">Crear</p>
+              <h2 className="section-title">Nueva calificación</h2>
             </div>
           </div>
           <div className="form">
-            <FormField label="Enrollment ID" name="enrollmentId" onChange={(event) => setEnrollmentId(event.target.value)} value={enrollmentId} />
+            <FormField label="ID de matrícula" name="enrollmentId" onChange={(event) => setEnrollmentId(event.target.value)} value={enrollmentId} />
             <label className="field" htmlFor="grade-subject">
-              <span className="field-label">Subject</span>
+              <span className="field-label">Materia</span>
               <select
                 id="grade-subject"
                 onChange={(event) => setNewSubjectId(event.target.value)}
                 value={newSubjectId}
               >
-                <option value="">Choose a subject</option>
+                <option value="">Seleccione una materia</option>
                 {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.name}
@@ -152,9 +152,9 @@ export default function AdminGradesPage() {
                 ))}
               </select>
             </label>
-            <FormField label="Score" max={100} min={0} name="score" onChange={(event) => setScore(event.target.value)} type="number" value={score} />
+            <FormField label="Calificación" max={100} min={0} name="score" onChange={(event) => setScore(event.target.value)} type="number" value={score} />
             <Button disabled={saving || !enrollmentId.trim() || !newSubjectId} onClick={() => void createGrade()}>
-              {saving ? 'Submitting...' : 'Submit grade'}
+              {saving ? 'Enviando…' : 'Enviar calificación'}
             </Button>
           </div>
         </Card>
@@ -163,12 +163,12 @@ export default function AdminGradesPage() {
       <section className="card section-stack">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Records</p>
-            <h2 className="section-title">{grades.length} grades</h2>
+            <p className="eyebrow">Registros</p>
+            <h2 className="section-title">{grades.length} calificaciones</h2>
           </div>
         </div>
-        {loading ? <p className="body-copy">Loading grades...</p> : null}
-        {!loading && grades.length === 0 ? <div className="empty-state body-copy">No grades found.</div> : null}
+        {loading ? <p className="body-copy">Cargando calificaciones…</p> : null}
+        {!loading && grades.length === 0 ? <div className="empty-state body-copy">No se encontraron calificaciones.</div> : null}
         <div className="activity-list">
           {grades.map((grade) => (
             <article className="activity-row" key={grade.id}>
@@ -176,7 +176,7 @@ export default function AdminGradesPage() {
               <span>
                 <strong>{grade.subject}</strong>
                 <p className="field-help">
-                  Enrollment {grade.enrollmentId} - {grade.createdAt ? formatDate(grade.createdAt) : 'No timestamp'}
+                  Matrícula {grade.enrollmentId} - {grade.createdAt ? formatDate(grade.createdAt) : 'Sin fecha'}
                 </p>
               </span>
             </article>

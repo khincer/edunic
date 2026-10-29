@@ -46,7 +46,7 @@ export default function EditInstitutionPage() {
         setSenderName(result.data.senderName ?? '');
         setReplyToEmail(result.data.replyToEmail ?? '');
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unable to load institution');
+        setError(err instanceof Error ? err.message : 'No se pudo cargar el colegio');
       } finally {
         setLoading(false);
       }
@@ -67,7 +67,7 @@ export default function EditInstitutionPage() {
       });
       router.push(`/admin/settings`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to update institution');
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar el colegio');
     } finally {
       setBusy(false);
     }
@@ -77,26 +77,27 @@ export default function EditInstitutionPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Institution settings</p>
-          <h1 className="page-title">Edit institution</h1>
+          <p className="eyebrow">Configuración del colegio</p>
+          <h1 className="page-title">Editar colegio</h1>
           <p className="body-copy">
-            Keep the school record recognizable and set the sender identity used
-            on the emails this school sends to families.
+            El registro del colegio debe seguir siendo reconocible; aquí también se
+            define la identidad del remitente de los correos que el colegio envía a
+            las familias.
           </p>
         </div>
         <ButtonLink href={`/admin/settings`} variant="secondary">
-          Back to detail
+          Volver al detalle
         </ButtonLink>
       </header>
 
       <Card>
         {error ? <div className="alert alert-error">{error}</div> : null}
-        {loading ? <p className="body-copy">Loading school...</p> : null}
+        {loading ? <p className="body-copy">Cargando colegio…</p> : null}
         {!loading ? (
           <form className="form" onSubmit={handleSubmit}>
             <FormField
               autoFocus
-              label="Institution name"
+              label="Nombre del colegio"
               maxLength={160}
               name="name"
               onChange={(event) => setName(event.target.value)}
@@ -104,16 +105,16 @@ export default function EditInstitutionPage() {
               value={name}
             />
             <FormField
-              help="Display name shown to families as the sender. Leave empty and no email is sent."
-              label="Sender name"
+              help="Nombre visible para las familias como remitente. Si queda vacío, no se envían correos."
+              label="Nombre del remitente"
               maxLength={120}
               name="senderName"
               onChange={(event) => setSenderName(event.target.value)}
               value={senderName}
             />
             <FormField
-              help="Where families reply. Left empty, the platform reply-to address is used."
-              label="Reply-to email"
+              help="Dirección a la que responden las familias. Si queda vacía, se usa la dirección de respuesta de la plataforma."
+              label="Correo de respuesta"
               maxLength={160}
               name="replyToEmail"
               onChange={(event) => setReplyToEmail(event.target.value)}
@@ -122,10 +123,10 @@ export default function EditInstitutionPage() {
             />
             <div className="button-row">
               <Button disabled={busy} type="submit">
-                {busy ? 'Saving...' : 'Save changes'}
+                {busy ? 'Guardando…' : 'Guardar cambios'}
               </Button>
               <ButtonLink href={`/admin/settings`} variant="secondary">
-                Cancel
+                Cancelar
               </ButtonLink>
             </div>
           </form>

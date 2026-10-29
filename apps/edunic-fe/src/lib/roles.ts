@@ -6,3 +6,16 @@ export const ADMIN_ROLES = ['director', 'vice_director', 'subdirector'];
 export function isAdminRole(role: string) {
   return ADMIN_ROLES.includes(role);
 }
+
+const roleLabels: Record<string, string> = {
+  director: 'Director',
+  vice_director: 'Vicedirector',
+  subdirector: 'Subdirector',
+  teacher: 'Docente',
+  parent: 'Familia',
+  student: 'Estudiante',
+};
+
+export function formatRole(role: string) {
+  return roleLabels[role] ?? role;
+}

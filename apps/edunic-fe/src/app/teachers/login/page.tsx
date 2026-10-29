@@ -6,15 +6,15 @@ export default async function TeacherLoginPage() {
     <AuthLoginPage
       accent="teacher"
       allowedRoles={['teacher', ...ADMIN_ROLES]}
-      brandSubtitle="Teacher workspace"
+      brandSubtitle="Espacio de trabajo del docente"
       brandTitle="Edunic"
       emailPlaceholder="teacher@school.edu"
-      heroText="Attendance, grades and classroom updates for your groups."
-      intro="Use your teacher account. School administration accounts also work here."
+      heroText="Asistencia, calificaciones y novedades del aula para sus grupos."
+      intro="Use su cuenta de docente. Las cuentas de administración del colegio también funcionan aquí."
       redirectTo="/teachers"
-      requiredRoleLabel="teacher role"
-      sectionLabel="Teacher"
-      title="Sign in"
+      requiredRoleLabel="el rol de Docente"
+      sectionLabel="Docente"
+      title="Iniciar sesión"
     />
   );
 }

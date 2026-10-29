@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Edunic',
-  description: 'Unified Edunic portal for admins, teachers, students, and parents',
+  description: 'Portal unificado de Edunic para administración, docentes, estudiantes y familias',
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      lang="en"
+      lang="es"
     >
       <body>{children}</body>
     </html>

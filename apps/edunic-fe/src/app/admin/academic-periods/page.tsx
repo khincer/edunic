@@ -41,7 +41,7 @@ export default function AdminAcademicPeriodsPage() {
       );
       setPeriods(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load academic periods');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar los períodos académicos');
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ export default function AdminAcademicPeriodsPage() {
       });
       await loadPeriods();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create academic period');
+      setError(err instanceof Error ? err.message : 'No se pudo crear el período académico');
     } finally {
       setSaving(false);
     }
@@ -75,9 +75,9 @@ export default function AdminAcademicPeriodsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Academic periods</p>
-          <h1 className="page-title">School calendar terms</h1>
-          <p className="body-copy">Academic years and terms for the school.</p>
+          <p className="eyebrow">Períodos académicos</p>
+          <h1 className="page-title">Calendario escolar</h1>
+          <p className="body-copy">Años y períodos académicos del colegio.</p>
         </div>
       </header>
 
@@ -87,17 +87,17 @@ export default function AdminAcademicPeriodsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Create</p>
-              <h2 className="section-title">New period</h2>
+              <p className="eyebrow">Crear</p>
+              <h2 className="section-title">Nuevo período</h2>
             </div>
           </div>
           <div className="form">
-            <FormField label="Year" name="year" onChange={(event) => setYear(event.target.value)} type="number" value={year} />
-            <FormField label="Term" max={4} min={1} name="term" onChange={(event) => setTerm(event.target.value)} type="number" value={term} />
-            <FormField label="Start date" name="startDate" onChange={(event) => setStartDate(event.target.value)} type="date" value={startDate} />
-            <FormField label="End date" name="endDate" onChange={(event) => setEndDate(event.target.value)} type="date" value={endDate} />
+            <FormField label="Año" name="year" onChange={(event) => setYear(event.target.value)} type="number" value={year} />
+            <FormField label="Período" max={4} min={1} name="term" onChange={(event) => setTerm(event.target.value)} type="number" value={term} />
+            <FormField label="Fecha de inicio" name="startDate" onChange={(event) => setStartDate(event.target.value)} type="date" value={startDate} />
+            <FormField label="Fecha de fin" name="endDate" onChange={(event) => setEndDate(event.target.value)} type="date" value={endDate} />
             <Button disabled={saving} onClick={() => void createPeriod()}>
-              {saving ? 'Creating...' : 'Create period'}
+              {saving ? 'Creando…' : 'Crear período'}
             </Button>
           </div>
         </Card>
@@ -105,21 +105,21 @@ export default function AdminAcademicPeriodsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">List</p>
-              <h2 className="section-title">{periods.length} periods</h2>
+              <p className="eyebrow">Listado</p>
+              <h2 className="section-title">{periods.length} períodos</h2>
             </div>
-            <Button onClick={() => void loadPeriods()} variant="secondary">Refresh</Button>
+            <Button onClick={() => void loadPeriods()} variant="secondary">Actualizar</Button>
           </div>
-          {loading ? <p className="body-copy">Loading periods...</p> : null}
-          {!loading && periods.length === 0 ? <div className="empty-state body-copy">No academic periods found.</div> : null}
+          {loading ? <p className="body-copy">Cargando períodos…</p> : null}
+          {!loading && periods.length === 0 ? <div className="empty-state body-copy">No se encontraron períodos académicos.</div> : null}
           <div className="activity-list">
             {periods.map((period) => (
               <article className="activity-row" key={period.id}>
                 <span className="activity-mark">T{period.term}</span>
                 <span>
-                  <strong>{period.year} Term {period.term}</strong>
+                  <strong>{period.year} Período {period.term}</strong>
                   <p className="field-help">
-                    {period.startDate ? formatDate(period.startDate) : 'No start'} - {period.endDate ? formatDate(period.endDate) : 'No end'}
+                    {period.startDate ? formatDate(period.startDate) : 'Sin inicio'} - {period.endDate ? formatDate(period.endDate) : 'Sin fin'}
                   </p>
                 </span>
               </article>

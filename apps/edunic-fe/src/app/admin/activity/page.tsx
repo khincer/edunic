@@ -19,10 +19,10 @@ import {
 } from '@/lib/api';
 
 const TYPE_LABELS: Record<ClassroomActivityItem['type'], string> = {
-  grade: 'Grade',
-  attendance: 'Attendance',
-  assignment: 'Assignment',
-  event: 'Event',
+  grade: 'Calificación',
+  attendance: 'Asistencia',
+  assignment: 'Tarea',
+  event: 'Evento',
 };
 
 function defaultSince() {
@@ -62,7 +62,7 @@ export default function AdminClassroomActivityPage() {
       );
       setSummary(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load classroom activity');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar la actividad de aula');
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export default function AdminClassroomActivityPage() {
       );
       setDetail(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load the classroom');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar el aula');
     } finally {
       setDetailLoading(false);
     }
@@ -100,10 +100,10 @@ export default function AdminClassroomActivityPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Activity</p>
-          <h1 className="page-title">Classroom activity</h1>
+          <p className="eyebrow">Actividad</p>
+          <h1 className="page-title">Actividad de aula</h1>
           <p className="body-copy">
-            What each classroom recorded since a date: grades, attendance, assignments and events.
+            Lo que registró cada aula desde una fecha: calificaciones, asistencia, tareas y eventos.
           </p>
         </div>
       </header>
@@ -113,14 +113,14 @@ export default function AdminClassroomActivityPage() {
       <Card className="filter-panel">
         <div className="form form-action-row button-row">
           <FormField
-            label="Since"
+            label="Desde"
             name="activitySince"
             onChange={(event) => setSince(event.target.value)}
             type="date"
             value={since}
           />
           <Button disabled={!since} onClick={apply}>
-            Apply
+            Aplicar
           </Button>
         </div>
       </Card>
@@ -128,41 +128,41 @@ export default function AdminClassroomActivityPage() {
       <section className="card section-stack">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">All classrooms</p>
+            <p className="eyebrow">Todas las aulas</p>
             <h2 className="section-title">
-              {classrooms.length} {classrooms.length === 1 ? 'classroom' : 'classrooms'}
+              {classrooms.length} {classrooms.length === 1 ? 'aula' : 'aulas'}
             </h2>
           </div>
         </div>
         {loading ? (
-          <PanelState message="Loading activity..." tone="loading" />
+          <PanelState message="Cargando actividad…" tone="loading" />
         ) : (
           <DataTable
             columns={[
               {
                 key: 'classroom',
-                header: 'Classroom',
+                header: 'Aula',
                 render: (row) => <strong>{formatClassroom(row)}</strong>,
               },
-              { key: 'teachers', header: 'Teachers', align: 'right', render: (row) => row.teacherCount },
-              { key: 'students', header: 'Students', align: 'right', render: (row) => row.activeStudents },
-              { key: 'grades', header: 'Grades', align: 'right', render: (row) => row.gradesRecorded },
+              { key: 'teachers', header: 'Docentes', align: 'right', render: (row) => row.teacherCount },
+              { key: 'students', header: 'Estudiantes', align: 'right', render: (row) => row.activeStudents },
+              { key: 'grades', header: 'Calificaciones', align: 'right', render: (row) => row.gradesRecorded },
               {
                 key: 'attendance',
-                header: 'Attendance',
+                header: 'Asistencia',
                 align: 'right',
-                render: (row) => `${row.attendanceMarked} (${row.absences} absent)`,
+                render: (row) => `${row.attendanceMarked} (${row.absences} ausencias)`,
               },
-              { key: 'assignments', header: 'Assignments', align: 'right', render: (row) => row.assignmentsCreated },
-              { key: 'events', header: 'Events', align: 'right', render: (row) => row.eventsScheduled },
+              { key: 'assignments', header: 'Tareas', align: 'right', render: (row) => row.assignmentsCreated },
+              { key: 'events', header: 'Eventos', align: 'right', render: (row) => row.eventsScheduled },
               {
                 key: 'last',
-                header: 'Last activity',
+                header: 'Última actividad',
                 render: (row) =>
                   row.lastActivityAt ? (
                     formatDate(row.lastActivityAt)
                   ) : (
-                    <span className="badge badge-red">Never</span>
+                    <span className="badge badge-red">Nunca</span>
                   ),
               },
               {
@@ -174,12 +174,12 @@ export default function AdminClassroomActivityPage() {
                     onClick={() => setSelectedId(row.classroomId)}
                     variant={row.classroomId === selectedId ? 'primary' : 'ghost'}
                   >
-                    Details
+                    Detalles
                   </Button>
                 ),
               },
             ]}
-            emptyMessage="No classrooms yet."
+            emptyMessage="Todavía no hay aulas."
             getRowKey={(row) => row.classroomId}
             rows={classrooms}
           />
@@ -189,52 +189,52 @@ export default function AdminClassroomActivityPage() {
       {selectedId ? (
         <section className="section-stack">
           {detailLoading || !detail ? (
-            <PanelState message="Loading the classroom..." tone="loading" />
+            <PanelState message="Cargando el aula…" tone="loading" />
           ) : (
             <>
               <section className="dashboard-stat-grid">
                 <Card className="metric-card">
                   <p className="eyebrow">{formatClassroom(detail.classroom)}</p>
                   <p className="metric">{detail.totals.activeStudents}</p>
-                  <p className="body-copy">active students</p>
+                  <p className="body-copy">estudiantes activos</p>
                 </Card>
                 <Card className="metric-card">
-                  <p className="eyebrow">Grades</p>
+                  <p className="eyebrow">Calificaciones</p>
                   <p className="metric">{detail.totals.gradesRecorded}</p>
                   <p className="body-copy">
                     {detail.totals.gradeAverage === null
-                      ? 'No average yet'
-                      : `Average ${detail.totals.gradeAverage}`}
+                      ? 'Todavía sin promedio'
+                      : `Promedio ${detail.totals.gradeAverage}`}
                   </p>
                 </Card>
                 <Card className="metric-card">
-                  <p className="eyebrow">Attendance</p>
+                  <p className="eyebrow">Asistencia</p>
                   <p className="metric">{detail.totals.attendanceMarked}</p>
                   <p className="body-copy">
-                    {detail.totals.absences} absent, {detail.totals.lates} late,{' '}
-                    {detail.totals.assignmentsCreated} assignments, {detail.totals.eventsScheduled} events
+                    {detail.totals.absences} ausencias, {detail.totals.lates} tardanzas,{' '}
+                    {detail.totals.assignmentsCreated} tareas, {detail.totals.eventsScheduled} eventos
                   </p>
                 </Card>
               </section>
               <section className="card section-stack">
                 <div className="panel-header">
                   <div>
-                    <p className="eyebrow">Latest</p>
-                    <h2 className="section-title">Recent activity</h2>
+                    <p className="eyebrow">Últimos</p>
+                    <h2 className="section-title">Actividad reciente</h2>
                   </div>
                 </div>
                 <DataTable
                   columns={[
-                    { key: 'when', header: 'When', render: (item) => formatDate(item.occurredAt) },
+                    { key: 'when', header: 'Cuándo', render: (item) => formatDate(item.occurredAt) },
                     {
                       key: 'type',
-                      header: 'Type',
+                      header: 'Tipo',
                       render: (item) => <span className="badge badge-blue">{TYPE_LABELS[item.type]}</span>,
                     },
-                    { key: 'student', header: 'Student', render: (item) => item.studentName ?? '-' },
-                    { key: 'summary', header: 'Detail', render: (item) => item.summary },
+                    { key: 'student', header: 'Estudiante', render: (item) => item.studentName ?? '-' },
+                    { key: 'summary', header: 'Detalle', render: (item) => item.summary },
                   ]}
-                  emptyMessage="Nothing recorded in this window."
+                  emptyMessage="No hay registros en este rango de fechas."
                   getRowKey={(item) => `${item.type}-${item.id}`}
                   rows={detail.recent}
                 />

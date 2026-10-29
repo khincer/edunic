@@ -14,6 +14,12 @@ import {
   type Grade,
 } from '@/lib/api';
 
+const attendanceStatusLabels: Record<string, string> = {
+  present: 'Presente',
+  late: 'Tardanza',
+  absent: 'Ausente',
+};
+
 export default function AdminAcademicRecordsPage() {
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
@@ -51,7 +57,7 @@ export default function AdminAcademicRecordsPage() {
       setGrades(gradeResult.data);
       setAttendance(attendanceResult.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load academic records');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar los registros académicos');
     } finally {
       setLoading(false);
     }
@@ -61,12 +67,12 @@ export default function AdminAcademicRecordsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Academic records</p>
-          <h1 className="page-title">Periods, grades, and attendance</h1>
-          <p className="body-copy">A live operational view across the core academic record modules.</p>
+          <p className="eyebrow">Registros académicos</p>
+          <h1 className="page-title">Períodos, calificaciones y asistencia</h1>
+          <p className="body-copy">Una vista operativa en vivo de los módulos principales del registro académico.</p>
         </div>
         <Button onClick={() => void loadRecords()} variant="secondary">
-          Refresh
+          Actualizar
         </Button>
       </header>
 
@@ -74,19 +80,19 @@ export default function AdminAcademicRecordsPage() {
 
       <section className="grid grid-3">
         <Card>
-          <p className="eyebrow">Periods</p>
+          <p className="eyebrow">Períodos</p>
           <p className="metric">{loading ? '...' : periods.length}</p>
-          <p className="body-copy">configured academic periods</p>
+          <p className="body-copy">períodos académicos configurados</p>
         </Card>
         <Card>
-          <p className="eyebrow">Grades</p>
+          <p className="eyebrow">Calificaciones</p>
           <p className="metric">{loading ? '...' : grades.length}</p>
-          <p className="body-copy">recent grade records</p>
+          <p className="body-copy">calificaciones recientes</p>
         </Card>
         <Card>
-          <p className="eyebrow">Attendance</p>
+          <p className="eyebrow">Asistencia</p>
           <p className="metric">{loading ? '...' : attendance.length}</p>
-          <p className="body-copy">recent attendance records</p>
+          <p className="body-copy">registros de asistencia recientes</p>
         </Card>
       </section>
 
@@ -94,8 +100,8 @@ export default function AdminAcademicRecordsPage() {
         <Card className="dashboard-panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Grades</p>
-              <h2 className="section-title">Latest submissions</h2>
+              <p className="eyebrow">Calificaciones</p>
+              <h2 className="section-title">Últimos envíos</h2>
             </div>
           </div>
           <div className="activity-list">
@@ -105,7 +111,7 @@ export default function AdminAcademicRecordsPage() {
                 <span>
                   <strong>{grade.subject}</strong>
                   <p className="field-help">
-                    {grade.createdAt ? formatDate(grade.createdAt) : 'No timestamp'}
+                    {grade.createdAt ? formatDate(grade.createdAt) : 'Sin fecha'}
                   </p>
                 </span>
               </article>
@@ -116,8 +122,8 @@ export default function AdminAcademicRecordsPage() {
         <Card className="dashboard-panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Attendance</p>
-              <h2 className="section-title">Recent marks</h2>
+              <p className="eyebrow">Asistencia</p>
+              <h2 className="section-title">Marcas recientes</h2>
             </div>
           </div>
           <div className="activity-list">
@@ -125,7 +131,7 @@ export default function AdminAcademicRecordsPage() {
               <article className="activity-row" key={record.id}>
                 <span className="activity-mark">{record.status.slice(0, 1)}</span>
                 <span>
-                  <strong>{record.status}</strong>
+                  <strong>{attendanceStatusLabels[record.status] ?? record.status}</strong>
                   <p className="field-help">{formatDate(record.date)}</p>
                 </span>
               </article>

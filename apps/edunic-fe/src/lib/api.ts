@@ -431,11 +431,11 @@ function getErrorMessage(payload: unknown) {
     return payload.message;
   }
 
-  return 'The API request failed';
+  return 'La solicitud a la API falló';
 }
 
 export function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en', {
+  return new Intl.DateTimeFormat('es', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -449,7 +449,7 @@ export function formatDay(value: string) {
     ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
     : new Date(value);
 
-  return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(date);
+  return new Intl.DateTimeFormat('es', { dateStyle: 'medium' }).format(date);
 }
 
 export function buildQuery(params: Record<string, string | number | undefined>) {
@@ -513,8 +513,8 @@ export type TeacherClassroom = {
 
 export function formatClassroom(classroom: { gradeLevel: number; section: string | null }) {
   return classroom.section
-    ? `Grade ${classroom.gradeLevel} ${classroom.section}`
-    : `Grade ${classroom.gradeLevel}`;
+    ? `Curso ${classroom.gradeLevel} ${classroom.section}`
+    : `Curso ${classroom.gradeLevel}`;
 }
 
 export type Topic = {
@@ -541,9 +541,9 @@ export type Payment = {
   createdAt: string | null;
 };
 
-// Amounts are stored in cents; the school bills in quetzales.
+// Amounts are stored in cents; the school bills in Nicaraguan córdobas.
 export function formatCents(cents: number) {
-  return `Q${(cents / 100).toFixed(2)}`;
+  return `C$${(cents / 100).toFixed(2)}`;
 }
 
 // Downloads an authenticated file (PDF, CSV) the API answers with.

@@ -15,6 +15,12 @@ import {
   type AttendanceStatus,
 } from '@/lib/api';
 
+const attendanceStatusLabels: Record<string, string> = {
+  present: 'Presente',
+  late: 'Tardanza',
+  absent: 'Ausente',
+};
+
 export default function AdminAttendancePage() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [status, setStatus] = useState<AttendanceStatus | ''>('');
@@ -48,7 +54,7 @@ export default function AdminAttendancePage() {
       );
       setRecords(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load attendance');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar la asistencia');
     } finally {
       setLoading(false);
     }
@@ -74,7 +80,7 @@ export default function AdminAttendancePage() {
       });
       await loadAttendance();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create attendance');
+      setError(err instanceof Error ? err.message : 'No se pudo registrar la asistencia');
     } finally {
       setSaving(false);
     }
@@ -84,9 +90,9 @@ export default function AdminAttendancePage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Attendance</p>
-          <h1 className="page-title">Daily attendance marks</h1>
-          <p className="body-copy">Filter attendance records and add marks.</p>
+          <p className="eyebrow">Asistencia</p>
+          <h1 className="page-title">Registro diario de asistencia</h1>
+          <p className="body-copy">Filtre los registros de asistencia y agregue marcas.</p>
         </div>
       </header>
 
@@ -96,8 +102,8 @@ export default function AdminAttendancePage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Filter</p>
-              <h2 className="section-title">Status</h2>
+              <p className="eyebrow">Filtrar</p>
+              <h2 className="section-title">Estado</h2>
             </div>
           </div>
           <div className="button-row">
@@ -110,7 +116,7 @@ export default function AdminAttendancePage() {
                 }}
                 variant={status === nextStatus ? 'primary' : 'secondary'}
               >
-                {nextStatus || 'all'}
+                {nextStatus ? attendanceStatusLabels[nextStatus] : 'Todas'}
               </Button>
             ))}
           </div>
@@ -119,23 +125,23 @@ export default function AdminAttendancePage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Create</p>
-              <h2 className="section-title">New mark</h2>
+              <p className="eyebrow">Crear</p>
+              <h2 className="section-title">Nueva marca</h2>
             </div>
           </div>
           <div className="form">
-            <FormField label="Enrollment ID" name="attendanceEnrollmentId" onChange={(event) => setEnrollmentId(event.target.value)} value={enrollmentId} />
-            <FormField label="Date" name="attendanceDate" onChange={(event) => setDate(event.target.value)} type="date" value={date} />
+            <FormField label="ID de matrícula" name="attendanceEnrollmentId" onChange={(event) => setEnrollmentId(event.target.value)} value={enrollmentId} />
+            <FormField label="Fecha" name="attendanceDate" onChange={(event) => setDate(event.target.value)} type="date" value={date} />
             <label className="form-field" htmlFor="attendanceStatus">
-              <span>Status</span>
+              <span>Estado</span>
               <select id="attendanceStatus" onChange={(event) => setNewStatus(event.target.value as AttendanceStatus)} value={newStatus}>
-                <option value="present">present</option>
-                <option value="late">late</option>
-                <option value="absent">absent</option>
+                <option value="present">Presente</option>
+                <option value="late">Tardanza</option>
+                <option value="absent">Ausente</option>
               </select>
             </label>
             <Button disabled={saving || !enrollmentId.trim()} onClick={() => void createAttendance()}>
-              {saving ? 'Marking...' : 'Mark attendance'}
+              {saving ? 'Registrando…' : 'Registrar asistencia'}
             </Button>
           </div>
         </Card>
@@ -144,20 +150,20 @@ export default function AdminAttendancePage() {
       <section className="card section-stack">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Records</p>
-            <h2 className="section-title">{records.length} marks</h2>
+            <p className="eyebrow">Registros</p>
+            <h2 className="section-title">{records.length} marcas</h2>
           </div>
         </div>
-        {loading ? <p className="body-copy">Loading attendance...</p> : null}
-        {!loading && records.length === 0 ? <div className="empty-state body-copy">No attendance records found.</div> : null}
+        {loading ? <p className="body-copy">Cargando asistencia…</p> : null}
+        {!loading && records.length === 0 ? <div className="empty-state body-copy">No se encontraron registros de asistencia.</div> : null}
         <div className="activity-list">
           {records.map((record) => (
             <article className="activity-row" key={record.id}>
               <span className="activity-mark">{record.status.slice(0, 1)}</span>
               <span>
-                <strong>{record.status}</strong>
+                <strong>{attendanceStatusLabels[record.status] ?? record.status}</strong>
                 <p className="field-help">
-                  Enrollment {record.enrollmentId} - {formatDate(record.date)}
+                  Matrícula {record.enrollmentId} - {formatDate(record.date)}
                 </p>
               </span>
             </article>

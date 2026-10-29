@@ -22,6 +22,19 @@ import {
 
 const METHODS = ['cash', 'transfer', 'card', 'check'];
 
+const paymentMethodLabels: Record<string, string> = {
+  cash: 'Efectivo',
+  transfer: 'Transferencia',
+  card: 'Tarjeta',
+  check: 'Cheque',
+};
+
+const paymentStatusLabels: Record<PaymentStatus, string> = {
+  pending: 'Pendiente',
+  paid: 'Pagado',
+  cancelled: 'Cancelado',
+};
+
 const STATUS_BADGE: Record<PaymentStatus, string> = {
   pending: 'badge',
   paid: 'badge badge-green',
@@ -67,7 +80,7 @@ export default function AdminPaymentsPage() {
       setBalances(balanceResult.data);
       setStudents(studentResult.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load payments');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar los pagos');
     } finally {
       setLoading(false);
     }
@@ -124,8 +137,8 @@ export default function AdminPaymentsPage() {
         setPaidNow(false);
         setNote('');
       },
-      'Payment recorded.',
-      'Unable to record the payment'
+      'Pago registrado.',
+      'No se pudo registrar el pago'
     );
   }
 
@@ -137,8 +150,8 @@ export default function AdminPaymentsPage() {
           body: { status },
         });
       },
-      status === 'paid' ? 'Payment marked as paid.' : 'Payment cancelled.',
-      'Unable to update the payment'
+      status === 'paid' ? 'Pago marcado como pagado.' : 'Pago cancelado.',
+      'No se pudo actualizar el pago'
     );
   }
 
@@ -151,7 +164,7 @@ export default function AdminPaymentsPage() {
         `receipt-${payment.receiptNumber}.pdf`
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to download the receipt');
+      setError(err instanceof Error ? err.message : 'No se pudo descargar el recibo');
     }
   }
 
@@ -159,10 +172,10 @@ export default function AdminPaymentsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Payments</p>
-          <h1 className="page-title">Payment ledger</h1>
+          <p className="eyebrow">Pagos</p>
+          <h1 className="page-title">Libro de pagos</h1>
           <p className="body-copy">
-            Record offline payments, follow balances and hand out receipts.
+            Registre pagos presenciales, siga los saldos y entregue recibos.
           </p>
         </div>
       </header>
@@ -174,15 +187,15 @@ export default function AdminPaymentsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Record</p>
-              <h2 className="section-title">New payment</h2>
+              <p className="eyebrow">Registrar</p>
+              <h2 className="section-title">Nuevo pago</h2>
             </div>
           </div>
           <div className="form">
             <div className="form-field">
-              <label htmlFor="paymentStudent">Student</label>
+              <label htmlFor="paymentStudent">Estudiante</label>
               <select id="paymentStudent" onChange={(event) => setStudentId(event.target.value)} value={studentId}>
-                <option value="">Choose a student</option>
+                <option value="">Seleccione un estudiante</option>
                 {students.map((student) => (
                   <option key={student.id} value={student.id}>
                     {student.fullName}
@@ -190,10 +203,10 @@ export default function AdminPaymentsPage() {
                 ))}
               </select>
             </div>
-            <FormField label="Concept" name="paymentConcept" onChange={(event) => setConcept(event.target.value)} value={concept} />
+            <FormField label="Concepto" name="paymentConcept" onChange={(event) => setConcept(event.target.value)} value={concept} />
             <FormField
               inputMode="decimal"
-              label="Amount (Q)"
+              label="Monto (C$)"
               min="0.01"
               name="paymentAmount"
               onChange={(event) => setAmount(event.target.value)}
@@ -201,24 +214,24 @@ export default function AdminPaymentsPage() {
               type="number"
               value={amount}
             />
-            <FormField label="Due date" name="paymentDueDate" onChange={(event) => setDueDate(event.target.value)} type="date" value={dueDate} />
+            <FormField label="Fecha de vencimiento" name="paymentDueDate" onChange={(event) => setDueDate(event.target.value)} type="date" value={dueDate} />
             <div className="form-field">
-              <label htmlFor="paymentMethod">Method</label>
+              <label htmlFor="paymentMethod">Método</label>
               <select id="paymentMethod" onChange={(event) => setMethod(event.target.value)} value={method}>
                 {METHODS.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {paymentMethodLabels[option] ?? option}
                   </option>
                 ))}
               </select>
             </div>
             <label className="checkbox-row">
               <input checked={paidNow} onChange={(event) => setPaidNow(event.target.checked)} type="checkbox" />
-              Paid now
+              Pagado ahora
             </label>
-            <FormField label="Note" name="paymentNote" onChange={(event) => setNote(event.target.value)} value={note} />
+            <FormField label="Nota" name="paymentNote" onChange={(event) => setNote(event.target.value)} value={note} />
             <Button disabled={!canRecord} onClick={recordPayment}>
-              {saving ? 'Saving...' : 'Record payment'}
+              {saving ? 'Guardando…' : 'Registrar pago'}
             </Button>
           </div>
         </Card>
@@ -226,22 +239,22 @@ export default function AdminPaymentsPage() {
         <Card>
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Balances</p>
-              <h2 className="section-title">{formatCents(outstanding)} outstanding</h2>
+              <p className="eyebrow">Saldos</p>
+              <h2 className="section-title">{formatCents(outstanding)} pendiente</h2>
             </div>
           </div>
           <p className="body-copy">
-            {overdue} overdue {overdue === 1 ? 'payment' : 'payments'} across {balances.length}{' '}
-            {balances.length === 1 ? 'student' : 'students'}.
+            {overdue} {overdue === 1 ? 'pago vencido' : 'pagos vencidos'} en {balances.length}{' '}
+            {balances.length === 1 ? 'estudiante' : 'estudiantes'}.
           </p>
           <DataTable
             columns={[
-              { key: 'student', header: 'Student', render: (balance) => balance.studentName },
-              { key: 'billed', header: 'Billed', align: 'right', render: (balance) => formatCents(balance.billedCents) },
-              { key: 'paid', header: 'Paid', align: 'right', render: (balance) => formatCents(balance.paidCents) },
+              { key: 'student', header: 'Estudiante', render: (balance) => balance.studentName },
+              { key: 'billed', header: 'Facturado', align: 'right', render: (balance) => formatCents(balance.billedCents) },
+              { key: 'paid', header: 'Pagado', align: 'right', render: (balance) => formatCents(balance.paidCents) },
               {
                 key: 'outstanding',
-                header: 'Owes',
+                header: 'Adeudado',
                 align: 'right',
                 render: (balance) => (
                   <span className={balance.overdueCount > 0 ? 'badge badge-red' : undefined}>
@@ -250,7 +263,7 @@ export default function AdminPaymentsPage() {
                 ),
               },
             ]}
-            emptyMessage="No balances yet."
+            emptyMessage="Todavía no hay saldos."
             getRowKey={(balance) => balance.studentId}
             rows={balances}
           />
@@ -260,48 +273,48 @@ export default function AdminPaymentsPage() {
       <section className="card section-stack">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Ledger</p>
+            <p className="eyebrow">Libro</p>
             <h2 className="section-title">
-              {payments.length} {payments.length === 1 ? 'payment' : 'payments'}
+              {payments.length} {payments.length === 1 ? 'pago' : 'pagos'}
             </h2>
           </div>
           <div className="form-field">
-            <label htmlFor="paymentStatusFilter">Status</label>
+            <label htmlFor="paymentStatusFilter">Estado</label>
             <select
               id="paymentStatusFilter"
               onChange={(event) => setStatusFilter(event.target.value as PaymentStatus | '')}
               value={statusFilter}
             >
-              <option value="">All</option>
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="">Todos</option>
+              <option value="pending">Pendiente</option>
+              <option value="paid">Pagado</option>
+              <option value="cancelled">Cancelado</option>
             </select>
           </div>
         </div>
         {loading ? (
-          <PanelState message="Loading payments..." tone="loading" />
+          <PanelState message="Cargando pagos…" tone="loading" />
         ) : (
           <DataTable
             columns={[
-              { key: 'receipt', header: 'Receipt', render: (payment) => payment.receiptNumber },
+              { key: 'receipt', header: 'Recibo', render: (payment) => payment.receiptNumber },
               {
                 key: 'student',
-                header: 'Student',
+                header: 'Estudiante',
                 render: (payment) => studentNames.get(payment.studentId) ?? payment.studentId,
               },
-              { key: 'concept', header: 'Concept', render: (payment) => payment.concept },
-              { key: 'amount', header: 'Amount', align: 'right', render: (payment) => formatCents(payment.amountCents) },
+              { key: 'concept', header: 'Concepto', render: (payment) => payment.concept },
+              { key: 'amount', header: 'Monto', align: 'right', render: (payment) => formatCents(payment.amountCents) },
               {
                 key: 'due',
-                header: 'Due',
+                header: 'Vence',
                 render: (payment) => (payment.dueDate ? formatDate(payment.dueDate) : '-'),
               },
               {
                 key: 'status',
-                header: 'Status',
+                header: 'Estado',
                 render: (payment) => (
-                  <span className={STATUS_BADGE[payment.status]}>{payment.status}</span>
+                  <span className={STATUS_BADGE[payment.status]}>{paymentStatusLabels[payment.status]}</span>
                 ),
               },
               {
@@ -313,21 +326,21 @@ export default function AdminPaymentsPage() {
                     {payment.status === 'pending' ? (
                       <>
                         <Button disabled={saving} onClick={() => setStatus(payment, 'paid')} variant="secondary">
-                          Mark paid
+                          Marcar como pagado
                         </Button>
                         <Button disabled={saving} onClick={() => setStatus(payment, 'cancelled')} variant="ghost">
-                          Cancel
+                          Cancelar
                         </Button>
                       </>
                     ) : null}
                     <Button onClick={() => void downloadReceipt(payment)} variant="ghost">
-                      Receipt
+                      Recibo
                     </Button>
                   </span>
                 ),
               },
             ]}
-            emptyMessage="No payments recorded."
+            emptyMessage="No hay pagos registrados."
             getRowKey={(payment) => payment.id}
             rows={payments}
           />

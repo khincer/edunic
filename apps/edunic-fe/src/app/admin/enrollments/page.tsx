@@ -11,6 +11,12 @@ import {
   type Enrollment,
 } from '@/lib/api';
 
+const enrollmentStatusLabels: Record<string, string> = {
+  active: 'Activas',
+  completed: 'Completadas',
+  withdrawn: 'Retiradas',
+};
+
 export default function AdminEnrollmentsPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [status, setStatus] = useState('active');
@@ -40,7 +46,7 @@ export default function AdminEnrollmentsPage() {
       );
       setEnrollments(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load enrollments');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar la lista de matrículas');
     } finally {
       setLoading(false);
     }
@@ -50,9 +56,9 @@ export default function AdminEnrollmentsPage() {
     <AdminShell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Enrollments</p>
-          <h1 className="page-title">Enrollment roster</h1>
-          <p className="body-copy">Review active, completed, and withdrawn student enrollments.</p>
+          <p className="eyebrow">Matrículas</p>
+          <h1 className="page-title">Listado de matrículas</h1>
+          <p className="body-copy">Revise las matrículas activas, completadas y retiradas de los estudiantes.</p>
         </div>
       </header>
 
@@ -61,8 +67,8 @@ export default function AdminEnrollmentsPage() {
       <Card>
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Filter</p>
-            <h2 className="section-title">{enrollments.length} matching records</h2>
+            <p className="eyebrow">Filtrar</p>
+            <h2 className="section-title">{enrollments.length} registros coincidentes</h2>
           </div>
           <div className="button-row">
             {['active', 'completed', 'withdrawn'].map((nextStatus) => (
@@ -74,14 +80,14 @@ export default function AdminEnrollmentsPage() {
                 }}
                 variant={status === nextStatus ? 'primary' : 'secondary'}
               >
-                {nextStatus}
+                {enrollmentStatusLabels[nextStatus] ?? nextStatus}
               </Button>
             ))}
           </div>
         </div>
-        {loading ? <p className="body-copy">Loading enrollments...</p> : null}
+        {loading ? <p className="body-copy">Cargando matrículas…</p> : null}
         {!loading && enrollments.length === 0 ? (
-          <div className="empty-state body-copy">No enrollments found.</div>
+          <div className="empty-state body-copy">No se encontraron matrículas.</div>
         ) : null}
         <div className="activity-list">
           {enrollments.map((enrollment) => (
@@ -90,7 +96,7 @@ export default function AdminEnrollmentsPage() {
               <span>
                 <strong>{enrollment.student.fullName}</strong>
                 <p className="field-help">
-                  {enrollment.status} - classroom {enrollment.classroomId ?? 'unassigned'} - period{' '}
+                  {enrollmentStatusLabels[enrollment.status] ?? enrollment.status} - aula {enrollment.classroomId ?? 'sin asignar'} - período{' '}
                   {enrollment.academicPeriodId}
                 </p>
               </span>

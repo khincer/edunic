@@ -6,6 +6,7 @@ import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/button';
 import { clearSession, getSession, login } from '@/lib/auth';
+import { formatRole } from '@/lib/roles';
 
 export type AuthLoginPageProps = {
   accent: 'admin' | 'teacher' | 'parent';
@@ -64,13 +65,13 @@ export function AuthLoginPage({
 
       if (!allowedRoles.includes(session.user.role)) {
         clearSession();
-        setError(`This login is for ${requiredRoleLabel}. Your account is marked as ${session.user.role}.`);
+        setError(`Este inicio de sesión es para ${requiredRoleLabel}. Su cuenta está marcada como ${formatRole(session.user.role)}.`);
         return;
       }
 
       router.replace(redirectTo);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to sign in');
+      setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión');
     } finally {
       setBusy(false);
     }
@@ -78,7 +79,7 @@ export function AuthLoginPage({
 
   return (
     <main className={`login-page auth-${accent}`}>
-      <section aria-label={`${sectionLabel} sign in`} className="login-panel">
+      <section aria-label={`Inicio de sesión: ${sectionLabel}`} className="login-panel">
         <div className="auth-brand">
           <span className="auth-brand-mark">E</span>
           <span>
@@ -95,7 +96,7 @@ export function AuthLoginPage({
 
           <form className="auth-form" onSubmit={handleSubmit}>
             <label className="auth-field" htmlFor="email">
-              <span>Email</span>
+              <span>Correo electrónico</span>
               <span className="auth-input-wrap">
                 <span aria-hidden="true" className="auth-input-icon">
                   <Mail size={16} strokeWidth={2} />
@@ -113,7 +114,7 @@ export function AuthLoginPage({
               </span>
             </label>
             <label className="auth-field" htmlFor="password">
-              <span>Password</span>
+              <span>Contraseña</span>
               <span className="auth-input-wrap">
                 <span aria-hidden="true" className="auth-input-icon">
                   <Lock size={16} strokeWidth={2} />
@@ -128,24 +129,24 @@ export function AuthLoginPage({
                   value={password}
                 />
                 <button
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                   className="auth-visibility"
                   onClick={() => setShowPassword((current) => !current)}
                   type="button"
                 >
-                  {showPassword ? 'Hide' : 'Show'}
+                  {showPassword ? 'Ocultar' : 'Mostrar'}
                 </button>
               </span>
             </label>
 
             <Button className="auth-submit" disabled={busy || !canSubmit} type="submit">
-              {busy ? 'Signing in…' : 'Sign in'}
+              {busy ? 'Iniciando sesión…' : 'Iniciar sesión'}
             </Button>
           </form>
         </section>
       </section>
 
-      <section aria-label={`${sectionLabel} context`} className="login-hero">
+      <section aria-label={`Contexto: ${sectionLabel}`} className="login-hero">
         <div className="school-identity">
           <h2>{brandTitle}</h2>
           <p>{heroText}</p>

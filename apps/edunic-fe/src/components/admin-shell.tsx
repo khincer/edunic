@@ -27,7 +27,7 @@ import {
   getSession,
   onSessionChange,
 } from '@/lib/auth';
-import { isAdminRole } from '@/lib/roles';
+import { formatRole, isAdminRole } from '@/lib/roles';
 import { Button, ButtonLink } from './button';
 
 type AdminShellProps = {
@@ -40,35 +40,35 @@ interface NavItem {
 }
 const navGroups: Array<{ label: string; items: NavItem[] }> = [
   {
-    label: 'Overview',
-    items: [{ label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard }],
+    label: 'Resumen',
+    items: [{ label: 'Panel principal', href: '/admin/dashboard', icon: LayoutDashboard }],
   },
   {
-    label: 'People',
+    label: 'Personas',
     items: [
-      { label: 'Students', href: '/admin/students', icon: UsersRound },
-      { label: 'Teachers', href: '/admin/teachers', icon: GraduationCap },
-      { label: 'Enrollments', href: '/admin/enrollments', icon: ClipboardList },
+      { label: 'Estudiantes', href: '/admin/students', icon: UsersRound },
+      { label: 'Docentes', href: '/admin/teachers', icon: GraduationCap },
+      { label: 'Matrículas', href: '/admin/enrollments', icon: ClipboardList },
     ],
   },
   {
-    label: 'Academics',
+    label: 'Académico',
     items: [
-      { label: 'Subjects', href: '/admin/subjects', icon: Library },
-      { label: 'Academic periods', href: '/admin/academic-periods', icon: CalendarDays },
-      { label: 'Grades', href: '/admin/grades', icon: BookOpenCheck },
-      { label: 'Attendance', href: '/admin/attendance', icon: ClipboardCheck },
-      { label: 'Reports', href: '/admin/reports', icon: FileText },
+      { label: 'Materias', href: '/admin/subjects', icon: Library },
+      { label: 'Períodos académicos', href: '/admin/academic-periods', icon: CalendarDays },
+      { label: 'Calificaciones', href: '/admin/grades', icon: BookOpenCheck },
+      { label: 'Asistencia', href: '/admin/attendance', icon: ClipboardCheck },
+      { label: 'Informes', href: '/admin/reports', icon: FileText },
     ],
   },
   {
-    label: 'Operations',
+    label: 'Operaciones',
     items: [
-      { label: 'Classroom activity', href: '/admin/activity', icon: Activity },
-      { label: 'Workflows', href: '/admin/workflows', icon: Workflow },
-      { label: 'Payments', href: '/admin/payments', icon: Wallet },
-      { label: 'Notifications', href: '/admin/notifications', icon: Bell },
-      { label: 'School settings', href: '/admin/settings', icon: Building2 },
+      { label: 'Actividad de aula', href: '/admin/activity', icon: Activity },
+      { label: 'Flujos de trabajo', href: '/admin/workflows', icon: Workflow },
+      { label: 'Pagos', href: '/admin/payments', icon: Wallet },
+      { label: 'Notificaciones', href: '/admin/notifications', icon: Bell },
+      { label: 'Configuración del colegio', href: '/admin/settings', icon: Building2 },
     ],
   },
 ];
@@ -94,7 +94,7 @@ export function AdminShell({ children }: AdminShellProps) {
     return (
       <main className="admin-app">
         <div className="admin-content">
-          <section className="empty-state body-copy">Checking your session…</section>
+          <section className="empty-state body-copy">Verificando tu sesión…</section>
         </div>
       </main>
     );
@@ -110,16 +110,16 @@ export function AdminShell({ children }: AdminShellProps) {
       <main className="admin-app">
         <div className="admin-content">
           <section className="card section-stack" role="alert">
-            <h1 className="page-title">This console is for the school administration</h1>
+            <h1 className="page-title">Esta consola es para la administración del colegio</h1>
             <p className="body-copy">
-              You are signed in as {session.user.email} ({session.user.role}).
+              Has iniciado sesión como {session.user.email} ({session.user.role}).
             </p>
             <div className="button-row">
               {portal ? (
                 <ButtonLink href={portal.href}>{portal.label}</ButtonLink>
               ) : null}
               <Button onClick={handleLogout} variant="secondary">
-                Sign out
+                Cerrar sesión
               </Button>
             </div>
           </section>
@@ -136,10 +136,10 @@ export function AdminShell({ children }: AdminShellProps) {
             <span className="admin-brand-mark">E</span>
             <span>
               <strong className="admin-brand-title">Edunic</strong>
-              <span className="admin-brand-subtitle">Administration</span>
+              <span className="admin-brand-subtitle">Administración</span>
             </span>
           </Link>
-          <nav aria-label="Admin navigation" className="admin-nav">
+          <nav aria-label="Navegación de administración" className="admin-nav">
             {navGroups.map((group) => (
               <div className="admin-nav-group" key={group.label}>
                 <p>{group.label}</p>
@@ -171,10 +171,10 @@ export function AdminShell({ children }: AdminShellProps) {
               <span>{formatRole(session.user.role)}</span>
             </span>
             <Button
-              aria-label="Sign out"
+              aria-label="Cerrar sesión"
               className="button-small"
               onClick={handleLogout}
-              title="Sign out"
+              title="Cerrar sesión"
               variant="ghost"
             >
               <LogOut aria-hidden="true" size={16} strokeWidth={2} />
@@ -191,11 +191,11 @@ export function AdminShell({ children }: AdminShellProps) {
 
 function getPortalFor(role: string) {
   if (role === 'teacher') {
-    return { href: '/teachers', label: 'Go to the teacher portal' };
+    return { href: '/teachers', label: 'Ir al portal docente' };
   }
 
   if (role === 'parent') {
-    return { href: '/parents', label: 'Go to the parent portal' };
+    return { href: '/parents', label: 'Ir al portal de familias' };
   }
 
   return null;
@@ -211,8 +211,4 @@ function getHydrated() {
 
 function getServerHydrated() {
   return false;
-}
-
-function formatRole(role: string) {
-  return role.replace(/_/g, ' ');
 }
