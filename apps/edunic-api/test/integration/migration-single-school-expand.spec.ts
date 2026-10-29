@@ -42,8 +42,8 @@ async function createStudent(name: string) {
   const id = randomUUID();
   createdStudents.push(id);
   await db.execute(
-    sql`insert into students (id, first_name, last_name)
-        values (${id}, ${name}, ${'Student'})`
+    sql`insert into students (id, first_name, first_last_name, second_last_name)
+        values (${id}, ${name}, ${'Student'}, ${'Fixture'})`
   );
   return id;
 }
@@ -215,9 +215,10 @@ describe('migration 0009 single school expand', () => {
     // database is emptied first: rows left by other suites have no school.
     await resetTestDatabase();
 
-    // 0015, 0014, 0013, 0012, 0011, 0010 and 0009 come off in order: each of
-    // them builds on what the previous one created, and the runner keeps the
-    // journal in step.
+    // 0016, 0015, 0014, 0013, 0012, 0011, 0010 and 0009 come off in order:
+    // each of them builds on what the previous one created, and the runner
+    // keeps the journal in step.
+    await runMigrationsDown();
     await runMigrationsDown();
     await runMigrationsDown();
     await runMigrationsDown();

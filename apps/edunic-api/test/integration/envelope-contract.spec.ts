@@ -58,7 +58,7 @@ describe('API error envelope contract', () => {
     const response = await client
       .post('/students')
       .set(teacherHeaders)
-      .send({ firstName: 'Ana', lastName: 'Lopez', dateOfBirth: '2012-01-01' });
+      .send({ firstName: 'Ana', firstLastName: 'Lopez', secondLastName: 'Test', dateOfBirth: '2012-01-01' });
 
     expect(response.status).toBe(403);
     expect(response.body).toMatchObject({ code: 'FORBIDDEN' });

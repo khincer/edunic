@@ -102,7 +102,7 @@ export class ClassroomActivityRepository {
           g.id,
           g.created_at as "occurredAt",
           st.id as "studentId",
-          trim(st.first_name || ' ' || st.last_name) as "studentName",
+          concat_ws(' ', st.first_name, st.second_name, st.first_last_name, st.second_last_name) as "studentName",
           s.name || ': ' || g.score as summary
         from grades g
         inner join enrollments e on e.id = g.enrollment_id
@@ -116,7 +116,7 @@ export class ClassroomActivityRepository {
           at.id,
           at.created_at,
           st.id,
-          trim(st.first_name || ' ' || st.last_name),
+          concat_ws(' ', st.first_name, st.second_name, st.first_last_name, st.second_last_name),
           at.status
         from attendance at
         inner join enrollments e on e.id = at.enrollment_id

@@ -56,11 +56,11 @@ describe('GET /reports/export.csv', () => {
     // The second name is a CSV injection payload with a comma and quotes.
     const myStudent = await createStudentFixture({
       firstName: 'Jane',
-      lastName: 'Doe',
+      firstLastName: 'Doe',
     });
     const otherStudent = await createStudentFixture({
       firstName: '=HYPERLINK("http://evil","x")',
-      lastName: 'Roe, Jr',
+      firstLastName: 'Roe, Jr',
     });
 
     const myTerm1 = await createEnrollmentFixture({

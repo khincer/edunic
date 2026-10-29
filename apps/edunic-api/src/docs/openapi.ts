@@ -4,23 +4,141 @@ import {
   operationsPaths,
 } from './openapi-administration.js';
 
+const studentNameProperties = {
+  firstName: { type: 'string', example: 'Ana' },
+  secondName: { type: 'string', nullable: true, example: 'María' },
+  firstLastName: { type: 'string', example: 'López' },
+  // Nullable only for students created before the four-part names.
+  secondLastName: { type: 'string', nullable: true, example: 'García' },
+  fullName: { type: 'string', example: 'Ana María López García' },
+};
+
 const studentSchema = {
   type: 'object',
-  required: ['id', 'firstName', 'lastName', 'fullName'],
+  required: ['id', 'firstName', 'firstLastName', 'fullName'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    firstName: { type: 'string', example: 'Jane' },
-    lastName: { type: 'string', example: 'Doe' },
-    fullName: { type: 'string', example: 'Jane Doe' },
+    ...studentNameProperties,
     dateOfBirth: {
       type: 'string',
       nullable: true,
       example: '2012-03-15',
     },
+    age: { type: 'integer', nullable: true, example: 11 },
     createdAt: {
       type: 'string',
       format: 'date-time',
       nullable: true,
+    },
+  },
+};
+
+// GET /students and GET /students/{studentId} add where the student sits in
+// the active academic period, and their guardians.
+const studentWithContextSchema = {
+  ...studentSchema,
+  required: [
+    ...studentSchema.required,
+    'academicPeriodId',
+    'classroomId',
+    'gradeLevel',
+    'section',
+    'guardians',
+  ],
+  properties: {
+    ...studentSchema.properties,
+    academicPeriodId: { type: 'string', format: 'uuid', nullable: true },
+    classroomId: { type: 'string', format: 'uuid', nullable: true },
+    gradeLevel: { type: 'integer', nullable: true, example: 5 },
+    section: { type: 'string', nullable: true, example: 'A' },
+    guardians: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'name'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string', example: 'Rosa García' },
+        },
+      },
+    },
+  },
+};
+
+const studentNameInputProperties = {
+  firstName: { type: 'string', example: 'Ana' },
+  secondName: { type: 'string', nullable: true, example: 'María' },
+  firstLastName: { type: 'string', example: 'López' },
+  secondLastName: { type: 'string', example: 'García' },
+};
+
+const studentRegistrationSchema = {
+  type: 'object',
+  required: ['student', 'guardians', 'enrollment', 'academicPeriod'],
+  properties: {
+    student: {
+      type: 'object',
+      required: ['id', 'firstName', 'firstLastName', 'secondLastName', 'fullName', 'dateOfBirth'],
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        ...studentNameProperties,
+        dateOfBirth: { type: 'string', example: '2015-05-10' },
+        age: { type: 'integer', example: 11 },
+      },
+    },
+    guardians: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 2,
+      items: {
+        type: 'object',
+        required: ['id', 'name', 'email', 'account'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string', example: 'Rosa García' },
+          email: { type: 'string', format: 'email' },
+          account: {
+            type: 'object',
+            required: ['userId', 'created'],
+            properties: {
+              userId: { type: 'string', format: 'uuid' },
+              created: { type: 'boolean', example: true },
+              temporaryPassword: {
+                type: 'string',
+                description:
+                  'Only when the parent account was created by this request. Shown once and never stored in clear.',
+              },
+            },
+          },
+        },
+      },
+    },
+    enrollment: {
+      type: 'object',
+      required: ['id', 'academicPeriodId', 'classroomId', 'classroom'],
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        academicPeriodId: { type: 'string', format: 'uuid' },
+        classroomId: { type: 'string', format: 'uuid' },
+        classroom: {
+          type: 'object',
+          required: ['id', 'gradeLevel', 'section'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            gradeLevel: { type: 'integer', example: 5 },
+            section: { type: 'string', nullable: true, example: 'A' },
+          },
+        },
+      },
+    },
+    academicPeriod: {
+      type: 'object',
+      required: ['id', 'year', 'term'],
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        year: { type: 'integer', example: 2026 },
+        term: { type: 'integer', example: 1 },
+      },
     },
   },
 };
@@ -3812,7 +3930,7 @@ export function buildOpenApiDocument() {
               in: 'query',
               schema: {
                 type: 'string',
-                enum: ['createdAt', 'firstName', 'lastName'],
+                enum: ['createdAt', 'firstName', 'firstLastName', 'secondLastName'],
                 default: 'createdAt',
               },
             },
@@ -3836,7 +3954,7 @@ export function buildOpenApiDocument() {
                     properties: {
                       data: {
                         type: 'array',
-                        items: studentSchema,
+                        items: studentWithContextSchema,
                       },
                       meta: {
                         type: 'object',
@@ -3864,10 +3982,9 @@ export function buildOpenApiDocument() {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['firstName', 'lastName'],
+                  required: ['firstName', 'firstLastName', 'secondLastName'],
                   properties: {
-                    firstName: { type: 'string', example: 'Jane' },
-                    lastName: { type: 'string', example: 'Doe' },
+                    ...studentNameInputProperties,
                     dateOfBirth: {
                       type: 'string',
                       example: '2012-03-15',
@@ -3895,6 +4012,80 @@ export function buildOpenApiDocument() {
           },
         },
       },
+      '/students/register': {
+        post: {
+          tags: ['Students'],
+          summary: 'Register a student with guardians and enroll them',
+          description:
+            'Administration only. In one transaction: creates the student, reuses guardians by email (case-insensitive) or creates them, links or creates their parent accounts, and enrolls the student in the grado (classroom) for the active academic period (the one covering today, else the latest year/term). A created account returns a one-time temporaryPassword.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: [
+                    'firstName',
+                    'firstLastName',
+                    'secondLastName',
+                    'dateOfBirth',
+                    'classroomId',
+                    'guardians',
+                  ],
+                  properties: {
+                    ...studentNameInputProperties,
+                    dateOfBirth: {
+                      type: 'string',
+                      format: 'date',
+                      description: 'YYYY-MM-DD, not in the future.',
+                      example: '2015-05-10',
+                    },
+                    classroomId: { type: 'string', format: 'uuid' },
+                    guardians: {
+                      type: 'array',
+                      minItems: 1,
+                      maxItems: 2,
+                      description: 'Emails must differ.',
+                      items: {
+                        type: 'object',
+                        required: ['name', 'email'],
+                        properties: {
+                          name: { type: 'string', example: 'Rosa García' },
+                          email: { type: 'string', format: 'email' },
+                          phone: { type: 'string', nullable: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Student registered and enrolled',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: studentRegistrationSchema,
+                    },
+                  },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: { $ref: '#/components/responses/NotFound' },
+            409: {
+              description:
+                'No active academic period, or a guardian email belongs to a user that is not a parent',
+            },
+          },
+        },
+      },
       '/students/{studentId}': {
         get: {
           tags: ['Students'],
@@ -3915,7 +4106,7 @@ export function buildOpenApiDocument() {
                   schema: {
                     type: 'object',
                     properties: {
-                      data: studentSchema,
+                      data: studentWithContextSchema,
                     },
                   },
                 },
@@ -3943,8 +4134,7 @@ export function buildOpenApiDocument() {
                 schema: {
                   type: 'object',
                   properties: {
-                    firstName: { type: 'string' },
-                    lastName: { type: 'string' },
+                    ...studentNameInputProperties,
                     dateOfBirth: { type: 'string', nullable: true },
                   },
                 },

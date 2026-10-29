@@ -173,7 +173,7 @@ describe('worker email delivery idempotency', () => {
     });
     const student = await createStudentFixture({
       firstName: 'Wren',
-      lastName: 'Vasquez',
+      firstLastName: 'Vasquez',
     });
     const enrollment = await createEnrollmentFixture({
       studentId: student.id,

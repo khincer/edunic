@@ -138,7 +138,7 @@ describe('auth and RBAC routes', () => {
       )
       .send({
         firstName: 'Ana',
-        lastName: 'Lopez',
+        firstLastName: 'Lopez', secondLastName: 'Test',
       });
 
     expect(response.status).toBe(403);

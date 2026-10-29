@@ -12,7 +12,7 @@ import {
 
 const studentBody = {
   firstName: 'Idem',
-  lastName: 'Potency',
+  firstLastName: 'Potency', secondLastName: 'Test',
   dateOfBirth: '2014-05-01',
 };
 

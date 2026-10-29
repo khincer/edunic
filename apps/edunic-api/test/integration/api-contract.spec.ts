@@ -148,7 +148,7 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
         method: 'POST',
         url: '/students',
         headers: teacherHeaders,
-        payload: { firstName: 'Ana', lastName: 'Lopez' },
+        payload: { firstName: 'Ana', firstLastName: 'Lopez', secondLastName: 'Test' },
       });
 
       expect(response.statusCode).toBe(403);
@@ -232,7 +232,7 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
   describe('idempotency contract (P2-R5)', () => {
     const studentBody = {
       firstName: 'Idem',
-      lastName: 'Potency',
+      firstLastName: 'Potency', secondLastName: 'Test',
       dateOfBirth: '2014-05-01',
     };
 
@@ -311,11 +311,11 @@ describe('API contract-drift net (P3-R3, P2-R9)', () => {
       });
 
       const names = [
-        { firstName: 'Mike', lastName: 'Alpha' },
-        { firstName: 'Ana', lastName: 'Zeta' },
-        { firstName: 'Bea', lastName: 'Zeta' },
-        { firstName: 'Cleo', lastName: 'Beta' },
-        { firstName: 'Dario', lastName: 'Gamma' },
+        { firstName: 'Mike', firstLastName: 'Alpha', secondLastName: 'Test' },
+        { firstName: 'Ana', firstLastName: 'Zeta', secondLastName: 'Test' },
+        { firstName: 'Bea', firstLastName: 'Zeta', secondLastName: 'Test' },
+        { firstName: 'Cleo', firstLastName: 'Beta', secondLastName: 'Test' },
+        { firstName: 'Dario', firstLastName: 'Gamma', secondLastName: 'Test' },
       ];
       for (const name of names) {
         await createStudentFixture({ ...name });

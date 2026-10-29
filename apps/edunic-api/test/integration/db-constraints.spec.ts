@@ -61,8 +61,8 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
     // Parent rows every probe builds on. Since 0015 no row names a school, so
     // none is needed.
     await scratch.query(
-      `INSERT INTO students (id, first_name, last_name)
-       VALUES ($1, 'Jane', 'Doe')`,
+      `INSERT INTO students (id, first_name, first_last_name, second_last_name)
+       VALUES ($1, 'Jane', 'Doe', 'Roe')`,
       [IDS.student]
     );
     await scratch.query(
@@ -87,7 +87,7 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
     const migrations = await scratch.query(
       'SELECT COUNT(*)::int AS count FROM drizzle.__drizzle_migrations'
     );
-    expect(migrations.rows[0]).toEqual({ count: 16 });
+    expect(migrations.rows[0]).toEqual({ count: 17 });
 
     const tables = [
       'users',
@@ -146,7 +146,7 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
     // and leave `constraint` unset (only named constraints set it).
     await expect(
       scratch.query(
-        `INSERT INTO students (id, first_name, last_name)
+        `INSERT INTO students (id, first_name, first_last_name)
          VALUES ($1, NULL, 'NoFirst')`,
         [IDS.unknownId]
       )
@@ -200,6 +200,18 @@ describe('DB constraints on a fresh database (P2-R7, P3-R4)', () => {
     ).rejects.toMatchObject({
       code: '23514',
       constraint: 'attendance_status_check',
+    });
+
+    // Legacy rows may lack a second last name (NULL), but a blank one is
+    // never stored.
+    await expect(
+      scratch.query(
+        `INSERT INTO students (first_name, first_last_name, second_last_name)
+         VALUES ('Blank', 'Second', '  ')`
+      )
+    ).rejects.toMatchObject({
+      code: '23514',
+      constraint: 'students_second_last_name_not_blank_check',
     });
   });
 

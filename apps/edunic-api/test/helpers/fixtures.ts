@@ -52,9 +52,13 @@ export async function createInstitutionFixture(name = 'Test Institution') {
   return result[0];
 }
 
+// secondLastName defaults to NULL, the shape of a row created before 0016, so
+// composed names stay "First Last" unless a spec asks for more.
 export async function createStudentFixture(input: {
   firstName?: string;
-  lastName?: string;
+  secondName?: string | null;
+  firstLastName?: string;
+  secondLastName?: string | null;
   dateOfBirth?: string | null;
 }) {
   const result = await db
@@ -62,7 +66,9 @@ export async function createStudentFixture(input: {
     .values({
       id: nextId('20000000'),
       firstName: input.firstName ?? 'Jane',
-      lastName: input.lastName ?? 'Doe',
+      secondName: input.secondName ?? null,
+      firstLastName: input.firstLastName ?? 'Doe',
+      secondLastName: input.secondLastName ?? null,
       dateOfBirth: input.dateOfBirth ?? '2012-03-15',
     })
     .returning();

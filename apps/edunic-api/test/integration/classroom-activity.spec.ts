@@ -51,11 +51,11 @@ describe('classroom activity', () => {
     const quiet = await createClassroomFixture({ gradeLevel: 6, section: 'B' });
     const period = await createAcademicPeriodFixture({});
 
-    const jane = await createStudentFixture({ firstName: 'Jane', lastName: 'Doe' });
-    const john = await createStudentFixture({ firstName: 'John', lastName: 'Roe' });
+    const jane = await createStudentFixture({ firstName: 'Jane', firstLastName: 'Doe' });
+    const john = await createStudentFixture({ firstName: 'John', firstLastName: 'Roe' });
     const quietStudent = await createStudentFixture({
       firstName: 'Quiet',
-      lastName: 'Kid',
+      firstLastName: 'Kid',
     });
     const janeEnrollment = await createEnrollmentFixture({
       studentId: jane.id,

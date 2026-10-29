@@ -35,11 +35,11 @@ describe('payments routes', () => {
     });
     const student = await createStudentFixture({
       firstName: 'Jane',
-      lastName: 'Doe',
+      firstLastName: 'Doe',
     });
     const otherStudent = await createStudentFixture({
       firstName: 'John',
-      lastName: 'Roe',
+      firstLastName: 'Roe',
     });
 
     return {

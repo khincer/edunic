@@ -1,9 +1,18 @@
 import { readFileSync } from 'node:fs';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { pgTable, text, uuid } from 'drizzle-orm/pg-core';
 import pg from 'pg';
 import { runMigrationsDown } from '@edunic/source/db';
-import { classrooms, students } from '@edunic/source/db/schema';
+import { classrooms } from '@edunic/source/db/schema';
 import { runMigrationsUpTo } from '../helpers/migrations';
+
+// The students table as the column-free 0015 code saw it. 0016 renamed
+// last_name, so the live schema no longer matches the 0014 replay.
+const students = pgTable('students', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+});
 
 // Migration 0014 is the expand step of the single-school contract: it adds
 // `single_school_id()` and makes it the DEFAULT of every `institution_id`

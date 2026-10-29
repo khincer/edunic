@@ -35,7 +35,7 @@ describe('audit logs routes', () => {
 
     const createResponse = await client.post('/students').set(headers).send({
       firstName: 'Ana',
-      lastName: 'Lopez',
+      firstLastName: 'Lopez', secondLastName: 'Test',
     });
 
     expect(createResponse.status).toBe(201);

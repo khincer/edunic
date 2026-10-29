@@ -67,7 +67,7 @@ describe('E2E flow: attendance', () => {
       method: 'POST',
       url: '/students',
       headers,
-      payload: { firstName: 'Mia', lastName: 'Torres', dateOfBirth: '2013-09-02' },
+      payload: { firstName: 'Mia', firstLastName: 'Torres', secondLastName: 'Test', dateOfBirth: '2013-09-02' },
     });
     expect(student.statusCode).toBe(201);
 

@@ -8,6 +8,11 @@ import { AuditLogsRepository } from '@edunic/source/domain/audit-logs';
 
 const MUTATING_METHODS = new Set(['POST', 'PATCH', 'DELETE']);
 
+// Any key naming a password (a registration's one-time temporaryPassword, a
+// password change body) is masked before the snapshot is persisted.
+const SECRET_KEY_PATTERN = /password/i;
+const REDACTED = '[REDACTED]';
+
 const auditLogsPluginHandler: FastifyPluginAsync = async (app) => {
   const auditLogsRepository = new AuditLogsRepository(app.db);
 
@@ -155,9 +160,26 @@ function buildAuditAfterSnapshot(request: FastifyRequest) {
     route: request.routeOptions.url,
     method: request.method,
     params: request.params,
-    body: request.body ?? null,
-    response: request.auditPayload ?? null,
+    body: redactSecrets(request.body ?? null),
+    response: redactSecrets(request.auditPayload ?? null),
   };
+}
+
+export function redactSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(redactSecrets);
+  }
+
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        SECRET_KEY_PATTERN.test(key) ? REDACTED : redactSecrets(entry),
+      ])
+    );
+  }
+
+  return value;
 }
 
 export const auditLogsPlugin = fp(auditLogsPluginHandler, {

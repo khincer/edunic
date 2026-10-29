@@ -1,4 +1,8 @@
 import { loginBodySchema } from '@edunic/source/domain/auth';
+import {
+  createStudentBodySchema,
+  registerStudentBodySchema,
+} from '@edunic/source/domain/students';
 import { buildOpenApiDocument } from '../../src/docs/openapi.js';
 
 // NFR-05: the served OpenAPI document describes the single-school routes. It is
@@ -234,6 +238,50 @@ describe('OpenAPI document (classroom activity)', () => {
       'assignment',
       'event',
     ]);
+  });
+});
+
+describe('OpenAPI document (students)', () => {
+  it.each([
+    ['/students', 'post', createStudentBodySchema],
+    ['/students/register', 'post', registerStudentBodySchema],
+  ])('documents the %s %s body exactly as the route validates it', (path, method, routeSchema) => {
+    const schema =
+      operation(path, method).requestBody?.content['application/json'].schema ?? {};
+
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(
+      Object.keys(routeSchema.shape).sort()
+    );
+  });
+
+  it('documents the registration refusals and the one-time password', () => {
+    const register = operation('/students/register', 'post');
+
+    for (const status of ['201', '400', '401', '403', '404', '409']) {
+      expect(register.responses[status]).toBeDefined();
+    }
+    expect(JSON.stringify(register.responses['201'])).toContain('temporaryPassword');
+  });
+
+  it('documents the four name parts and the active-period fields of a student', () => {
+    const item =
+      operation('/students', 'get').responses['200'].content['application/json']
+        .schema.properties.data.items;
+
+    expect(Object.keys(item.properties)).toEqual(
+      expect.arrayContaining([
+        'firstName',
+        'secondName',
+        'firstLastName',
+        'secondLastName',
+        'gradeLevel',
+        'section',
+        'classroomId',
+        'academicPeriodId',
+        'guardians',
+      ])
+    );
+    expect(item.properties).not.toHaveProperty('lastName');
   });
 });
 

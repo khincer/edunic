@@ -8,6 +8,7 @@ import {
   StudentsRepository,
   createStudentBodySchema,
   listStudentsQuerySchema,
+  registerStudentBodySchema,
   studentParamsSchema,
   updateStudentBodySchema,
 } from '@edunic/source/domain/students';
@@ -20,14 +21,29 @@ import {
 import { actorOf } from './actor.js';
 
 const STUDENT_FILTER_SORT_OPTIONS = {
-  filterFields: ['firstName', 'lastName', 'dateOfBirth', 'createdAt'],
-  sortFields: ['firstName', 'lastName', 'dateOfBirth', 'createdAt'],
+  filterFields: [
+    'firstName',
+    'secondName',
+    'firstLastName',
+    'secondLastName',
+    'dateOfBirth',
+    'createdAt',
+  ],
+  sortFields: [
+    'firstName',
+    'secondName',
+    'firstLastName',
+    'secondLastName',
+    'dateOfBirth',
+    'createdAt',
+  ],
 };
 
 export async function studentRoutes(app: FastifyInstance) {
   const studentsService = new StudentsService(
     new StudentsRepository(app.db),
-    new AccessService(new AccessRepository(app.db))
+    new AccessService(new AccessRepository(app.db)),
+    app.eventBus
   );
   const readAccess = {
     preHandler: [app.authenticate, app.authorizeRoles(adminAnd('teacher', 'parent'))],
@@ -64,6 +80,13 @@ export async function studentRoutes(app: FastifyInstance) {
   app.post('/', adminOnly, async (request, reply) => {
     const body = parseWithSchema(createStudentBodySchema, request.body);
     const result = await studentsService.createStudent(body);
+
+    return reply.status(201).send(result);
+  });
+
+  app.post('/register', adminOnly, async (request, reply) => {
+    const body = parseWithSchema(registerStudentBodySchema, request.body);
+    const result = await studentsService.registerStudent(body);
 
     return reply.status(201).send(result);
   });

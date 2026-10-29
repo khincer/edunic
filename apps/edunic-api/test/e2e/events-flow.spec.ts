@@ -66,7 +66,7 @@ describe('E2E flow: events', () => {
       method: 'POST',
       url: '/students',
       headers,
-      payload: { firstName: 'Eva', lastName: 'Mendez', dateOfBirth: '2011-04-19' },
+      payload: { firstName: 'Eva', firstLastName: 'Mendez', secondLastName: 'Test', dateOfBirth: '2011-04-19' },
     });
     expect(student.statusCode).toBe(201);
     studentId = student.json().data.id;
