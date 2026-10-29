@@ -298,13 +298,16 @@ export async function seedDatabase(db: NodePgDatabase = defaultDb) {
       {
         id: ids.students.johnDoe,
         firstName: 'John',
-        lastName: 'Doe',
+        firstLastName: 'Doe',
+        secondLastName: 'Rivera',
         dateOfBirth: '2014-02-12',
       },
       {
         id: ids.students.janeSmith,
         firstName: 'Jane',
-        lastName: 'Smith',
+        secondName: 'Marie',
+        firstLastName: 'Smith',
+        secondLastName: 'Castillo',
         dateOfBirth: '2013-08-24',
       },
     ])

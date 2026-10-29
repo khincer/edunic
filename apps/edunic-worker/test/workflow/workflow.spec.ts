@@ -143,7 +143,8 @@ describe('workflow: enrollment.created -> worker -> enrollment.welcomed', () => 
       headers,
       payload: {
         firstName: 'Wren',
-        lastName: 'Vasquez',
+        firstLastName: 'Vasquez',
+        secondLastName: 'Reyes',
         dateOfBirth: '2011-04-19',
       },
     });

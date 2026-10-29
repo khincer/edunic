@@ -62,14 +62,22 @@ describe('E2E flow: students', () => {
       method: 'POST',
       url: '/students',
       headers,
-      payload: { firstName: 'Sofia', lastName: 'Ramirez', dateOfBirth: '2014-02-10' },
+      payload: {
+        firstName: 'Sofia',
+        firstLastName: 'Ramirez',
+        secondLastName: 'Ortega',
+        dateOfBirth: '2014-02-10',
+      },
     });
 
     expect(created.statusCode).toBe(201);
     const student = created.json().data;
     expect(student).toMatchObject({
       firstName: 'Sofia',
-      lastName: 'Ramirez',
+      secondName: null,
+      firstLastName: 'Ramirez',
+      secondLastName: 'Ortega',
+      fullName: 'Sofia Ramirez Ortega',
       dateOfBirth: '2014-02-10',
     });
     expect(student).not.toHaveProperty('institutionId');
@@ -90,14 +98,15 @@ describe('E2E flow: students', () => {
       method: 'PATCH',
       url: `/students/${student.id}`,
       headers,
-      payload: { lastName: 'Santos' },
+      payload: { firstLastName: 'Santos' },
     });
 
     expect(updated.statusCode).toBe(200);
     expect(updated.json().data).toMatchObject({
       id: student.id,
       firstName: 'Sofia',
-      lastName: 'Santos',
+      firstLastName: 'Santos',
+      fullName: 'Sofia Santos Ortega',
     });
 
     const list = await app.inject({
@@ -111,14 +120,16 @@ describe('E2E flow: students', () => {
     expect(listBody.data).toHaveLength(1);
     expect(listBody.data[0]).toMatchObject({
       id: student.id,
-      lastName: 'Santos',
+      firstLastName: 'Santos',
     });
     expect(listBody.meta).toEqual({ total: 1, limit: 10, offset: 0 });
 
     // DB state: the lifecycle ended with exactly one updated row.
     const rows = await db.execute(
-      sql.raw('SELECT last_name FROM students')
+      sql.raw('SELECT first_last_name, second_last_name FROM students')
     );
-    expect(rows.rows).toEqual([{ last_name: 'Santos' }]);
+    expect(rows.rows).toEqual([
+      { first_last_name: 'Santos', second_last_name: 'Ortega' },
+    ]);
   });
 });

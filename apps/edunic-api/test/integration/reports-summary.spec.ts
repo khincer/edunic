@@ -34,7 +34,7 @@ describe('student academic summary content', () => {
     const period = await createAcademicPeriodFixture({});
     const student = await createStudentFixture({
       firstName: 'Jane',
-      lastName: 'Doe',
+      firstLastName: 'Doe',
     });
     const enrollment = await createEnrollmentFixture({
       studentId: student.id,

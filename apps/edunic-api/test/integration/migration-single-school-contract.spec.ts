@@ -153,12 +153,15 @@ describe('migration 0015 single school contract', () => {
     }[];
   }
 
+  // Byte order (COLLATE "C") matches the JS sort of the expected lists; a
+  // database with an en_US collation would put "guardians" before
+  // "guardian_user_links".
   async function foreignKeysToInstitutions() {
     const result = await db().query(
       `SELECT conrelid::regclass::text AS table_name
          FROM pg_constraint
         WHERE contype = 'f' AND confrelid = 'public.institutions'::regclass
-        ORDER BY 1`
+        ORDER BY conrelid::regclass::text COLLATE "C"`
     );
     return result.rows.map((row: { table_name: string }) => row.table_name);
   }
@@ -204,7 +207,8 @@ describe('migration 0015 single school contract', () => {
       [PERIOD]
     );
     await db().query(
-      `INSERT INTO students (id, first_name, last_name) VALUES ($1, 'Ana', 'Contract')`,
+      `INSERT INTO students (id, first_name, first_last_name, second_last_name)
+       VALUES ($1, 'Ana', 'Contract', 'Seed')`,
       [STUDENT]
     );
     await db().query(
@@ -259,7 +263,7 @@ describe('migration 0015 single school contract', () => {
   it('is applied by the migrator and leaves no institution_id column anywhere', async () => {
     await withScratchDatabaseUrl(runMigrations);
 
-    expect(await appliedCount()).toBe(16);
+    expect(await appliedCount()).toBe(17);
     expect(await institutionIdColumns()).toEqual([]);
     expect(await foreignKeysToInstitutions()).toEqual([]);
     expect(await indexesNamingInstitution()).toEqual([]);
@@ -344,6 +348,10 @@ describe('migration 0015 single school contract', () => {
   });
 
   it('down refuses and changes nothing when rows exist but there is no school', async () => {
+    // 0016 (student names) sits on top of the contract; it comes off first.
+    await withScratchDatabaseUrl(runMigrationsDown);
+    expect(await appliedCount()).toBe(16);
+
     await expect(withScratchDatabaseUrl(runMigrationsDown)).rejects.toThrow(
       /no institutions row/
     );
@@ -448,16 +456,18 @@ describe('migration 0015 single school contract', () => {
     await db().query('DELETE FROM institutions WHERE id = $1', [OTHER_SCHOOL]);
 
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(16);
+    expect(await appliedCount()).toBe(17);
     expect(await institutionIdColumns()).toEqual([]);
     expect(await seededCounts()).toEqual(SEEDED);
 
+    // 0016, then the contract itself.
+    await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
     expect(await appliedCount()).toBe(15);
     expect(await seededCounts()).toEqual(SEEDED);
 
     await withScratchDatabaseUrl(runMigrations);
-    expect(await appliedCount()).toBe(16);
+    expect(await appliedCount()).toBe(17);
     expect(await institutionIdColumns()).toEqual([]);
     expect(await foreignKeysToInstitutions()).toEqual([]);
     expect(await seededCounts()).toEqual(SEEDED);

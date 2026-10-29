@@ -234,7 +234,7 @@ export class GuardiansRepository {
       select
         id,
         first_name as "firstName",
-        last_name as "lastName"
+        concat_ws(' ', first_last_name, second_last_name) as "lastName"
       from students
       where id = ${studentId}
       limit 1

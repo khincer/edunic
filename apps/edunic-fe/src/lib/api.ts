@@ -57,10 +57,68 @@ export type EmailDeliveryState = {
 export type Student = {
   id: string;
   firstName: string;
-  lastName: string;
+  secondName: string | null;
+  firstLastName: string;
+  // Null only for students created before the four-part names.
+  secondLastName: string | null;
   fullName: string;
   dateOfBirth: string | null;
+  age: number | null;
   createdAt: string | null;
+  // Where the student sits in the active academic period. Present on the
+  // list and detail reads, absent on create/update responses.
+  academicPeriodId?: string | null;
+  classroomId?: string | null;
+  gradeLevel?: number | null;
+  section?: string | null;
+  guardians?: Array<{ id: string; name: string }>;
+};
+
+export type StudentRegistrationGuardianInput = {
+  name: string;
+  email: string;
+  phone?: string;
+};
+
+export type StudentRegistrationInput = {
+  firstName: string;
+  secondName?: string;
+  firstLastName: string;
+  secondLastName: string;
+  dateOfBirth: string;
+  classroomId: string;
+  guardians: StudentRegistrationGuardianInput[];
+};
+
+export type StudentRegistration = {
+  student: {
+    id: string;
+    firstName: string;
+    secondName: string | null;
+    firstLastName: string;
+    secondLastName: string;
+    fullName: string;
+    dateOfBirth: string;
+    age: number;
+  };
+  guardians: Array<{
+    id: string;
+    name: string;
+    email: string;
+    account: {
+      userId: string;
+      created: boolean;
+      // Only for an account created by this registration; shown once.
+      temporaryPassword?: string;
+    };
+  }>;
+  enrollment: {
+    id: string;
+    academicPeriodId: string;
+    classroomId: string;
+    classroom: { id: string; gradeLevel: number; section: string | null };
+  };
+  academicPeriod: { id: string; year: number; term: number };
 };
 
 export type AcademicPeriod = {
@@ -515,6 +573,14 @@ export function formatClassroom(classroom: { gradeLevel: number; section: string
   return classroom.section
     ? `Curso ${classroom.gradeLevel} ${classroom.section}`
     : `Curso ${classroom.gradeLevel}`;
+}
+
+// The registration form and the Grados page name a classroom "Grado 5 A";
+// the rest of the console keeps formatClassroom.
+export function formatGrado(classroom: { gradeLevel: number; section: string | null }) {
+  return classroom.section
+    ? `Grado ${classroom.gradeLevel} ${classroom.section}`
+    : `Grado ${classroom.gradeLevel}`;
 }
 
 export type Topic = {

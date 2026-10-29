@@ -37,12 +37,15 @@ describe('students routes', () => {
 
     const createResponse = await client.post('/students').set(tenantHeaders).send({
       firstName: '  Ana  ',
-      lastName: '  Lopez ',
+      secondName: '   ',
+      firstLastName: '  Lopez ',
+      secondLastName: ' Ruiz ',
       dateOfBirth: '2013-04-10',
     });
 
     expect(createResponse.status).toBe(201);
-    expect(createResponse.body.data.fullName).toBe('Ana Lopez');
+    expect(createResponse.body.data.fullName).toBe('Ana Lopez Ruiz');
+    expect(createResponse.body.data.secondName).toBeNull();
     expect(createResponse.body.data).not.toHaveProperty('institutionId');
     const studentId = createResponse.body.data.id;
 
@@ -71,6 +74,40 @@ describe('students routes', () => {
       .set(tenantHeaders);
     expect(deleteResponse.status).toBe(200);
     expect(deleteResponse.body.data).toEqual({ id: studentId, deleted: true });
+  });
+
+  it('requires the second last name when creating a student', async () => {
+    const adminUser = await createUserFixture({ role: 'director' });
+
+    const response = await client
+      .post('/students')
+      .set(await createAuthHeaders({ userId: adminUser.id }))
+      .send({ firstName: 'Ana', firstLastName: 'Lopez' });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('searches across all four name parts', async () => {
+    const adminUser = await createUserFixture({ role: 'director' });
+    const headers = await createAuthHeaders({ userId: adminUser.id });
+    await createStudentFixture({
+      firstName: 'Ana',
+      secondName: 'Lucia',
+      firstLastName: 'Lopez',
+      secondLastName: 'Herrera',
+    });
+    await createStudentFixture({ firstName: 'Beto', firstLastName: 'Mora' });
+
+    for (const term of ['lucia', 'herrera', 'lopez', 'ana']) {
+      const response = await client
+        .get(`/students?search=${term}`)
+        .set(headers);
+
+      expect(response.status).toBe(200);
+      expect(
+        response.body.data.map((student: { fullName: string }) => student.fullName)
+      ).toEqual(['Ana Lucia Lopez Herrera']);
+    }
   });
 
   it('returns 400 when tenant header is missing', async () => {

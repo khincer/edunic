@@ -76,15 +76,28 @@ export const userRoles = pgTable(
    👨‍🎓 STUDENTS
 ========================================================= */
 
-export const students = pgTable('students', {
-  id: uuid('id').defaultRandom().primaryKey(),
+// second_last_name is nullable only for rows created before 0016; the API
+// requires it for every new student.
+export const students = pgTable(
+  'students',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
 
-  firstName: text('first_name').notNull(),
-  lastName: text('last_name').notNull(),
-  dateOfBirth: text('date_of_birth'),
+    firstName: text('first_name').notNull(),
+    secondName: text('second_name'),
+    firstLastName: text('first_last_name').notNull(),
+    secondLastName: text('second_last_name'),
+    dateOfBirth: text('date_of_birth'),
 
-  createdAt: timestamp('created_at').defaultNow(),
-});
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (t) => ({
+    secondLastNameNotBlank: check(
+      'students_second_last_name_not_blank_check',
+      sql`${t.secondLastName} is null or length(trim(${t.secondLastName})) > 0`
+    ),
+  })
+);
 
 /* =========================================================
    👪 GUARDIANS

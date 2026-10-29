@@ -93,7 +93,7 @@ export class ReportsRepository {
       select
         id,
         first_name as "firstName",
-        last_name as "lastName",
+        concat_ws(' ', first_last_name, second_last_name) as "lastName",
         date_of_birth as "dateOfBirth"
       from students
       where id = ${studentId}
@@ -191,7 +191,7 @@ export class ReportsRepository {
       select
         st.id as "studentId",
         st.first_name as "firstName",
-        st.last_name as "lastName",
+        concat_ws(' ', st.first_last_name, st.second_last_name) as "lastName",
         c.grade_level as "gradeLevel",
         c.section,
         ap.year,
@@ -211,7 +211,8 @@ export class ReportsRepository {
         on c.id = e.classroom_id
       where ${sql.join(filters, sql` and `)}
       order by
-        st.last_name asc,
+        st.first_last_name asc,
+        st.second_last_name asc,
         st.first_name asc,
         st.id asc,
         ap.term asc,
@@ -260,7 +261,7 @@ export class ReportsRepository {
         report_history.id,
         report_history.student_id as "studentId",
         students.first_name as "studentFirstName",
-        students.last_name as "studentLastName",
+        concat_ws(' ', students.first_last_name, students.second_last_name) as "studentLastName",
         report_history.year,
         report_history.report_type as "reportType",
         report_history.created_by_user_id as "createdByUserId",

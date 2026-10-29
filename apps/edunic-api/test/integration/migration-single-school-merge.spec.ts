@@ -56,7 +56,8 @@ describe('migration 0010 single school merge', () => {
     // Migrate up, then roll the merge back so the seed data below lands on
     // the pre-merge schema.
     await withScratchDatabaseUrl(runMigrations);
-    // 0015, 0014, 0013, 0012, 0011 and the merge come off in order.
+    // 0016, 0015, 0014, 0013, 0012, 0011 and the merge come off in order.
+    await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
@@ -354,7 +355,7 @@ describe('migration 0010 single school merge', () => {
     const applied = await db().query(
       'select count(*)::int as count from drizzle.__drizzle_migrations'
     );
-    expect(applied.rows).toEqual([{ count: 16 }]);
+    expect(applied.rows).toEqual([{ count: 17 }]);
     const columns = await db().query(
       `select table_name from information_schema.columns
         where table_schema = 'public' and column_name = 'institution_id'`

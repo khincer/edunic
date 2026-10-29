@@ -434,7 +434,7 @@ export class DashboardsRepository {
         g.score,
         g.created_at as "createdAt",
         s.id as "studentId",
-        concat(s.first_name, ' ', s.last_name) as "studentName"
+        concat_ws(' ', s.first_name, s.second_name, s.first_last_name, s.second_last_name) as "studentName"
       from grades g
       inner join subjects on subjects.id = g.subject_id
       inner join enrollments e
@@ -461,7 +461,7 @@ export class DashboardsRepository {
     const result = await this.db.execute<StudentRiskRow>(sql`
       select
         s.id as "studentId",
-        concat(s.first_name, ' ', s.last_name) as "studentName",
+        concat_ws(' ', s.first_name, s.second_name, s.first_last_name, s.second_last_name) as "studentName",
         concat('Grade ', c.grade_level, coalesce(' ' || c.section, '')) as "classroomName",
         avg(g.score)::numeric(10,2) as average,
         count(a.id) filter (where a.status = 'absent')::int as absences
@@ -476,7 +476,7 @@ export class DashboardsRepository {
         on g.enrollment_id = e.id
       left join attendance a
         on a.enrollment_id = e.id
-      group by s.id, s.first_name, s.last_name, c.grade_level, c.section
+      group by s.id, c.grade_level, c.section
       having avg(g.score) < 80
           or count(a.id) filter (where a.status = 'absent') > 0
       order by
@@ -492,7 +492,7 @@ export class DashboardsRepository {
     const result = await this.db.execute<ParentStudentRow>(sql`
       select distinct on (s.id)
         s.id as "studentId",
-        concat(s.first_name, ' ', s.last_name) as "fullName",
+        concat_ws(' ', s.first_name, s.second_name, s.first_last_name, s.second_last_name) as "fullName",
         s.date_of_birth as "dateOfBirth",
         g.name as "guardianName",
         latest_enrollment.id as "enrollmentId",
@@ -580,7 +580,7 @@ export class DashboardsRepository {
         g.score,
         g.created_at as "createdAt",
         s.id as "studentId",
-        concat(s.first_name, ' ', s.last_name) as "studentName"
+        concat_ws(' ', s.first_name, s.second_name, s.first_last_name, s.second_last_name) as "studentName"
       from grades g
       inner join subjects on subjects.id = g.subject_id
       inner join enrollments e
@@ -739,7 +739,7 @@ export class DashboardsRepository {
       select
         report_history.id,
         report_history.student_id as "studentId",
-        concat(students.first_name, ' ', students.last_name) as "studentName",
+        concat_ws(' ', students.first_name, students.second_name, students.first_last_name, students.second_last_name) as "studentName",
         report_history.year,
         report_history.report_type as "reportType",
         report_history.created_at as "createdAt"

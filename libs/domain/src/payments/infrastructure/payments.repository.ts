@@ -288,7 +288,7 @@ export class PaymentsRepository {
         p.receipt_number as "receiptNumber",
         p.note,
         p.created_at as "createdAt",
-        concat(s.first_name, ' ', s.last_name) as "studentName",
+        concat_ws(' ', s.first_name, s.second_name, s.first_last_name, s.second_last_name) as "studentName",
         school.name as "schoolName",
         school.sender_name as "schoolSenderName",
         school.reply_to_email as "schoolReplyToEmail"
@@ -312,7 +312,7 @@ export class PaymentsRepository {
     const result = await this.db.execute<StudentBalanceRow>(sql`
       select
         s.id as "studentId",
-        concat(s.first_name, ' ', s.last_name) as "studentName",
+        concat_ws(' ', s.first_name, s.second_name, s.first_last_name, s.second_last_name) as "studentName",
         coalesce(sum(p.amount_cents) filter (where p.status <> 'cancelled'), 0)::int as "billedCents",
         coalesce(sum(p.amount_cents) filter (where p.status = 'paid'), 0)::int as "paidCents",
         count(*) filter (
@@ -322,8 +322,8 @@ export class PaymentsRepository {
         )::int as "overdueCount"
       from students s
       left join payments p on p.student_id = s.id
-      group by s.id, s.first_name, s.last_name
-      order by s.first_name asc, s.last_name asc
+      group by s.id
+      order by s.first_name asc, s.first_last_name asc
     `);
 
     return result.rows;

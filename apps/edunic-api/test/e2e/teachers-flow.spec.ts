@@ -85,7 +85,7 @@ describe('E2E flow: teachers', () => {
       method: 'POST',
       url: '/students',
       headers: teacherHeaders,
-      payload: { firstName: 'Blocked', lastName: 'TeacherWrite' },
+      payload: { firstName: 'Blocked', firstLastName: 'TeacherWrite', secondLastName: 'Test' },
     });
 
     expect(write.statusCode).toBe(403);

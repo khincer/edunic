@@ -10,6 +10,12 @@ export function hashPassword(password: string) {
   return `${PASSWORD_PREFIX}$${salt}$${hash}`;
 }
 
+// A one-time password for an account created on someone's behalf: 18 random
+// bytes, 24 URL-safe characters. Only its hash is ever stored.
+export function generateTemporaryPassword() {
+  return randomBytes(18).toString('base64url');
+}
+
 export function verifyPassword(password: string, storedHash: string) {
   const [prefix, salt, expectedHash] = storedHash.split('$');
 

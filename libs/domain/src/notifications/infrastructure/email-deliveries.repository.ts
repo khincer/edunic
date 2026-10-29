@@ -195,7 +195,7 @@ export class EmailDeliveriesRepository {
     const result = await this.db.execute<EmailStudentTarget>(sql`
       select
         students.id as "studentId",
-        trim(concat_ws(' ', students.first_name, students.last_name)) as "studentName"
+        concat_ws(' ', students.first_name, students.second_name, students.first_last_name, students.second_last_name) as "studentName"
       from enrollments
       inner join students
         on students.id = enrollments.student_id

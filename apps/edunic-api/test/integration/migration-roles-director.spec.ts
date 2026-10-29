@@ -93,13 +93,14 @@ describe('migration 0013 roles director', () => {
   it('is applied by the migrator: user_institution_roles is gone', async () => {
     await withScratchDatabaseUrl(runMigrations);
 
-    expect(await appliedCount()).toBe(16);
+    expect(await appliedCount()).toBe(17);
     expect(await tableExists('user_institution_roles')).toBe(false);
   }, 60_000);
 
   it('down brings user_institution_roles back and up renames admin to director', async () => {
-    // 0015 (the contract) and 0014 (the single_school_id default) come off
-    // first, then 0013 itself.
+    // 0016 (student names), 0015 (the contract) and 0014 (the
+    // single_school_id default) come off first, then 0013 itself.
+    await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
     await withScratchDatabaseUrl(runMigrationsDown);
@@ -119,7 +120,7 @@ describe('migration 0013 roles director', () => {
 
     await withScratchDatabaseUrl(runMigrations);
 
-    expect(await appliedCount()).toBe(16);
+    expect(await appliedCount()).toBe(17);
     expect(await roleOf(ADMIN_USER)).toBe('director');
     expect(await roleOf(TEACHER_USER)).toBe('teacher');
     expect(await tableExists('user_institution_roles')).toBe(false);

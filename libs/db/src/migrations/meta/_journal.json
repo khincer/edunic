@@ -113,6 +113,13 @@
       "when": 1792456900000,
       "tag": "0015_single_school_contract",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792457000000,
+      "tag": "0016_student_names",
+      "breakpoints": true
     }
   ]
 }

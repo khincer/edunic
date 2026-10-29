@@ -10,6 +10,7 @@ import {
   ClipboardList,
   FileText,
   GraduationCap,
+  Layers,
   LayoutDashboard,
   Library,
   LogOut,
@@ -28,6 +29,7 @@ import {
   onSessionChange,
 } from '@/lib/auth';
 import { formatRole, isAdminRole } from '@/lib/roles';
+import { AdminInbox } from './admin-inbox';
 import { Button, ButtonLink } from './button';
 
 type AdminShellProps = {
@@ -54,6 +56,7 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
   {
     label: 'Académico',
     items: [
+      { label: 'Grados', href: '/admin/grados', icon: Layers },
       { label: 'Materias', href: '/admin/subjects', icon: Library },
       { label: 'Períodos académicos', href: '/admin/academic-periods', icon: CalendarDays },
       { label: 'Calificaciones', href: '/admin/grades', icon: BookOpenCheck },
@@ -182,6 +185,9 @@ export function AdminShell({ children }: AdminShellProps) {
           </div>
         </aside>
         <section className="admin-main">
+          <header className="admin-topbar">
+            <AdminInbox userId={session.user.id} />
+          </header>
           <div className="admin-content">{children}</div>
         </section>
       </div>

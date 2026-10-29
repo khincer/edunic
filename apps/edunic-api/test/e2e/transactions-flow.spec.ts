@@ -70,7 +70,7 @@ describe('E2E flow: transactions', () => {
       method: 'POST',
       url: '/students',
       headers,
-      payload: { firstName: 'Liam', lastName: 'Navarro', dateOfBirth: '2012-11-03' },
+      payload: { firstName: 'Liam', firstLastName: 'Navarro', secondLastName: 'Test', dateOfBirth: '2012-11-03' },
     });
     expect(student.statusCode).toBe(201);
     studentId = student.json().data.id;

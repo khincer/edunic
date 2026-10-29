@@ -62,7 +62,7 @@ export default function AdminReportsPage() {
 
     try {
       const [studentResult, classroomResult] = await Promise.all([
-        apiRequest<ApiListResponse<Student>>('/students?limit=100&sortBy=lastName&sortOrder=asc'),
+        apiRequest<ApiListResponse<Student>>('/students?limit=100&sortBy=firstLastName&sortOrder=asc'),
         apiRequest<ApiListResponse<Classroom>>('/classrooms?limit=100'),
       ]);
       setStudents(studentResult.data);
@@ -110,7 +110,7 @@ export default function AdminReportsPage() {
     void download(
       `pdf-${student.id}`,
       `/reports/students/${student.id}/academic-summary/pdf?year=${yearNumber}`,
-      `academic-summary-${student.lastName}-${yearNumber}.pdf`
+      `academic-summary-${student.firstLastName}-${yearNumber}.pdf`
     );
   }
 

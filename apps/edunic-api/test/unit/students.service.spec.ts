@@ -1,12 +1,16 @@
 import {
   StudentsService,
   StudentsServiceError,
+  ageOn,
+  composeFullName,
 } from '@edunic/source/domain/students';
 
 const studentRow = {
   id: 'student-1',
   firstName: 'Jane',
-  lastName: 'Doe',
+  secondName: null,
+  firstLastName: 'Doe',
+  secondLastName: 'Roe',
   dateOfBirth: null,
   createdAt: null,
 };
@@ -54,20 +58,27 @@ describe('StudentsService', () => {
 
     const result = await service.createStudent({
       firstName: ' Jane ',
-      lastName: ' Doe ',
+      secondName: '  ',
+      firstLastName: ' Doe ',
+      secondLastName: ' Roe ',
     });
 
     expect(repository.create).toHaveBeenCalledWith({
       firstName: 'Jane',
-      lastName: 'Doe',
+      secondName: null,
+      firstLastName: 'Doe',
+      secondLastName: 'Roe',
       dateOfBirth: null,
     });
     expect(result.data).toEqual({
       id: 'student-1',
       firstName: 'Jane',
-      lastName: 'Doe',
-      fullName: 'Jane Doe',
+      secondName: null,
+      firstLastName: 'Doe',
+      secondLastName: 'Roe',
+      fullName: 'Jane Doe Roe',
       dateOfBirth: null,
+      age: null,
       createdAt: null,
     });
   });
@@ -75,14 +86,22 @@ describe('StudentsService', () => {
   it('reads and updates a student by id alone', async () => {
     const repository = {
       findById: jest.fn().mockResolvedValue(studentRow),
+      listContexts: jest.fn().mockResolvedValue([]),
       update: jest.fn().mockResolvedValue({ ...studentRow, firstName: 'Ann' }),
     };
     const access = { assertCanReadStudent: jest.fn() };
     const service = new StudentsService(repository as never, access as never);
     const actor = { userId: 'u1', role: 'director' } as never;
 
-    await service.getStudent('student-1', actor);
+    const read = await service.getStudent('student-1', actor);
     expect(repository.findById).toHaveBeenLastCalledWith('student-1');
+    expect(read.data).toMatchObject({
+      gradeLevel: null,
+      section: null,
+      classroomId: null,
+      academicPeriodId: null,
+      guardians: [],
+    });
 
     const updated = await service.updateStudent({
       studentId: 'student-1',
@@ -91,9 +110,47 @@ describe('StudentsService', () => {
     expect(repository.update).toHaveBeenCalledWith({
       studentId: 'student-1',
       firstName: 'Ann',
-      lastName: undefined,
+      secondName: undefined,
+      firstLastName: undefined,
+      secondLastName: undefined,
       dateOfBirth: undefined,
     });
     expect(updated.data.firstName).toBe('Ann');
+  });
+});
+
+describe('composeFullName', () => {
+  it('joins the parts with single spaces and skips empty ones', () => {
+    expect(
+      composeFullName({
+        firstName: 'Ana',
+        secondName: 'María',
+        firstLastName: 'López',
+        secondLastName: 'García',
+      })
+    ).toBe('Ana María López García');
+    expect(
+      composeFullName({
+        firstName: 'Ana',
+        secondName: '  ',
+        firstLastName: 'López',
+        secondLastName: null,
+      })
+    ).toBe('Ana López');
+  });
+});
+
+describe('ageOn', () => {
+  const today = new Date('2026-10-26T12:00:00.000Z');
+
+  it('counts whole years, before and after the birthday', () => {
+    expect(ageOn('2015-10-26', today)).toBe(11);
+    expect(ageOn('2015-10-27', today)).toBe(10);
+    expect(ageOn('2015-01-01', today)).toBe(11);
+  });
+
+  it('returns null without a usable date', () => {
+    expect(ageOn(null, today)).toBeNull();
+    expect(ageOn('10/26/2015', today)).toBeNull();
   });
 });

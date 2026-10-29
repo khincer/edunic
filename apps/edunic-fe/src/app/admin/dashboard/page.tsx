@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { ActivityMark, getAssignmentActivityKind } from '@/components/activity-mark';
 import { AdminShell } from '@/components/admin-shell';
-import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { PanelState } from '@/components/panel-state';
 import {
@@ -20,7 +19,6 @@ export default function DashboardPage() {
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [savingNotificationId, setSavingNotificationId] = useState('');
 
   useEffect(() => {
     void loadDashboard();
@@ -40,22 +38,6 @@ export default function DashboardPage() {
       setError(err instanceof Error ? err.message : 'No se pudo cargar el panel principal');
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function markNotificationRead(notificationId: string) {
-    setSavingNotificationId(notificationId);
-    setError('');
-
-    try {
-      await apiRequest(`/notifications/${notificationId}/read`, {
-        method: 'PATCH',
-      });
-      await loadDashboard();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo marcar la notificación como leída');
-    } finally {
-      setSavingNotificationId('');
     }
   }
 
@@ -153,59 +135,6 @@ export default function DashboardPage() {
           />
         </Panel>
 
-        <Panel href="/admin/notifications" title="Notificaciones">
-          {(dashboard?.recentNotifications ?? []).map((notification) => (
-            <article
-              className="activity-row activity-row-action"
-              data-unread={!notification.readAt}
-              key={notification.id}
-            >
-              <ActivityMark kind="notification" />
-              <span>
-                <strong>{notification.title}</strong>
-                <p className="field-help">{notification.message}</p>
-              </span>
-              {notification.readAt ? (
-                <span className="activity-row-meta">Leída</span>
-              ) : (
-                <Button
-                  className="button-small"
-                  disabled={savingNotificationId === notification.id}
-                  onClick={() => void markNotificationRead(notification.id)}
-                  variant="secondary"
-                >
-                  Marcar como leída
-                </Button>
-              )}
-            </article>
-          ))}
-          <ListState
-            empty="No hay notificaciones."
-            isEmpty={dashboard?.recentNotifications.length === 0}
-            loading={loading}
-          />
-        </Panel>
-
-        <Panel
-          badge={dashboard?.unreadMessages ? `${dashboard.unreadMessages} sin leer` : undefined}
-          title="Mensajes"
-        >
-          {(dashboard?.recentMessages ?? []).map((message) => (
-            <article className="activity-row" data-unread={!message.readAt} key={message.id}>
-              <ActivityMark kind="message" />
-              <span>
-                <strong>{message.subject}</strong>
-                <p className="field-help">{message.body}</p>
-              </span>
-            </article>
-          ))}
-          <ListState
-            empty="No hay mensajes."
-            isEmpty={dashboard?.recentMessages.length === 0}
-            loading={loading}
-          />
-        </Panel>
-
         <Panel href="/admin/reports" title="Informes recientes">
           {(dashboard?.reportHistory ?? []).map((report) => (
             <article className="activity-row" key={report.id}>
@@ -251,16 +180,14 @@ export default function DashboardPage() {
 type PanelProps = {
   title: string;
   href?: string;
-  badge?: string;
   children: ReactNode;
 };
 
-function Panel({ title, href, badge, children }: PanelProps) {
+function Panel({ title, href, children }: PanelProps) {
   return (
     <Card className="dashboard-panel">
       <div className="panel-header">
         <h2 className="section-title">{title}</h2>
-        {badge ? <span className="badge badge-blue">{badge}</span> : null}
         {href ? (
           <Link className="panel-link" href={href}>
             Ver todo

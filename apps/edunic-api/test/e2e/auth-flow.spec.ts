@@ -85,7 +85,7 @@ describe('E2E flow: auth', () => {
       method: 'POST',
       url: '/students',
       headers,
-      payload: { firstName: 'E2E', lastName: 'Student', dateOfBirth: '2015-06-01' },
+      payload: { firstName: 'E2E', firstLastName: 'Student', secondLastName: 'Test', dateOfBirth: '2015-06-01' },
     });
 
     expect(created.statusCode).toBe(201);
@@ -122,7 +122,7 @@ describe('E2E flow: auth', () => {
       headers: {
         authorization: `Bearer ${session.token}`,
       },
-      payload: { firstName: 'Blocked', lastName: 'Write' },
+      payload: { firstName: 'Blocked', firstLastName: 'Write', secondLastName: 'Test' },
     });
 
     expect(response.statusCode).toBe(403);

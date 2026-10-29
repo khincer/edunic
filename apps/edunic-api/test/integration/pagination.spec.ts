@@ -46,11 +46,11 @@ describe('list pagination conventions', () => {
 
   it('pages students with keyset cursors without duplicates or gaps', async () => {
     const names = [
-      { firstName: 'Mike', lastName: 'Alpha' },
-      { firstName: 'Ana', lastName: 'Zeta' },
-      { firstName: 'Bea', lastName: 'Zeta' },
-      { firstName: 'Cleo', lastName: 'Beta' },
-      { firstName: 'Dario', lastName: 'Gamma' },
+      { firstName: 'Mike', firstLastName: 'Alpha' },
+      { firstName: 'Ana', firstLastName: 'Zeta' },
+      { firstName: 'Bea', firstLastName: 'Zeta' },
+      { firstName: 'Cleo', firstLastName: 'Beta' },
+      { firstName: 'Dario', firstLastName: 'Gamma' },
     ];
 
     for (const name of names) {
@@ -84,7 +84,7 @@ describe('list pagination conventions', () => {
       cursor = response.body.hasMore ? response.body.nextCursor : undefined;
     } while (cursor);
 
-    // Stable order: last_name asc, first_name asc, id asc.
+    // Stable order: first_last_name asc, first_name asc, id asc.
     expect(collectedNames).toEqual([
       'Mike Alpha',
       'Cleo Beta',
@@ -97,9 +97,9 @@ describe('list pagination conventions', () => {
 
   it('keeps the legacy offset contract, marks it deprecated, and allows switching to cursors', async () => {
     const names = [
-      { firstName: 'Ana', lastName: 'Alfa' },
-      { firstName: 'Bea', lastName: 'Beta' },
-      { firstName: 'Cleo', lastName: 'Gamma' },
+      { firstName: 'Ana', firstLastName: 'Alfa' },
+      { firstName: 'Bea', firstLastName: 'Beta' },
+      { firstName: 'Cleo', firstLastName: 'Gamma' },
     ];
 
     for (const name of names) {
@@ -107,7 +107,7 @@ describe('list pagination conventions', () => {
     }
 
     const legacy = await client
-      .get('/students?limit=2&offset=0&sort=lastName:asc')
+      .get('/students?limit=2&offset=0&sort=firstLastName:asc')
       .set(headers);
 
     expect(legacy.status).toBe(200);
@@ -174,9 +174,9 @@ describe('list pagination conventions', () => {
 
   it('supports the standard filter and sort params on students', async () => {
     const names = [
-      { firstName: 'Ana', lastName: 'Lopez' },
-      { firstName: 'Bea', lastName: 'Mendez' },
-      { firstName: 'Cleo', lastName: 'Zeballos' },
+      { firstName: 'Ana', firstLastName: 'Lopez' },
+      { firstName: 'Bea', firstLastName: 'Mendez' },
+      { firstName: 'Cleo', firstLastName: 'Zeballos' },
     ];
 
     for (const name of names) {
@@ -184,7 +184,7 @@ describe('list pagination conventions', () => {
     }
 
     const filtered = await client
-      .get('/students?filter=lastName:eq:Mendez')
+      .get('/students?filter=firstLastName:eq:Mendez')
       .set(headers);
 
     expect(filtered.status).toBe(200);
@@ -193,7 +193,7 @@ describe('list pagination conventions', () => {
     expect(filtered.body.hasMore).toBe(false);
 
     const sorted = await client
-      .get('/students?sort=lastName:asc&limit=10')
+      .get('/students?sort=firstLastName:asc&limit=10')
       .set(headers);
 
     expect(sorted.status).toBe(200);

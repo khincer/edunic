@@ -108,7 +108,8 @@ export class EnrollmentsRepository {
     if (input.search) {
       filters.push(sql`(
         s.first_name ilike ${`%${input.search}%`}
-        or s.last_name ilike ${`%${input.search}%`}
+        or s.first_last_name ilike ${`%${input.search}%`}
+        or coalesce(s.second_last_name, '') ilike ${`%${input.search}%`}
       )`);
     }
 
@@ -156,7 +157,7 @@ export class EnrollmentsRepository {
         e.promotion_status as "promotionStatus",
         e.created_at as "createdAt",
         s.first_name as "studentFirstName",
-        s.last_name as "studentLastName"
+        concat_ws(' ', s.first_last_name, s.second_last_name) as "studentLastName"
       from enrollments e
       inner join students s on s.id = e.student_id
       ${whereClause}
@@ -197,7 +198,7 @@ export class EnrollmentsRepository {
         e.promotion_status as "promotionStatus",
         e.created_at as "createdAt",
         s.first_name as "studentFirstName",
-        s.last_name as "studentLastName"
+        concat_ws(' ', s.first_last_name, s.second_last_name) as "studentLastName"
       from enrollments e
       inner join students s on s.id = e.student_id
       where e.id = ${enrollmentId}
@@ -346,7 +347,7 @@ export class EnrollmentsRepository {
       case 'status':
         return sql.raw('e.status');
       case 'studentName':
-        return sql.raw('s.last_name, s.first_name');
+        return sql.raw('s.first_last_name, s.first_name');
       default:
         return sql.raw('e.created_at');
     }

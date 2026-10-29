@@ -74,7 +74,7 @@ export default function AdminPaymentsPage() {
           `/payments?limit=100${status ? `&status=${status}` : ''}`
         ),
         apiRequest<ApiListResponse<DashboardPaymentBalance>>('/payments/balances'),
-        apiRequest<ApiListResponse<Student>>('/students?limit=100&sortBy=lastName&sortOrder=asc'),
+        apiRequest<ApiListResponse<Student>>('/students?limit=100&sortBy=firstLastName&sortOrder=asc'),
       ]);
       setPayments(paymentResult.data);
       setBalances(balanceResult.data);
