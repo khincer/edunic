@@ -39,7 +39,10 @@ module.exports = {
       },
     ],
   },
-  transformIgnorePatterns: ['node_modules/(?!(jose)/)'],
+  // Same ESM-only packages as the api config, under both npm and pnpm layouts.
+  transformIgnorePatterns: [
+    'node_modules/(?!(\\.pnpm/(jose|cookie)@[^/]+/node_modules/)?(jose|cookie)/)',
+  ],
   setupFiles: ['<rootDir>/apps/edunic-worker/test/setup-env.cjs'],
   setupFilesAfterEnv: ['<rootDir>/apps/edunic-worker/test/setup-after-env.cjs'],
   maxWorkers: 1,

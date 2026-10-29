@@ -38,7 +38,12 @@ module.exports = {
       },
     ],
   },
-  transformIgnorePatterns: ['node_modules/(?!(jose)/)'],
+  // jose and cookie ship ESM only, so babel must compile them. The optional
+  // group matches pnpm's .pnpm/<pkg>@<version>/node_modules/<pkg>/ layout as
+  // well as npm's flat node_modules/<pkg>/.
+  transformIgnorePatterns: [
+    'node_modules/(?!(\\.pnpm/(jose|cookie)@[^/]+/node_modules/)?(jose|cookie)/)',
+  ],
   setupFiles: ['<rootDir>/apps/edunic-api/test/setup-env.cjs'],
   setupFilesAfterEnv: ['<rootDir>/apps/edunic-api/test/setup-after-env.cjs'],
   maxWorkers: 1,
